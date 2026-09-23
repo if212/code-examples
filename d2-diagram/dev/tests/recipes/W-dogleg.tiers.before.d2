@@ -1,0 +1,26 @@
+# Before: two callers with two partners each, as narrow as the rest: ELK cannot put both
+# partners under their caller, and four edges into the data tier step sideways.
+...@neutral-theme
+direction: down
+classes: {col: {width: 130}; pair: {width: 280}; low: {width: 130; height: 92}}
+gateway: API gateway {class: service; width: 600}
+services: Services {
+  class: zone
+  catalog: Catalog {class: [service; col]}
+  orders: Orders {class: [service; col]}
+  billing: Billing {class: [service; col]}
+}
+data: Data {
+  class: zone
+  catalog_db: Catalog DB {class: [datastore; low]}
+  cache: Cache {class: [datastore; low]}
+  orders_db: Orders DB {class: [datastore; low]}
+  events: Events {class: [queue; low]}
+  billing_db: Billing DB {class: [datastore; low]}
+}
+gateway -> services: routes {class: dep}
+services.catalog -> data.catalog_db: {class: dep}
+services.catalog -> data.cache: {class: dep}
+services.orders -> data.orders_db: {class: dep}
+services.orders -> data.events: {class: async}
+services.billing -> data.billing_db: {class: dep}

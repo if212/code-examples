@@ -1,0 +1,12 @@
+# Before: step 2 marks the primary as failed with a class list, but the node already has a
+# single class: d2 ignores the list and the database stays healthy on every board.
+...@neutral-theme
+direction: down
+app: App servers {class: service}
+db: "Primary DB\nPostgres" {class: datastore}
+app -> db: SQL {class: dep}
+steps: {
+  down: {
+    db.class: [datastore; danger]
+  }
+}

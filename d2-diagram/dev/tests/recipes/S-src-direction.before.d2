@@ -1,0 +1,13 @@
+# Before: `direction: right` inside a plain container: ELK ignores it, the steps still stack down.
+...@neutral-theme
+direction: down
+api: Orders API {class: service}
+jobs: "Nightly\njobs" {
+  class: zone
+  direction: right
+  extract: Extract {class: service}
+  load: Load {class: service}
+  report: Report {class: service}
+  extract -> load -> report: {class: dep}
+}
+api -> jobs.extract: triggers {class: dep}

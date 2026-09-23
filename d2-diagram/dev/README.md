@@ -17,7 +17,7 @@ point: [../SKILL.md](../SKILL.md).
 | `playbooks/*.md` | per-type rules, <= 150 lines each | the routed type |
 | `reference/*.md` | design system, Snowflake brand, syntax, layout, icons, export | on demand |
 | `templates/*.d2` | starting diagrams (<= 80 lines, clean in d2check) and the two theme files | copied |
-| `scripts/` | `d2check.sh` (the loop) calls `d2lint.py`, `semcheck.py`, `d2raster.py` (+ `raster.cjs`, `pngstats.py`) and `font-flags.sh`; `doctor.sh` (setup), `icon.sh`, `contrast.py` | run |
+| `scripts/` | `d2check.sh` (the loop) calls `font-flags.sh`, `svgpost.py` (the post step: labels off bends, keys, tables, tech lines), `d2lint.py`, `semcheck.py`, `d2raster.py` (+ `raster.cjs`, `pngstats.py`); `doctor.sh` (setup), `icon.sh`, `contrast.py` | run |
 | `assets/icons/`, `assets/fonts/` | offline Lucide pack (ISC), bundled fonts (OFL) | embedded |
 | `dev/run_all_tests.sh` | every suite, one summary table | - |
 | `dev/package.sh` | builds `dev/dist/d2-diagram.zip` | - |
@@ -53,7 +53,7 @@ the faithful-render cases need Chromium (Node Playwright or a Chrome binary);
 
 | Suite | Command | Proves |
 |---|---|---|
-| structure | `sh dev/tests/structure/check.sh` | the checks (a)-(l): frontmatter, paths, anchors and `section N` / `rule N` references (and no link from a shipped file into `dev/`), reachability, a heading per code, ASCII, size, deleted paths, junk, class lists, script syntax, allowed-tools, templates fmt + routed |
+| structure | `sh dev/tests/structure/check.sh` | the checks (a)-(o): frontmatter, paths, anchors and `section N` / `rule N` references (and no link from a shipped file into `dev/`), reachability, a heading per code, ASCII, size, deleted paths, junk, class lists, script syntax, allowed-tools, templates fmt + routed, the svgpost wiring, no escape-hatch wording ("the honest shape") in the recipes, a recipe grep context (`-A N`) that covers the longest recipe |
 | lint | `python3 dev/tests/lint/run_tests.py` | every d2lint code fires on its case, ok cases stay clean, rasterizer checks |
 | d2check | `sh dev/tests/lint/test_d2check.sh` | exit codes, summary lines, file modes, routes, multi-board |
 | doctor | `sh dev/tests/lint/test_doctor.sh` | doctor.sh on simulated machines (one dependency taken away at a time) prints the right verdict and fix; every script's `--help` and usage exit |
@@ -64,7 +64,7 @@ the faithful-render cases need Chromium (Node Playwright or a Chrome binary);
 | export | `sh dev/tests/refs/check_export.sh` | the commands of reference/export.md, run on fixtures |
 | recipes | `sh dev/tests/recipes/run.sh` | every `Fix:` in review-and-fix.md (see below) |
 | icons | `sh dev/tests/refs/verify_icons.sh` | every icon name in the docs answers HTTP 200 (network) |
-| routing | `sh dev/tests/routing/run.sh gate` | blind `claude -p` sessions, given only workflows/route.md, pick the right template for held-out requests (needs the claude CLI; `--llm`) |
+| routing | `sh dev/tests/routing/run.sh gate` | blind `claude -p` sessions, given only workflows/route.md, pick the right template for 86 held-out requests (36 in Chinese): 90% templates and 83% calls in both modes (needs the claude CLI; `--llm`) |
 
 ## Build the zip
 
@@ -92,10 +92,13 @@ a draft build only). To check an unpacked zip by hand:
    section 2), fmt-clean, ASCII, at most 80 lines.
 2. `dev/tests/templates/<name>.brief` in the format of workflows/brief.md.
 3. Gate: `sh scripts/d2check.sh --check-fmt --brief dev/tests/templates/<name>.brief --column 800 templates/<name>.d2 /tmp/t/<name>.svg`
-   exits 0 with 0 E- and 0 S- findings and at most one W- (explained in a
-   comment); min text >= 12px, height <= 1280px. Read the col.png against the
-   rubric in workflows/review-and-fix.md. (`--check-fmt`: report formatting,
-   never rewrite the shipped template.)
+   exits 0 with 0 E- and 0 S- findings; min text >= 12px, displayed height
+   <= 900px, content aspect 0.6-2.5; a key wherever S-key asks for one; any
+   focus quotes the brief's `# request:`; no W- or I- finding except those on
+   an `# expect: W-code xN - <reason>` line of the brief (the templates suite
+   enforces all of it). Read the col.png against the rubric in
+   workflows/review-and-fix.md. (`--check-fmt`: report formatting, never
+   rewrite the shipped template.)
 4. Route it: a row in `workflows/route.md` (and the playbook section it
    points to). The structure check fails for a template the router does not name.
    Add it to the catalog table in `README.md` and to the type list in the
@@ -125,7 +128,8 @@ before file and is gone after the fix). Pairs live in `dev/tests/recipes/`:
 - Brief (for S- codes): `# brief: FILE` in the file, else `<name>.before.brief` /
   `<name>.after.brief`, `<name>.brief` or `<CODE>.brief`.
 - Directives on the first lines: `# expect: CODES` (more codes the before must
-  show, all proven by the pair), `# allow: CODES` (codes the after may keep),
+  show, all proven by the pair), `# allow: CODES (reason)` (codes the after may
+  keep; the after of a W- recipe should render clean, so say why one stays),
   `# column: N`, `# d2check: OPTS`, `# d2: FLAGS` (after `--`),
   `# expect-error: TEXT` (compile pairs), `# unescape` (write non-ASCII as
   `\uXXXX`; the repo stays ASCII).
@@ -166,7 +170,9 @@ layouts: rerun the recipes after any of them.
 | `d2 fmt` rewrites `C# SDK` to `C # SDK` and splits `a; b`, so S-src-hash and S-src-semicolon only fire on unformatted text; in the loop the brief check reports the result | workflows/review-and-fix.md#s-src-hash |
 | crow's feet at the source end render only on `<->`; `style.stroke` paints a sql_table's body | playbooks/erd.md rules 1 and 4 |
 | an edge label is measured with the italic face even when `italic: false` | assets/fonts/README.md (Regular passed as italic) |
-| nested `direction` is ignored except in grid cells; `grid-columns` alone fills column-major | reference/layout.md section 7 |
-| a later class wins; a class list on a node that already has a class is ignored in steps | workflows/review-and-fix.md#last-class-wins; reference/syntax.md section 7 |
+| nested `direction` is ignored except in grid cells; `grid-columns` alone fills column-major | reference/layout.md section 7; semcheck S-src-direction |
+| a later class wins; a class list assigned over a single class is ignored (list over list applies) | workflows/review-and-fix.md#last-class-wins; reference/syntax.md section 7; semcheck S-src-class |
+| the native legend (`vars.d2-legend`) is always drawn right of the diagram, shadowed, off-palette, with black text | svgpost.py restyles it and moves it under the diagram when the column is too narrow |
+| edge labels sit at the midpoint, often on a bend or a foreign sequence lifeline | svgpost.py slides them to a straight run or a free lifeline gap; d2lint reports what is left |
 | keywords are case-sensitive; `Shape: x` at the root silently draws nothing | reference/syntax.md section 16 |
 | markdown labels clip in Chromium; theme 303 draws white text on white | reference/syntax.md; reference/design-system.md section 10 |

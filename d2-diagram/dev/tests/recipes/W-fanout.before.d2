@@ -11,9 +11,9 @@ services: Services {
   orders: Orders {class: [service; focal]}
   payments: Payments {class: service}
 }
-web -> gateway: {class: flow}
+web -> gateway: {class: dep}
 gateway -> services.auth: {class: dep}
 gateway -> services.catalog: {class: dep}
 gateway -> services.cart: {class: dep}
-gateway -> services.orders: {class: flow}
+gateway -> services.orders: {class: dep}
 gateway -> services.payments: {class: dep}

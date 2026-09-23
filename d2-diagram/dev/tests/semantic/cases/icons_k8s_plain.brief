@@ -1,0 +1,11 @@
+# request: "Kubernetes topology: the internet reaches a pod."
+type: deployment
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  inet: Internet
+  pod: Pod
+edges:
+  inet -> pod: HTTPS

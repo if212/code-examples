@@ -1,0 +1,12 @@
+# request: "OAuth PKCE: the SPA sends the code_verifier/code_challenge pair to the Authorization Server."
+type: sequence
+reader: test
+width: 800
+direction: right
+focus: none
+nodes:
+  spa: SPA
+  auth: Authorization Server
+messages:
+  spa -> auth: "GET /authorize + code_challenge"
+  spa -> auth: "POST /token + code_verifier"

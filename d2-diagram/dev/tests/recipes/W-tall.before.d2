@@ -15,4 +15,4 @@ approve: Approve {class: service}
 prod: Deploy prod {class: [service; focal]}
 verify: Verify {class: service}
 
-checkout -> deps -> lint -> unit -> build -> scan -> push -> staging -> smoke -> approve -> prod -> verify: {class: flow}
+checkout -> deps -> lint -> unit -> build -> scan -> push -> staging -> smoke -> approve -> prod -> verify: {class: dep}

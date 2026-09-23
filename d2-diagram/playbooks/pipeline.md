@@ -8,133 +8,113 @@ from `${CLAUDE_SKILL_DIR}/templates/pipeline.d2`. Grid mechanics:
 
 ## 1. Pick the layout by where it is read
 
-Measured on the template's 10 nodes with d2check defaults:
+Measured on the template's content (3 sources, 3 warehouse layers, 3 consumers):
 
 | Layout | 800px column | 1600px slide |
 |---|---|---|
-| Serpentine: each stage row is a grid cell with its own `direction` | 680x864, text 15px: use | fine |
-| One ELK row: `direction: right`, stages as zones | 1395px, text 8px (E-small-text) | 1395x468, clean: use |
-| ELK `direction: down`, two stage zones | 640x1090, clean; a label on each hop: 1385px (W-tall) | too tall |
-| Grid of stage columns, `grid-rows: 1` | 1238px, text 9.6px, 6 diagonal edges | never |
-
-`direction: down` suits a short chain with unlabelled hops (6 ranks at most):
-it reads one way and ELK centres every merge and fan-out, whatever their size.
-Past two rows of three stages, add rows (right, left, right) or split the
-story into `steps` boards (`${CLAUDE_SKILL_DIR}/templates/steps.d2`).
+| ELK `direction: down`, one zone per stage, tools as hop end labels (the template) | 580x884, 14px: use | W-tall, W-aspect |
+| the same with mid-edge hop labels | 580x1061 (W-tall) | - |
+| ELK `direction: right`, the same zones, 130px layers, mid-edge hop labels | 7.6px text (E-small-text) | 1384x468, clean: use |
+| Serpentine: root `grid-columns: 1`, each row ONE stage with its own `direction` | only when one edge joins two rows (rule 6) | fine |
+| A grid container inside an ELK layout | collapsed into one 2040px row: never | never |
 
 ## 2. Notation checklist
 
-- [ ] Stages are `zone`s titled by what happens there: "Extract and load",
-      "Transform (dbt) and serve".
-- [ ] Tables, buckets and databases are `datastore`, topics and streams
-      `queue`, sources you do not own `[service; external]`.
-- [ ] Arrows point where the data goes. The path from a source to the focus
-      is `flow`, other hops `dep`, fire-and-forget hops `async`.
-- [ ] Technology in the label: `"RAW\nSnowflake"`, `"Connectors\nFivetran"`.
-- [ ] The transformer (dbt, a Spark job) is named in a stage title or an edge
-      label, never drawn as its own node or lane (rule 5).
-- [ ] One focus, usually the table the document is about: `[datastore; focal]`.
+- [ ] Zones are the stages the request names ("Sources", "Snowflake",
+      "Consumers"), never layout rows; the warehouse is ONE zone holding its
+      layers (RAW, STAGING, MARTS), the platform's name as its title.
+- [ ] Tables, layers and databases are `datastore`, topics and streams `queue`.
+- [ ] Labels are `"<role>\n<tool>"` with `tech`, role first everywhere, in the
+      request's words: `"App DB\nPostgres"`, `"Dashboards\nLooker"`.
+- [ ] Tools that move data (Fivetran, dbt, a Spark job) label the hops they
+      perform (rule 3), never a node of their own or a title word.
+- [ ] Co-equal sources: no main source, one look and one edge class for all.
+      `flow` only on a chain the request describes, starting at the hub they
+      merge into; a fan-out to peers ends it. The focus: `focal` on the table
+      the request names ("Highlight MARTS").
+- [ ] `external` on a source only when its owner matters to the reader; it
+      then needs a key line (`${CLAUDE_SKILL_DIR}/reference/design-system.md` section 8).
 
 ## 3. Rules
 
-**1. Serpentine for doc columns.** Root `grid-columns: 1`; every stage row is a
-`zone` with its own `direction`, alternating `right` and `left`. A grid cell
-honours its `direction`; a plain container ignores it.
+**1. Stages stack down, each a zone; the warehouse is one zone.** Sources
+in one row, the warehouse layers down its middle, consumers in the last row:
+the template is 580x884. Stage rows of different widths are fine: ELK
+centres every merge and fan-out.
+
+**2. A merge from a whole stage, or a fan-out to one, is ONE edge to the
+zone** (`sources -> wh.raw`, `wh.marts -> consumers`); the brief still lists
+every edge and semcheck accepts the zone edge for them. Edge by edge also
+passed (580x894) but repeated "Fivetran" three times and jogged two edges.
+
+**3. A tool's name rides at the end of the hop it performs:** a local class
+`hop: {source-arrowhead.style: {font-color: ${ink-600}; font-size: 14};
+target-arrowhead.style: {font-color: ${ink-600}; font-size: 14}}`, then
+`{class: [hop; dep]; target-arrowhead.label: dbt}` (or `source-arrowhead` for
+the tail end). Mid-edge labels cost 59px a rank (580x1061, W-tall). Snowflake
+brand: `${sf-gray}` in place of `${ink-600}` (left as is, the compile fails).
+
+**4. Cylinders need their height.** One line needs 90px to clear the rims,
+two lines 106 (E-label-overflow below that); a box beside a cylinder is
+10px shorter, so its sides end on the walls (96 beside 106).
+
+**5. Keep the warehouse column wide.** Layers as wide as the rows allow (230
+under 530px rows): a 190px column left 170px voids beside it (I-sparse; the
+check counts nodes, not zone fill).
+
+**6. Serpentine only when each row is exactly one stage and ONE edge joins
+two rows,** node to node, at a row end: d2 draws edges between grid cells as
+straight centre-to-centre lines, so a merge or fan-out across rows comes out
+diagonal. A grid cell honours its own `direction`; a plain container does not.
 
 ```d2
 # cwd: ../templates
 ...@neutral-theme
 grid-columns: 1
 vertical-gap: 60
-load: Load {
+classes: {w: {width: 150}}
+ingest: Ingest {
   class: zone
   direction: right
-  pg: "App DB\nPostgres" {class: datastore; width: 150}
-  raw: "RAW\nSnowflake" {class: datastore; width: 150}
-  pg -> raw: {class: flow}
+  app: "Clickstream\nSegment" {class: [service; tech; w]}
+  kafka: "Events\nKafka" {class: [queue; tech; w]}
+  app -> kafka: {class: dep}
 }
-serve: Serve {
+process: Process {
   class: zone
   direction: left
-  marts: "MARTS\nSnowflake" {class: [datastore; focal]; width: 150}
-  bi: "Dashboards\nLooker" {class: service; width: 150}
-  marts -> bi: {class: flow}
+  flink: "Enrich\nFlink" {class: [service; tech; w]}
+  lake: "Sessions\nIceberg" {class: [datastore; tech; w]}
+  flink -> lake: {class: dep}
 }
-load.raw -> serve.marts: {class: flow}
+ingest.kafka -> process.flink: {class: dep}
 ```
 
-**2. Merges and fan-outs stay inside one row,** where ELK routes them at right
-angles. Between grid cells d2 draws a straight line from center to center: in
-a grid of stage columns every merge and fan-out came out diagonal, and even a
-1:1 box-to-cylinder hop slants because the two centers differ.
+**7. Keep a serpentine's turns vertical:** one `width` on every node and the
+same number of nodes per row; a turn at the left end is always vertical, at
+the right end only while both rows are equally wide (rows of 3 and 2 tilted
+it 133px; W-diagonal-edge flags a lean over 8px). A 2-node tail row folds into
+the row before it. A labelled edge across `vertical-gap: 40` touched the row
+border: 60 clears it.
 
-**3. One edge between rows, node to node:** the last node of a row to the first
-node of the next. A row-to-row edge (`load -> serve`) ends at the rows'
-middles and loses the real endpoint: semcheck fails it (S-misrouted-edge).
+**8. Slides: one ELK row.** `direction: right` with the template's zones and
+130px layers, hop labels mid-edge (a row pays them in width): 1384x468 at
+`--column 1600`, clean; with 230px layers, 1470px and W-aspect.
 
-**4. Keep the turn vertical.** Row contents sit left-aligned in their cells, so
-a turn at the left end is always vertical, and a turn at the right end only
-while both rows are equally wide: one `width` on every node, the same number
-of stages per row, merges and fan-outs of at most 3 with the main node in the
-middle, no labels on horizontal hops. Measured tilts: a `loads` label 52px, a
-4th source 36px (a second routing track, +50px), rows of 3 and 2 stages 133px.
-d2lint flags a turn leaning over 8px (W-diagonal-edge); still look at the turn
-in the col.png after every edit.
-
-**5. Name the transformer in the title or on the turn edge,** not in a node: a
-`dbt` node adds a stage to its row (870px wide) and pushed the turn 135px off
-vertical.
-
-**6. Hubs grow in rows.** With `direction: right|left`, a node with N incoming
-or outgoing edges grows to N x 40px tall. Put the main-path source in the
-middle of a merge: its lane runs straight into the hub, and no box of the same
-shape shares the hub's centre line (W-sibling-size otherwise).
-
-**7. Leave room for labels between cells.** A labelled edge across
-`vertical-gap: 40` touches the row border; 60 clears it. Across
-`horizontal-gap: 40` the label straddles both borders (2 x
-W-edge-label-on-border); use the longest label plus 60.
-
-**8. Slides: one ELK row.** Drop `grid-columns`, `vertical-gap` and the per-row
-`direction`s, set `direction: right`, group the stages in zones and label hops
-freely. 1395x468 for the template's content, clean at `--column 1600`.
-
-```d2
-# cwd: ../templates
-...@neutral-theme
-direction: right
-src: Sources {
-  class: zone
-  pg: "App DB\nPostgres" {class: datastore}
-  events: "Clickstream\nSegment" {class: [service; external]}
-}
-fivetran: "Connectors\nFivetran" {class: service}
-wh: Snowflake {
-  class: zone
-  raw: RAW {class: datastore}
-  marts: MARTS {class: [datastore; focal]}
-}
-src.pg -> fivetran: {class: flow}
-src.events -> fivetran: {class: dep}
-fivetran -> wh.raw: {class: flow}
-wh.raw -> wh.marts: dbt {class: flow}
-```
-
-**9. RAG indexing: one row that ends at the vector index.** Row 1 `Index
-(nightly)`, `direction: right`: the source docs, chunk, embed and the index
-`[datastore; focal]` at its right end. How a question is answered is a second
-diagram (workflows/route.md, SPLIT); when the user wants both in one picture,
-Row 2 `Answer (per question)`, `direction: left`: retrieve, rerank, build
-prompt, then `"LLM\nClaude API"` `[service; external]`, so the edge from the
-index into retrieve is the vertical turn (rule 4). Four boxes a row, one local
-class `{width: 150; height: 77}` on every box: 800x438, 13.7px, clean. The app
-around the model (tools, memory): `${CLAUDE_SKILL_DIR}/templates/llm-app.d2`.
+**9. RAG: indexing and answering.** Zone titles carry the cadence:
+"Indexing (nightly)", "Answering (per question)". ONE embedding-model node
+serves both paths (documents and questions need the same model); the person
+asking sits outside every stage zone; the question is drawn into retrieve,
+rerank and the prompt (a reranker scores question and chunk pairs, the
+prompt carries the question); co-equal document sources share one look. Both
+paths as stage zones in an 800px column made a 1331px tower: for one
+picture draw the app view (`${CLAUDE_SKILL_DIR}/templates/llm-app.d2`, where
+the vector index is the floor both paths meet, 776x818), or split indexing
+and answering into two diagrams (`${CLAUDE_SKILL_DIR}/workflows/route.md`).
 
 ## 4. The template
 
-`${CLAUDE_SKILL_DIR}/templates/pipeline.d2`: two rows, "Extract and load"
-(right) and "Transform (dbt) and serve" (left); three sources merge into
-Fivetran, RAW turns down into STAGING, MARTS fans out to three consumers:
-680x864 at 800px, no errors or warnings. A third row runs `direction: right`
-and starts under row 2's last node: that turn is at the left end, so it stays
-vertical (rule 4).
+`${CLAUDE_SKILL_DIR}/templates/pipeline.d2`: Sources (the app DB, the Stripe
+API, Segment) load into RAW through one edge labelled Fivetran; dbt builds
+STAGING and MARTS inside the Snowflake zone; one edge feeds the Consumers
+zone. 580x884 at 800px, no errors or warnings, no key (one edge class).

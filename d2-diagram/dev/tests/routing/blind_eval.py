@@ -10,7 +10,8 @@ usage: python3 blind_eval.py CASES.json ROUTE.md [options]
   --per-request   one fresh session per request (default: one session for all requests)
   --jobs N        parallel sessions in --per-request mode (default 6)
   --out DIR       results dir (default: a new temp dir; its path is printed)
-  --gate T,C      exit 1 unless at least T templates and C calls are right (e.g. 27,25)
+  --gate T,C      exit 1 unless at least T templates and C calls are right: counts (27,25)
+                  or shares of the cases (90%,83%)
   --model M       model for the sessions (default: the CLI default)
   --answers F     score saved answers (a JSON list of {id, template, call}) instead of
                   calling claude: re-scoring, or answers from a subagent given prompt.txt
@@ -116,10 +117,11 @@ def main():
     gate = None
     if a.gate:
         try:
-            gate = tuple(int(x) for x in a.gate.split(','))
-            assert len(gate) == 2
+            parts = a.gate.split(',')
+            assert len(parts) == 2
+            gate = tuple(-(-int(x[:-1]) * len(cases) // 100) if x.endswith('%') else int(x) for x in parts)
         except (ValueError, AssertionError):
-            die('--gate wants T,C (templates,calls), e.g. --gate 27,25')
+            die('--gate wants T,C (templates,calls): counts, e.g. --gate 27,25, or shares, e.g. --gate 90%,83%')
     out = a.out or tempfile.mkdtemp(prefix='route-eval.')
     os.makedirs(os.path.join(out, 'raw'), exist_ok=True)
     name = os.path.splitext(os.path.basename(a.cases))[0]
@@ -160,7 +162,8 @@ def main():
         g = ans.get(c['id'], {'template': '?', 'call': '?'})
         t, cl = str(g.get('template', '?')), str(g.get('call', '?')).upper()
         call = c.get('call', 'GO')
-        good = t == c['expect'] or t in c.get('alt', [])
+        # an EDIT or OUT call is right whatever template it names (the edited file stands in for one)
+        good = t == c['expect'] or t in c.get('alt', []) or (c['expect'] in ('EDIT', 'OUT') and cl == c['expect'])
         goodc = cl == call or cl in c.get('altcall', []) or (t in ('EDIT', 'OUT') and call in ('EDIT', 'OUT'))
         ok_t += good
         ok_c += goodc

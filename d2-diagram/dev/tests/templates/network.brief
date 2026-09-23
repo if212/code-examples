@@ -1,16 +1,16 @@
 # request: "Network diagram of the prod VPC (10.0.0.0/16, us-east-1) for the
 #  platform runbook. Two AZs, each with a public and a private subnet; the
 #  data subnets 10.0.21.0/24 and 10.0.22.0/24 hold the Multi-AZ RDS Postgres
-#  orders DB and the Multi-AZ ElastiCache Redis. Internet users reach an ALB
-#  in the public subnets over HTTPS 443 through the internet gateway; the ALB
-#  forwards to orders-api on 8080, running as Fargate tasks in the private
-#  subnets. orders-api talks to Postgres on 5432, the workers to Redis on
-#  6379; the workers reach the internet through a NAT gateway per AZ."
+#  orders DB. Internet users reach an ALB in the public subnets over HTTPS 443
+#  through the internet gateway; the ALB forwards to orders-api on 8080,
+#  running as Fargate tasks in the private subnets. orders-api talks to
+#  Postgres on 5432; the workers reach the internet through a NAT gateway
+#  per AZ."
 type: network
 reader: platform engineers reading the runbook
 width: 800
 direction: down
-focus: users -> vpc.igw -> vpc.pub_a.alb -> vpc.app_a.api
+focus: none
 out: AZ frames (each subnet title names its AZ), route tables, NACLs, security groups, VPC endpoints, DNS
 nodes:
   users: Internet users
@@ -28,19 +28,16 @@ nodes:
   vpc.app_b: Private 1b\n10.0.12.0/24
   vpc.app_b.api: orders-api\nFargate 1b
   vpc.app_b.worker: worker\nFargate 1b
-  vpc.cache: Redis\nElastiCache, Multi-AZ {shape: cylinder}
-  vpc.db: Orders DB\nRDS Postgres, Multi-AZ\ndata subnets 10.0.21.0/24, 10.0.22.0/24 {shape: cylinder}
+  vpc.db: Orders DB, RDS Postgres Multi-AZ\ndata subnets 10.0.21.0/24, 10.0.22.0/24 {shape: cylinder}
 edges:
   users -> vpc.igw: "HTTPS :443"
-  vpc.igw -> vpc.pub_a.alb: ":443"
-  vpc.igw -> vpc.pub_b.alb: ":443"
+  vpc.igw -> vpc.pub_a.alb
+  vpc.igw -> vpc.pub_b.alb
   vpc.pub_a.alb -> vpc.app_a.api: ":8080"
   vpc.pub_b.alb -> vpc.app_b.api: ":8080"
   vpc.app_a.api -> vpc.db: ":5432"
   vpc.app_b.api -> vpc.db: ":5432"
-  vpc.app_a.worker -> vpc.cache: ":6379"
-  vpc.app_b.worker -> vpc.cache: ":6379"
-  vpc.app_a.worker -> vpc.pub_a.nat: egress {dashed}
-  vpc.app_b.worker -> vpc.pub_b.nat: egress {dashed}
-  vpc.pub_a.nat -> vpc.igw: egress {dashed}
-  vpc.pub_b.nat -> vpc.igw: egress {dashed}
+  vpc.app_a.worker -> vpc.pub_a.nat {dashed}
+  vpc.app_b.worker -> vpc.pub_b.nat {dashed}
+  vpc.pub_a.nat -> vpc.igw {dashed}
+  vpc.pub_b.nat -> vpc.igw {dashed}

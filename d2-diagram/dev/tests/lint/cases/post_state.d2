@@ -1,0 +1,31 @@
+# post: svgpost
+# expect-clean: E- W-label-on-bend
+# A copy of the round-4 order-lifecycle experiment (st5): the happy path down the spine, exits to the
+# right. d2 centres the short exit labels ('cancel', 'return') on their elbows; svgpost slides each one,
+# mask rect and all, onto a straight run of its own edge (test_svgpost.sh).
+...@neutral-theme
+direction: down
+classes: {
+  ghost: {width: 12; height: 48; style: {opacity: 0; font-size: 14; italic: false}}
+  s: {width: 140; height: 48}
+}
+start: "" {class: dot}
+pending: Pending {class: [state; s]}
+paid: Paid {class: [state; s]}
+shipped: Shipped {class: [state; s]}
+delivered: Delivered {class: [success; terminal; s]; style.double-border: true}
+cancelled: Cancelled {class: [terminal; s]; style.double-border: true}
+refunded: Refunded {class: [terminal; s]; style.double-border: true}
+g1: "" {class: ghost}
+g2: "" {class: ghost}
+g3: "" {class: ghost}
+start -> pending: {class: flow}
+pending -> g1: pay {class: ghost}
+pending -> paid: pay {class: flow}
+pending -> cancelled: cancel {class: dep}
+paid -> g2: ship {class: ghost}
+paid -> shipped: ship {class: flow}
+paid -> refunded: refund {class: dep}
+shipped -> g3: deliver {class: ghost}
+shipped -> delivered: deliver {class: flow}
+shipped -> refunded: return {class: dep}

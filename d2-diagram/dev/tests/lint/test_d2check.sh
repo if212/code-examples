@@ -22,6 +22,11 @@ o=$(sh "$CHECK" "$T/ok_flowchart.d2" "$T/out/ok.svg" 2>&1); rc=$?
 if [ "$rc" = 0 ] && has "$o" '^reviewed: faithful' && has "$o" '^display: ' && has "$o" '^READ: ' && has "$o" '^re-render: d2 ' && has "$o" '^fonts: '; then
   ok "clean case: exit 0 + reviewed/display/READ/re-render/fonts lines"
 else bad "clean case (exit $rc)" "$o"; fi
+# FIXPLAN I6: post: and checks: lines; the re-render line ends with the svgpost step; a clean result says so
+if has "$o" '^post: ' && has "$o" '^checks: lint 0 error(s) 0 warning(s); semantic 0 error(s) 0 warning(s)$' &&
+  has "$o" '^re-render: d2 .* && python3 [^ ]*/scripts/svgpost.py [^ ]*ok.svg$' && has "$o" '^result: exit 0 - clean'; then
+  ok "I6: post:, checks: and the svgpost step on the re-render line"
+else bad "I6 summary lines" "$o"; fi
 m=$(stat -c %a "$T/out/ok.svg" 2>/dev/null || stat -f %Lp "$T/out/ok.svg")
 if [ "$m" = 644 ] && grep -q 'geometricPrecision' "$T/out/ok.svg" && head -c 400 "$T/out/ok.svg" | grep -q ' width="[0-9.]*" height="[0-9.]*"'; then
   ok "deliverable: mode 644, width/height, geometricPrecision"
@@ -97,7 +102,8 @@ sh "$CHECK" --no-raster "$T/multi_board.d2" "$T/v2/mb.svg" > /dev/null 2>&1
 # 5. tripwire, formatting, strict -----------------------------------------------------------------------
 printf 'a: "Caf\303\251"\na -> b\n' > "$T/nonascii.d2"
 o=$(sh "$CHECK" --no-raster "$T/nonascii.d2" 2>&1); rc=$?
-[ "$rc" = 2 ] && has "$o" '^tripwire: 1 line' && ok "tripwire: non-ASCII label -> exit 2" || bad "tripwire (exit $rc)" "$o"
+[ "$rc" = 2 ] && has "$o" '^tripwire: 1 line' && has "$o" '(the whole .d2, comments included, must be plain ASCII; translate non-English text)' &&
+  ok "tripwire: non-ASCII label -> exit 2, says translate (F18)" || bad "tripwire (exit $rc)" "$o"
 printf 'vars: {d2-config: {layout-engine: elk}}\na->b\n' > "$T/fmt.d2"
 o=$(sh "$CHECK" --no-raster --check-fmt "$T/fmt.d2" 2>&1); rc=$?
 [ "$rc" = 2 ] && has "$o" '^fmt: NOT formatted' && grep -q 'a->b' "$T/fmt.d2" && ok "--check-fmt: reports, leaves the file, exit 2" || bad "--check-fmt (exit $rc)" "$o"
@@ -108,7 +114,9 @@ has "$o" '^fmt:' && bad "fmt note on an already formatted file" "$o" || ok "no f
 cp "$HERE/cases/bad_short_label.d2" "$T/short.d2"
 o=$(sh "$CHECK" --no-raster "$T/short.d2" 2>&1); rc=$?
 sh "$CHECK" --no-raster --strict "$T/short.d2" > /dev/null 2>&1; rc2=$?
-[ "$rc" = 3 ] && [ "$rc2" = 2 ] && has "$o" 'W-short-label x1 -> workflows/review-and-fix.md#w-short-label' && ok "warnings: exit 3 with --no-raster, 2 with --strict; code line + anchor" || bad "strict ($rc/$rc2)" "$o"
+[ "$rc" = 3 ] && [ "$rc2" = 2 ] && has "$o" '^W-short-label x1 -> workflows/review-and-fix.md#w-short-label (warning)$' &&
+  has "$o" '^result: exit 3 - .*; 1 warning(s) still to fix$' &&
+  ok "warnings: exit 3 with --no-raster, 2 with --strict; code line + anchor + severity" || bad "strict ($rc/$rc2)" "$o"
 
 # 6. -l/-t warn, --watch refused ------------------------------------------------------------------------
 o=$(sh "$CHECK" --no-raster "$T/ok_flowchart.d2" "$T/out/ok.svg" -- -l dagre 2>&1); rc=$?
@@ -128,7 +136,8 @@ if [ -f "$SKILL/scripts/semcheck.py" ]; then
   cp "$SKILL/templates/neutral-theme.d2" "$T/"
   printf '...@neutral-theme\napi: API {class: service}\ndb: DB {class: datastor}\napi -> db: {class: dep}\n' > "$T/nobrief.d2"
   o=$(sh "$CHECK" --no-raster "$T/nobrief.d2" 2>&1); rc=$?
-  [ "$rc" = 2 ] && has "$o" '^semantic: source checks only - no brief' && has "$o" '^S-src-class x1 -> workflows/review-and-fix.md#s-src-class' &&
+  [ "$rc" = 2 ] && has "$o" '^semantic: 1 error(s), 0 warning(s) - source checks only - no brief' &&
+    has "$o" '^S-src-class x1 -> workflows/review-and-fix.md#s-src-class (error)' &&
     ok "no brief: semcheck --lint runs, a class typo exits 2 (B36)" || bad "no-brief source checks (exit $rc)" "$o"
   printf 'a -> b\n' > "$T/unpinned.d2"
   o=$(sh "$CHECK" --no-raster "$T/unpinned.d2" 2>&1); rc=$?
@@ -153,12 +162,11 @@ EOF
   o=$(sh "$fake/d2check.sh" --no-raster "$T/ok_flowchart.d2" "$T/out/f.svg" 2>&1); rc=$?
   has "$o" '^fonts: default (assets/fonts/default)' && has "$o" "'--font-italic=/" && grep -q 'd2-[0-9]*-font-italic' "$T/out/f.svg" && ok "font-flags.sh: default family applied (spaces in paths)" || bad "font flags (exit $rc)" "$o"
   # the re-render line runs as printed (quoted font paths, no $(...) under a path with spaces) and
-  # gives the shipped SVG minus d2check's text-rendering style (B38)
+  # gives the shipped SVG byte for byte, svgpost step included (B38, FIXPLAN I6)
   cp "$T/out/f.svg" "$T/out/f.shipped.svg"
   rr=$(printf '%s\n' "$o" | sed -n 's/^re-render: //p')
-  if sh -c "$rr" > /dev/null 2>&1 &&
-    [ "$(sed 's/\.d2-svg text{text-rendering:geometricPrecision}//' "$T/out/f.shipped.svg" | cksum)" = "$(cksum < "$T/out/f.svg")" ]; then
-    ok "re-render: runs as printed from a path with spaces, same SVG (B38)"
+  if sh -c "$rr" > /dev/null 2>&1 && [ "$(cksum < "$T/out/f.shipped.svg")" = "$(cksum < "$T/out/f.svg")" ]; then
+    ok "re-render: runs as printed from a path with spaces, same SVG byte for byte (B38)"
   else bad "re-render line under a path with spaces" "$rr"; fi
   printf '...@snowflake-brand\na -> b\n' > "$T/sf.d2"
   printf 'vars: {d2-config: {layout-engine: elk}}\n' > "$T/snowflake-brand.d2"
@@ -273,6 +281,176 @@ sh "$CHECK" --no-raster --brief "$T/nope.brief" "$T/ok_flowchart.d2" > /dev/null
 [ "$rc" = 1 ] && ok "missing --brief file: exit 1" || bad "missing brief exit $rc"
 o=$(sh "$CHECK" "$T/out/ok.svg" 2>&1); rc=$?
 [ "$rc" = 64 ] && has "$o" 'd2lint.py' && ok "an SVG as input: exit 64, points at d2lint.py" || bad "SVG input (exit $rc)" "$o"
+
+# 11. round 4 (FIXPLAN F6, F19, I6, I8) ------------------------------------------------------------------
+cp "$SKILL/templates/neutral-theme.d2" "$T/"
+# a warning with a faithful raster: exit 0, but the result line says it is still to fix (F6)
+o=$(sh "$CHECK" "$T/short.d2" "$T/out/short.svg" 2>&1); rc=$?
+[ "$rc" = 0 ] && has "$o" '^result: exit 0 - 1 warning(s) to fix before delivering (workflows/review-and-fix.md)' &&
+  ok "warnings only: exit 0, result names them as still to fix (F6)" || bad "warnings result line (exit $rc)" "$o"
+# the re-render line rebuilds the finished SVG byte for byte: labels moved, key restyled (I6)
+cat > "$T/rr.d2" << 'EOF'
+...@neutral-theme
+direction: down
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: request {class: dep}
+    a -> b: event {class: async}
+  }
+}
+pending: Pending {class: state}
+paid: Paid {class: state}
+cancelled: Cancelled {class: terminal}
+refunded: Refunded {class: terminal}
+pending -> paid: pay {class: dep}
+pending -> cancelled: cancel {class: async}
+paid -> refunded: refund {class: dep}
+EOF
+o=$(sh "$CHECK" --no-raster "$T/rr.d2" "$T/out/rr.svg" 2>&1)
+cp "$T/out/rr.svg" "$T/out/rr.shipped.svg"
+rr=$(printf '%s\n' "$o" | sed -n 's/^re-render: //p')
+if has "$o" '^post: .*restyled key' && grep -q 'class="d2-key"' "$T/out/rr.svg" && (cd "$T" && sh -c "$rr" > /dev/null 2>&1) &&
+  [ "$(cksum < "$T/out/rr.shipped.svg")" = "$(cksum < "$T/out/rr.svg")" ]; then
+  ok "re-render: d2 + svgpost rebuild the deliverable byte for byte (key restyled)"
+else bad "re-render with svgpost" "$o"; fi
+# multi-board: the re-render line finishes every board
+mkdir -p "$T/rrmb" && cp "$HERE/d2check/multi_board.d2" "$T/rrmb/mb.d2"
+sh "$CHECK" --no-raster "$T/rrmb/mb.d2" "$T/rrmb/mb.svg" > "$T/rrmb.txt" 2>&1
+rr=$(sed -n 's/^re-render: //p' "$T/rrmb.txt")
+(cd "$T/rrmb" && find mb -name '*.svg' | sort | while IFS= read -r f; do cksum < "$f"; done) > "$T/rrmb.before"
+if [ -s "$T/rrmb.before" ] && (cd "$T/rrmb" && sh -c "$rr" > /dev/null 2>&1) && has "$rr" "&& find .* -exec python3 .*svgpost.py.* {} +$"; then
+  (cd "$T/rrmb" && find mb -name '*.svg' | sort | while IFS= read -r f; do cksum < "$f"; done) > "$T/rrmb.after"
+  cmp -s "$T/rrmb.before" "$T/rrmb.after" && ok "multi-board re-render: every board byte for byte" ||
+    bad "multi-board re-render differs" "$(diff "$T/rrmb.before" "$T/rrmb.after")"
+else bad "multi-board re-render line" "$rr"; fi
+# D2W ownership (I8): another file with the same name gets a warning and no automatic brief
+mkdir -p "$T/own/a" "$T/own/b"
+cp "$HERE/d2check/brief_case.d2" "$T/own/a/same.d2" && cp "$HERE/d2check/brief_case.d2" "$T/own/b/same.d2"
+sh "$CHECK" --no-raster "$T/own/a/same.d2" > /dev/null 2>&1
+cp "$HERE/d2check/brief_case.brief" "$D2_WORK/same/same.brief"
+[ "$(cat "$D2_WORK/same/.source")" = "$T/own/a/same.d2" ] && ok "D2W/.source names the .d2 that owns D2W" || bad "D2W/.source" "$(cat "$D2_WORK/same/.source")"
+o=$(sh "$CHECK" --no-raster "$T/own/b/same.d2" 2>&1); rc=$?
+has "$o" "^warning: D2W/same belongs to $T/own/a/same.d2: its brief is not applied - pass --brief or set D2_WORK" &&
+  has "$o" '^semantic: .* - source checks only' && ! has "$o" 'S-missing-edge' && [ "$(cat "$D2_WORK/same/.source")" = "$T/own/a/same.d2" ] &&
+  ok "same name, other folder: warning, owner's brief not applied, ownership kept (I8)" || bad "D2W ownership (exit $rc)" "$o"
+o=$(sh "$CHECK" --no-raster --brief "$D2_WORK/same/same.brief" "$T/own/b/same.d2" 2>&1)
+! has "$o" '^warning: D2W/same belongs' && has "$o" 'S-missing-edge' && ok "same name with --brief: no warning, that brief applies" ||
+  bad "D2W ownership with --brief" "$o"
+o=$(sh "$CHECK" --no-raster "$T/own/a/same.d2" 2>&1)
+has "$o" 'S-missing-edge' && ! has "$o" '^warning: D2W' && ok "the owner still gets its brief" || bad "owner's brief" "$o"
+rm -f "$T/own/a/same.d2"
+o=$(sh "$CHECK" --no-raster "$T/own/b/same.d2" 2>&1)
+! has "$o" '^warning: D2W' && [ "$(cat "$D2_WORK/same/.source")" = "$T/own/b/same.d2" ] &&
+  ok "the owner's .d2 is gone: the next file takes D2W over" || bad "D2W takeover" "$o"
+# D2W/.lock: a live run holds D2W (exit 1); a lock left by a dead run is taken over, and removed at exit
+sh -c 'sleep 30; :' d2check.sh &   # stands in for a running d2check: its command line names d2check
+spid=$!
+printf '%s\n' "$spid" > "$D2_WORK/same/.lock"
+o=$(sh "$CHECK" --no-raster "$T/own/b/same.d2" 2>&1); rc=$?
+[ "$rc" = 1 ] && has "$o" "another d2check (pid $spid) is using" && ok "D2W/.lock of a live run: exit 1, names the pid" ||
+  bad "live lock (exit $rc)" "$o"
+kill "$spid" 2> /dev/null; wait "$spid" 2> /dev/null
+# after a container restart the dead run's pid can belong to another program: that lock is stale too
+if [ -r "/proc/$$/cmdline" ] || ps -p $$ -o args= > /dev/null 2>&1; then
+  sleep 30 &
+  spid=$!
+  printf '%s\n' "$spid" > "$D2_WORK/same/.lock"
+  o=$(sh "$CHECK" --no-raster "$T/own/b/same.d2" 2>&1); rc=$?
+  [ "$rc" != 1 ] && has "$o" '^result: ' && [ ! -f "$D2_WORK/same/.lock" ] &&
+    ok "D2W/.lock naming a live non-d2check pid (reused after a restart): taken over" || bad "reused-pid lock (exit $rc)" "$o"
+  kill "$spid" 2> /dev/null; wait "$spid" 2> /dev/null
+fi
+o=$(sh "$CHECK" --no-raster "$T/own/b/same.d2" 2>&1); rc=$?
+[ "$rc" != 1 ] && has "$o" '^result: ' && [ ! -f "$D2_WORK/same/.lock" ] && ok "stale D2W/.lock taken over, removed at exit" ||
+  bad "stale lock (exit $rc)" "$o"
+# CRLF: converted with a message (F19 F4); --check-fmt reports it instead
+printf 'vars: {d2-config: {layout-engine: elk}}\r\na -> b: calls\r\n' > "$T/crlf.d2"
+o=$(sh "$CHECK" --no-raster --check-fmt "$T/crlf.d2" 2>&1); rc=$?
+[ "$rc" = 2 ] && has "$o" 'has CRLF (Windows) line endings' && has "$o" '^result: exit 2 - .*convert the CRLF line endings to LF' &&
+  LC_ALL=C grep -q "$(printf '\r')" "$T/crlf.d2" && ok "--check-fmt on CRLF: reported, file untouched, exit 2" || bad "CRLF --check-fmt (exit $rc)" "$o"
+o=$(sh "$CHECK" --no-raster "$T/crlf.d2" 2>&1); rc=$?
+[ "$rc" = 3 ] && has "$o" '^fmt: converted CRLF line endings to LF in ' && ! has "$o" 'tripwire' &&
+  ! LC_ALL=C grep -q "$(printf '\r')" "$T/crlf.d2" && ok "CRLF: converted to LF with a message, no tripwire (F19)" || bad "CRLF (exit $rc)" "$o"
+# a read-only IN (F19 F3; as root -w always passes, so a d2 whose fmt cannot write stands in for a read-only
+# file system): checked, not reformatted, and the check says whether d2 fmt would change it
+mkdir -p "$T/rofs/bin"
+real_d2=$(command -v d2)
+printf '#!/bin/sh\nif [ "$1" = fmt ] && [ "$2" != --check ]; then\n  echo "err: failed to fmt: open $2: read-only file system" >&2\n  exit 1\nfi\nexec %s "$@"\n' "$real_d2" > "$T/rofs/bin/d2"
+chmod +x "$T/rofs/bin/d2"
+printf 'vars: {d2-config: {layout-engine: elk}}\na ->    b: calls\n' > "$T/rofs/ro.d2"
+o=$(PATH="$T/rofs/bin:$PATH" sh "$CHECK" --no-raster "$T/rofs/ro.d2" 2>&1); rc=$?
+[ "$rc" = 3 ] && has "$o" '^fmt: .*ro.d2 is read-only - checked, not reformatted (d2 fmt would change it)' && has "$o" '^render: ok' &&
+  ok "read-only IN: checked, not failed, says d2 fmt would change it (F19)" || bad "read-only IN (exit $rc)" "$o"
+d2 fmt "$T/rofs/ro.d2" > /dev/null 2>&1
+o=$(PATH="$T/rofs/bin:$PATH" sh "$CHECK" --no-raster "$T/rofs/ro.d2" 2>&1); rc=$?
+[ "$rc" = 3 ] && has "$o" '^fmt: .*ro.d2 is read-only - checked, not reformatted$' &&
+  ok "read-only IN already formatted: no 'would change it'" || bad "read-only IN formatted (exit $rc)" "$o"
+# an extra flag d2 does not know is a usage error (64), not a compile error
+o=$(sh "$CHECK" --no-raster "$T/ok_flowchart.d2" "$T/out/bogus.svg" -- --bogus 2>&1); rc=$?
+[ "$rc" = 64 ] && has "$o" 'd2 rejected an extra flag after --' && ok "-- --bogus: exit 64, names the flag (F19)" || bad "-- --bogus (exit $rc)" "$o"
+# a compile error in a file whose name has spaces keeps the source excerpt
+mkdir -p "$T/sp2" && printf 'vars: {d2-config: {layout-engine: elk}}\nleft -> right\n' > "$T/sp2/my kw.d2"
+o=$(sh "$CHECK" --no-raster "$T/sp2/my kw.d2" 2>&1); rc=$?
+[ "$rc" = 1 ] && has "$o" '^  my kw.d2:2: left -> right' && ok "spaces in the name: the source line is still quoted (F19)" ||
+  bad "source excerpt with spaces (exit $rc)" "$o"
+# brand detection reads imports, not comments; an import path with spaces is followed
+printf '# not a snowflake-brand diagram\n...@neutral-theme\na: A {class: service}\n' > "$T/brandc.d2"
+o=$(sh "$CHECK" --no-raster "$T/brandc.d2" 2>&1)
+has "$o" '^fonts: default (' && ! has "$o" 'snowflake' && ok "a comment naming snowflake-brand is not the brand (F19)" || bad "brand in a comment" "$o"
+mkdir -p "$T/sp2/my themes" && cp "$SKILL/templates/neutral-theme.d2" "$T/sp2/my themes/"
+printf '...@"my themes/neutral-theme"\na: A {class: service}\nb: B {class: service}\na -> b: {class: dep}\n' > "$T/sp2/imp.d2"
+o=$(sh "$CHECK" --no-raster "$T/sp2/imp.d2" 2>&1); rc=$?
+[ "$rc" = 3 ] && has "$o" '^render: ok .*(elk)' && ! has "$o" 'S-src-cli-engine' && ok "import path with spaces: theme found, ELK (F19)" ||
+  bad "import with spaces (exit $rc)" "$o"
+# --json: early errors are one JSON object too (F19 F7)
+o=$(sh "$CHECK" --json "$T/no-such.d2" 2> /dev/null); rc=$?
+j=$(printf '%s' "$o" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["exit"], "no such file" in d["error"])' 2>&1)
+[ "$rc" = 1 ] && [ "$j" = "1 True" ] && ok "--json, missing IN: one JSON object, exit 1" || bad "--json early error (exit $rc: $j)" "$o"
+o=$(sh "$CHECK" --json --column 5 "$T/ok_flowchart.d2" 2> /dev/null); rc=$?
+j=$(printf '%s' "$o" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["exit"])' 2>&1)
+[ "$rc" = 64 ] && [ "$j" = 64 ] && ok "--json, usage error: one JSON object, exit 64" || bad "--json usage error (exit $rc: $j)" "$o"
+# D2CHECK_TIMEOUT: validated; a render that runs over is stopped with exit 1 (F19 F17)
+o=$(D2CHECK_TIMEOUT=soon sh "$CHECK" --no-raster "$T/ok_flowchart.d2" 2>&1); rc=$?
+[ "$rc" = 64 ] && has "$o" 'D2CHECK_TIMEOUT wants whole seconds' && ok "D2CHECK_TIMEOUT=soon: exit 64" || bad "D2CHECK_TIMEOUT validation (exit $rc)" "$o"
+if command -v timeout > /dev/null 2>&1; then
+  { printf 'vars: {d2-config: {layout-engine: elk}}\n'; i=0
+    while [ "$i" -lt 120 ]; do printf 'n%d -> n%d\nn%d -> n%d\n' "$i" $((i + 1)) "$i" $(((i * 7 + 3) % 120)); i=$((i + 1)); done; } > "$T/slow.d2"
+  s=$(date +%s)
+  o=$(D2CHECK_TIMEOUT=2 sh "$CHECK" --no-raster "$T/slow.d2" "$T/out/slow.svg" 2>&1); rc=$?
+  el=$(($(date +%s) - s))
+  [ "$rc" = 1 ] && has "$o" 'd2 ran over 2s and was stopped' && [ ! -f "$T/out/slow.svg" ] && [ "$el" -lt 15 ] &&
+    ok "D2CHECK_TIMEOUT=2: a slow render stops, exit 1, no OUT (${el}s)" || bad "render timeout (exit $rc, ${el}s)" "$o"
+fi
+# a timeout without -k (busybox) or one that wants -t (old busybox): the render still runs
+mkdir -p "$T/bbt/bin"
+printf '#!/bin/sh\ncase $1 in -k) echo "timeout: unrecognized option: k" >&2; exit 1 ;; esac\nshift; exec "$@"\n' > "$T/bbt/bin/timeout"
+chmod +x "$T/bbt/bin/timeout"
+o=$(PATH="$T/bbt/bin:$PATH" sh "$CHECK" --no-raster "$T/ok_flowchart.d2" "$T/bbt/a.svg" 2>&1); rc=$?
+printf '#!/bin/sh\ncase $1 in -t) shift 2; exec "$@" ;; esac\necho "timeout: unrecognized option" >&2; exit 1\n' > "$T/bbt/bin/timeout"
+o2=$(PATH="$T/bbt/bin:$PATH" sh "$CHECK" --no-raster "$T/ok_flowchart.d2" "$T/bbt/b.svg" 2>&1); rc2=$?
+[ "$rc" = 3 ] && [ "$rc2" = 3 ] && [ -f "$T/bbt/a.svg" ] && [ -f "$T/bbt/b.svg" ] &&
+  ok "a busybox timeout (no -k, or -t only): the render runs" || bad "busybox timeout (exit $rc/$rc2)" "$o
+$o2"
+# ELK spacing from the source: 72px layers with a sql_table (crow's feet), 50px under bottom titles
+printf 'vars: {d2-config: {layout-engine: elk}}\nt: {shape: sql_table; id: int}\nu: {shape: sql_table; id: int}\nt.id -> u.id\n' > "$T/tbl.d2"
+o=$(sh "$CHECK" --no-raster "$T/tbl.d2" 2>&1)
+has "$o" '^re-render: .*--elk-nodeNodeBetweenLayers 72 ' && has "$o" '^post: .*table rules' && ok "sql_table: layers 72px apart, table rules restyled (F11)" ||
+  bad "sql_table spacing" "$o"
+printf 'vars: {d2-config: {layout-engine: elk}}\nsys: System {\n  label.near: bottom-left\n  api: API\n}\n' > "$T/bt.d2"
+o=$(sh "$CHECK" --no-raster "$T/bt.d2" 2>&1)
+has "$o" "^re-render: .*--elk-padding '\[top=50,left=50,bottom=50,right=50\]'" && ok "a bottom-left container title: 50px bottom padding (F10)" ||
+  bad "bottom title padding" "$o"
+# the S-inferred list is the report's Assumed: line: printed in full, never cut
+{ printf '# request: "a long list of assumed parts"\ntype: architecture\nreader: test\nwidth: 800\ndirection: down\nfocus: none\nout: none\nnodes:\n'
+  for k in alpha bravo charlie delta echo foxtrot golf; do printf '  %s_component_service: %s {inferred}\n' "$k" "$k"; done
+  printf 'edges:\n'; } > "$T/inf.brief"
+{ printf '...@neutral-theme\ngrid-columns: 3\n'
+  for k in alpha bravo charlie delta echo foxtrot golf; do printf '%s_component_service: %s {class: service}\n' "$k" "$k"; done; } > "$T/inf.d2"
+o=$(sh "$CHECK" --no-raster --brief "$T/inf.brief" "$T/inf.d2" 2>&1)
+l=$(printf '%s\n' "$o" | grep -A1 '^S-inferred x' | tail -1)
+[ "${#l}" -gt 170 ] && has "$l" 'golf' && ok "S-inferred: the whole list, ${#l} chars (F19)" || bad "S-inferred cut" "$o"
 
 # 9. speed: the acceptance sample -----------------------------------------------------------------------
 if [ -f "$HERE/d2check/arch.ds.d2" ]; then

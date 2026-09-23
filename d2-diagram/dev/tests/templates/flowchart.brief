@@ -7,16 +7,16 @@ type: flowchart
 reader: on-call engineers reading the ops runbook
 width: 800
 direction: down
-focus: gate
+focus: gate, placed -> checks -> gate -> fulfil, fulfil.pick -> fulfil.pack -> fulfil.ship  # "Highlight the go/no-go decision"; "If all checks pass, fulfilment picks, packs and hands the parcel to the carrier"
 out: returns, partial shipments, notifications
 nodes:
   placed: Order placed {start}
-  checks: Checks run in parallel
+  checks: Checks in parallel
   checks.stock: Reserve stock
   checks.card: Authorize card
   checks.fraud: Fraud screen
   gate: All checks pass? {decision}
-  fulfil: "Fulfilment: any failure cancels"
+  fulfil: Fulfilment
   fulfil.pick: Pick items
   fulfil.pack: Pack parcel
   fulfil.ship: Hand to carrier
@@ -28,6 +28,6 @@ edges:
   gate -> fulfil: all pass
   fulfil.pick -> fulfil.pack
   fulfil.pack -> fulfil.ship
-  fulfil -> shipped
-  gate -> cancelled: any fails
-  fulfil -> cancelled
+  fulfil -> shipped: all done
+  gate -> cancelled: any check fails
+  fulfil -> cancelled: any step fails

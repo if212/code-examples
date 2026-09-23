@@ -1,0 +1,30 @@
+# Before: a note row for the first step, an inferred reply and default notes: 1209px tall in a
+# doc column.
+...@neutral-theme
+shape: sequence_diagram
+
+order: Order service {class: [actor; focal]}
+payment: Payment service {class: actor}
+inventory: Inventory service {class: actor}
+
+order.create: Creates order (PENDING) {class: note}
+order.t -> payment: "1. Charge card" {class: dep}
+payment -> order.t: "2. card charged" {class: secondary; style.stroke-dash: 3}
+order.t -> inventory: "3. Reserve stock" {class: dep}
+
+alt: "alt" {
+  class: zone
+  ok: "[stock reserved]" {
+    class: zone
+    style: {text-transform: none; bold: false}
+    inventory -> order.t: "4. stock reserved" {class: secondary; style.stroke-dash: 3}
+  }
+  failed: "[reservation fails]" {
+    class: zone
+    style: {text-transform: none; bold: false}
+    inventory -> order.t: "4. reservation failed" {class: failure}
+    order.t -> payment: "5. Refund charge" {class: dep}
+    payment -> order.t: "6. charge refunded" {class: secondary; style.stroke-dash: 3}
+    order.cancel: Cancels order {class: note}
+  }
+}

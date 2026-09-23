@@ -1,0 +1,23 @@
+# After: the edge is written from the database's end, `pg <- cluster.api`: ELK ranks the
+# database beside the upper tiers and the SQL edge runs straight up (557x721, was 647x941).
+# allow: W-sibling-size I-sparse (Internet and Postgres share the top rank; the void right of the ingress)
+...@neutral-theme
+direction: down
+internet: Internet {class: actor}
+cluster: Cluster {
+  class: zone
+  ingress: Ingress controller {class: service}
+  web: "web\nDeployment" {class: service}
+  api: "api\nDeployment" {class: service}
+  config: "api-config\nConfigMap" {class: service}
+  secret: "api-secret\nSecret" {class: service}
+  pvc: "api-data\nPVC" {class: service}
+  ingress -> web: {class: dep}
+  ingress -> api: {class: dep}
+  api -> config: reads {class: dep}
+  api -> secret: reads {class: dep}
+  api -> pvc: mounts {class: dep}
+}
+pg: Postgres {class: datastore}
+internet -> cluster.ingress: HTTPS {class: dep}
+pg <- cluster.api: SQL {class: dep}

@@ -1,0 +1,40 @@
+# expect-clean: E- I-sparse
+# A gitflow-style grid: every cell is a hidden slot, and the visible commit dots inside the slots fill
+# the panel; the container-fill check counts what the panel shows (visible descendants), not its direct
+# children (here only the one visible tag).
+...@neutral-theme
+classes: {
+  slot: {label: ""; width: 60; height: 52; grid-rows: 1; horizontal-gap: 20; vertical-gap: 16; style.opacity: 0}
+}
+git: {
+  class: zone
+  label: ""
+  grid-rows: 5
+  grid-columns: 4
+  horizontal-gap: 16
+  vertical-gap: 16
+  t0: "" {width: 56; height: 28; style.opacity: 0}
+  t1: "1.0" {class: service; width: 56; height: 28}
+  t2: "" {width: 56; height: 28; style.opacity: 0}
+  t3: "" {width: 56; height: 28; style.opacity: 0}
+  m0: {class: slot; c: "" {class: dot}}
+  m1: {class: slot; c: "" {class: dot}}
+  m2: {class: slot; c: "" {class: dot}}
+  m3: {class: slot; c: "" {class: dot}}
+  d0: {class: slot; c: "" {class: dot}}
+  d1: {class: slot; c: "" {class: dot}}
+  d2: {class: slot; c: "" {class: dot}}
+  d3: {class: slot; c: "" {class: dot}}
+  r0: {class: slot; c: "" {class: dot}}
+  r1: {class: slot; c: "" {class: dot}}
+  r2: {class: slot; c: "" {class: dot}}
+  r3: {class: slot; c: "" {class: dot}}
+  h0: {class: slot; c: "" {class: dot}}
+  h1: {class: slot; c: "" {class: dot}}
+  h2: {class: slot; c: "" {class: dot}}
+  h3: {class: slot; c: "" {class: dot}}
+}
+git.m0.c -- git.m1.c -- git.m2.c -- git.m3.c: {class: dep}
+git.d0.c -- git.d1.c -- git.d2.c -- git.d3.c: {class: dep}
+git.r0.c -- git.r1.c -- git.r2.c -- git.r3.c: {class: dep}
+git.h0.c -- git.h1.c -- git.h2.c -- git.h3.c: {class: dep}

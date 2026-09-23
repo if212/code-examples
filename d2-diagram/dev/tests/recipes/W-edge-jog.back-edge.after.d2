@@ -6,9 +6,9 @@ awaiting: Awaiting payment {class: state}
 confirmed: Confirmed {class: [state; focal]}
 shipping: Shipping {class: state}
 held: Held {class: state}
-placed -> awaiting: {class: flow}
-awaiting -> confirmed: {class: flow}
-confirmed -> shipping: {class: flow}
+placed -> awaiting: {class: dep}
+awaiting -> confirmed: {class: dep}
+confirmed -> shipping: {class: dep}
 shipping -> held: {class: dep}
 confirmed <- held: {class: dep}
 awaiting -> held: {class: dep}

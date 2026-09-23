@@ -5,7 +5,7 @@ direction: down
 web: Web app {class: actor}
 services: Services {
   class: zone
-  orders: Orders {class: [service; focal]}
+  orders: Orders {class: service}
   notify: Notifications {class: service}
 }
 data: Data {
@@ -13,7 +13,7 @@ data: Data {
   db: "Orders DB\nPostgres" {class: datastore}
   events: "Order events\nKafka" {class: queue}
 }
-web -> services.orders: {class: flow}
+web -> services.orders: {class: dep}
 services.orders -> data.db: {class: dep}
 services.orders -> data.events: {class: async}
 data.events -> services.notify: {class: async}

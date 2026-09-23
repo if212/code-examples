@@ -1,0 +1,14 @@
+# request: "Before and after: the monolith's session store goes away."
+type: compare
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  before: Before
+  before.app: App
+  before.sessions: Session store
+  after: After
+  after.app: App
+edges:
+  before.app -> before.sessions

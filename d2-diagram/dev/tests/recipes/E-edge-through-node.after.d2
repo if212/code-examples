@@ -1,9 +1,10 @@
 # After: no grid: ELK lays the zones out left to right and routes the CDC edge around Ingest.
+# allow: W-aspect
 ...@neutral-theme
 direction: right
 src: Sources {class: zone; app: "App DB\nPostgres" {class: datastore}}
 ingest: Ingest {class: zone; fivetran: Fivetran {class: service}}
 wh: Warehouse {class: zone; raw: RAW {class: [datastore; focal]}}
-src.app -> ingest.fivetran: {class: flow}
-ingest.fivetran -> wh.raw: {class: flow}
+src.app -> ingest.fivetran: {class: dep}
+ingest.fivetran -> wh.raw: {class: dep}
 src.app -> wh.raw: CDC stream {class: async}

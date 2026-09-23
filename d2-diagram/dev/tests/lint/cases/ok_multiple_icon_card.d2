@@ -1,0 +1,14 @@
+# expect-clean: E-
+# From the round-3 Kubernetes deliverable: style.multiple draws a back card offset up and right, so
+# the node's box is 10px wider and taller than the card that holds the label. The label and icon fit
+# the front card: no E-label-overflow (d2lint measures against the front card).
+...@neutral-theme
+direction: down
+classes: {
+  icon-top: {height: 64; icon.near: top-center; label.near: bottom-center}
+}
+svc: "api\nService" {class: [service; icon-top]; icon: ./server.svg}
+api: "api Deployment\n3 replicas" {class: [service; icon-top; focal]; icon: ./server.svg; style.multiple: true}
+web: "web frontend Deployment\n3 replicas" {class: [service; icon-top]; icon: ./server.svg; style.multiple: true}
+svc -> api: {class: flow}
+svc -> web: {class: dep}

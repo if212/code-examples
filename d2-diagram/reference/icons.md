@@ -17,16 +17,23 @@ is `sh ${CLAUDE_SKILL_DIR}/scripts/icon.sh`). Every name below returned HTTP
   recognize; the label still names the thing and its technology
   (`"Orders DB\nPostgres"`). An icon that needs a legend entry is the
   wrong icon (`d2-legend` draws icons about 12 px wide anyway).
-- Yes: architecture, deployment, Kubernetes, pipeline and CI/CD diagrams.
-  No: sequence, ERD, UML class, state and C4 diagrams, flowchart decisions.
+- Yes: architecture, deployment, Kubernetes and pipeline diagrams. Flowcharts
+  and CI/CD: on steps only (never decisions or terminals), and only while
+  the height budget holds: an icon card is 90 px against 48 for a `compact`
+  box, about 40 px more per rank (reference/layout.md section 9).
+  No: sequence, ERD, UML class, state and C4 diagrams.
 - Shape first: a datastore is a cylinder and a queue or stream a queue
   shape, without an icon. Leaf icons go on rectangles only: even on ELK a
   2-line label overlaps the icon on diamonds, clouds, ovals and hexagons
-  and touches it on cylinders, documents and packages.
+  and touches it on cylinders, documents and packages. When the request asks
+  for icons on every node, the datastore becomes a rectangle card with its
+  icon (`database`).
 - Budget: one icon per node at most; every peer of a role gets one or none
   does; about 10 per diagram; a container icon only on the outermost
   boundary. An icon makes a 1-line rectangle grow from 66 to 118 px tall
-  (2 lines: 82 to 166 px); section 5 has a compact card.
+  (2 lines: 82 to 166 px); section 5 has a compact card. All cards of one
+  diagram share one label line count, name first (`"api-config\nConfigMap"`
+  beside `"api\nDeployment"`).
 
 ## 2. One family per diagram
 
@@ -38,17 +45,23 @@ is `sh ${CLAUDE_SKILL_DIR}/scripts/icon.sh`). Every name below returned HTTP
 
 - A concept outside the chosen family gets no icon; its label carries it.
   In a k8s diagram the database is `"Orders DB\nPostgres"` with no logo.
-- k8s icons are pre-colored notation, not brand logos: never recolor them,
-  and do not put lucide icons beside them.
-- semcheck reports a second family as `S-src-icon-family`.
+- k8s icons are pre-colored notation, not brand logos: never recolor them.
+- One exception: a Kubernetes diagram whose request asks for icons ("with
+  icons") gets an icon on every node. k8s icons for the Kubernetes resources,
+  lucide for the rest (internet `globe`, load balancer `split`, managed
+  database `database` on a rectangle card), each lucide file fetched with
+  `--color 326CE5` (the k8s blue) so the two sets read as one. semcheck
+  accepts exactly that pair when the brief's `# request:` asks for icons.
+- Any other second family: `S-src-icon-family`.
 
 ## 3. Color
 
 - Lucide draws with `currentColor`, which an embedded icon cannot inherit:
   unpinned, it renders black. `icon.sh get` pins it (default `475569`).
 - One accent for every lucide icon, the imported theme's: `475569`
-  (`ink-600`) in `neutral-theme.d2`, `11567F` (Mid-Blue) in `snowflake-brand.d2`.
-- The accent reaches 6.9:1 or more on white and on 50-100 tints but fails
+  (`ink-600`) in `neutral-theme.d2`, `11567F` (Mid-Blue) in `snowflake-brand.d2`;
+  `326CE5` beside k8s icons (section 2; 4.76:1 on white).
+- `475569` and `11567F` reach 6.9:1 or more on white and on 50-100 tints but fail
   3:1 on a solid fill (`475569` on `2563EB`: 1.5:1). There, use the node's
   text color (`icon.sh get --color FFFFFF lucide:server icons/server-light.svg`)
   or no icon.
@@ -198,7 +211,9 @@ would otherwise share an icon: one icon, one meaning per diagram.
 ## 7. Kubernetes (k8s family)
 
 All 38 icons of the set; refs are `k8s:<name>`. The cluster itself is a
-titled container without an icon.
+titled container without an icon. Config and storage objects (ConfigMap,
+Secret, PVC) are `service` rectangles with their k8s icon, not cylinders,
+in the row under the workload that uses them (playbooks/infrastructure.md).
 
 | Resource | Icon (k8s) | Resource | Icon (k8s) |
 |---|---|---|---|

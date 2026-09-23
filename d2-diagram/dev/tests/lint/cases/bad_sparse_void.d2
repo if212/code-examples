@@ -1,0 +1,44 @@
+# expect: I-sparse
+# expect-text: empty region
+# From the round-3 Snowflake deliverable: RAW ends the first serpentine row high on the right, and the
+# long drop to STAGING leaves a dead square under it (right of Snowpipe).
+...@snowflake-brand
+
+# Serpentine for a doc column: each row is a grid cell with its own direction.
+grid-columns: 1
+vertical-gap: 60
+
+load: Sources and ingestion {
+  class: sf-container
+  direction: right
+  # Main-path source (Postgres CDC) in the middle of the merge into RAW.
+  saas: SaaS APIs {class: [sf-node; sf-external]; width: 150}
+  pg: "Postgres\nvia CDC" {class: sf-datastore; width: 150}
+  s3: "Event files\nS3" {class: sf-datastore; width: 150}
+  fivetran: "Connectors\nFivetran" {class: sf-node; width: 150}
+  kafka: Kafka connector {class: sf-node; width: 150}
+  snowpipe: Snowpipe {class: sf-node; width: 150}
+  raw: "RAW\nSnowflake" {class: sf-datastore; width: 150}
+}
+
+# Row 2 runs right to left, so STAGING sits under RAW. dbt is named in the title.
+serve: Transform (dbt) and consume {
+  class: sf-container
+  direction: left
+  stg: "STAGING\nSnowflake" {class: sf-datastore; width: 150}
+  marts: "MARTS\nSnowflake" {class: [sf-datastore; sf-primary]; width: 150}
+  tableau: "Dashboards\nTableau" {class: sf-node; width: 150}
+  snowpark: "ML model\nSnowpark" {class: sf-node; width: 150}
+}
+
+# Edges last, main path first.
+load.pg -> load.kafka: {class: sf-flow}
+load.kafka -> load.raw: {class: sf-flow}
+load.raw -> serve.stg: {class: sf-flow}
+serve.stg -> serve.marts: {class: sf-flow}
+load.saas -> load.fivetran: {class: sf-edge}
+load.s3 -> load.snowpipe: {class: sf-edge}
+load.fivetran -> load.raw: {class: sf-edge}
+load.snowpipe -> load.raw: {class: sf-edge}
+serve.marts -> serve.tableau: {class: sf-edge}
+serve.marts -> serve.snowpark: {class: sf-edge}

@@ -1,19 +1,19 @@
 # neutral-theme.d2 - default design system of the d2-diagram skill (light only).
-# Copy it next to the diagram and make `...@neutral-theme` the first line there.
+# Copy it next to the diagram; `...@neutral-theme` is the first line of code there.
 # It sets ELK, pad 24 and theme 0 below: never pass -l or -t on the command line.
 # Give every node, container and styled edge a ROLE class, never a color:
 #   base      service actor datastore queue decision state terminal note dot caption
 #   modifier  focal focal-solid muted external danger success
 #   container zone zone-blue zone-green zone-amber zone-violet boundary
 #   edge      flow dep secondary async failure ok
-# Combine base then modifier; the last class wins: {class: [datastore; focal]}.
+#   geometry  compact chip tech ghost (after the base role); title key (alone)
+# Order: base, geometry, modifier; the last class wins: {class: [datastore; focal]}.
 # terminal is shape only, so it goes last: {class: [success; terminal]}.
-# One focal per diagram. Blue = focus and main path, red = failure,
-# violet = async, green = success. No shadow, 3d or gradients.
-# Lucide icons are pinned to ink-600 (475569), the icon.sh get default.
+# Emphasis is earned: focal and flow only where the brief's focus quotes the request.
+# Blue = focus and main path, red = failure, violet = async, green = success.
+# A color, dash or weight that means something gets a key. No shadow, 3d or gradients.
 # Role table, type scale and rules: ${CLAUDE_SKILL_DIR}/reference/design-system.md
 # After any edit: python3 ${CLAUDE_SKILL_DIR}/scripts/contrast.py --check neutral-theme.d2
-
 vars: {
   # slate ramp: 900-600 text, 500-400 strokes, 300-200 rules, 100-50 fills
   ink-900: "#1E293B"
@@ -26,27 +26,33 @@ vars: {
   ink-100: "#F1F5F9"
   ink-50: "#F8FAFC"
   paper: "#FFFFFF"
-  # one accent and four semantic hues: 800/700 text, 600 stroke, 200 rule, 50 fill
+  # one accent and four semantic hues: 800/700 text, 600 stroke, 200 rule,
+  # 100 node fill, 50 panel fill (a node never takes the fill of the panel it sits on)
   primary-700: "#1D4ED8"
   primary-600: "#2563EB"
   primary-200: "#BFDBFE"
+  primary-100: "#DBEAFE"
   primary-50: "#EFF6FF"
   success-800: "#166534"
   success-700: "#15803D"
   success-600: "#15973F"
   success-200: "#BBF7D0"
+  success-100: "#DCFCE7"
   success-50: "#F0FDF4"
   danger-800: "#991B1B"
   danger-600: "#DC2626"
   danger-200: "#FECACA"
+  danger-100: "#FEE2E2"
   danger-50: "#FEF2F2"
   warn-800: "#92400E"
   warn-700: "#B45309"
   warn-200: "#FDE68A"
+  warn-100: "#FEF3C7"
   warn-50: "#FFFBEB"
   async-800: "#5B21B6"
   async-600: "#7C3AED"
   async-200: "#DDD6FE"
+  async-100: "#EDE9FE"
   async-50: "#F5F3FF"
   d2-config: {
     layout-engine: elk
@@ -68,7 +74,7 @@ vars: {
       B4: "#F1F5F9"
       B5: "#FFFFFF"
       B6: "#FFFFFF"
-      AA2: "#1D4ED8"
+      AA2: "#64748B"
       AA4: "#F8FAFC"
       AA5: "#FFFFFF"
       AB4: "#F8FAFC"
@@ -80,22 +86,23 @@ vars: {
 classes: {
   # ---- base roles: shape and look (1px slate outline, radius 8, 16px bold) ----
   service: {style: {fill: ${paper}; stroke: ${ink-500}; stroke-width: 1; font-color: ${ink-900}; font-size: 16; border-radius: 8}}
-  actor: {style: {fill: ${ink-100}; stroke: ${ink-400}; stroke-width: 1; font-color: ${ink-900}; font-size: 16; border-radius: 8}}
+  # actor: light chrome (sequence lifelines take this outline); bold like every node label
+  actor: {style: {fill: ${ink-200}; stroke: ${ink-300}; stroke-width: 1; font-color: ${ink-900}; font-size: 16; bold: true; border-radius: 8}} # decorative: light chrome, the label names it
   datastore: {shape: cylinder; style: {fill: ${ink-50}; stroke: ${ink-500}; stroke-width: 1; font-color: ${ink-900}; font-size: 16}}
-  queue: {shape: queue; style: {fill: ${async-50}; stroke: ${async-600}; stroke-width: 1; font-color: ${ink-900}; font-size: 16}}
+  queue: {shape: queue; style: {fill: ${async-100}; stroke: ${async-600}; stroke-width: 1; font-color: ${ink-900}; font-size: 16}}
   decision: {shape: diamond; style: {fill: ${ink-50}; stroke: ${ink-500}; stroke-width: 1; font-color: ${ink-900}; font-size: 16}}
   state: {style: {fill: ${paper}; stroke: ${ink-500}; stroke-width: 1; font-color: ${ink-900}; font-size: 16; border-radius: 8}}
-  note: {shape: page; style: {fill: ${warn-50}; stroke: ${warn-200}; stroke-width: 1; font-color: ${warn-800}; font-size: 14; bold: false}} # decorative border
+  note: {shape: page; style: {fill: ${warn-100}; stroke: ${warn-200}; stroke-width: 1; font-color: ${warn-800}; font-size: 14; bold: false}} # decorative border
   dot: {shape: circle; width: 20; height: 20; style: {fill: ${ink-700}; stroke: ${ink-700}; stroke-width: 1}}
   terminal: {style: {stroke-width: 1; font-size: 16; border-radius: 99}}
 
   # ---- modifiers: color and weight; alone they draw a radius-8 box ----
-  focal: {style: {fill: ${primary-50}; stroke: ${primary-600}; stroke-width: 2; font-color: ${ink-900}; bold: true; border-radius: 8}}
+  focal: {style: {fill: ${primary-100}; stroke: ${primary-600}; stroke-width: 2; font-color: ${ink-900}; bold: true; border-radius: 8}}
   focal-solid: {style: {fill: ${primary-600}; stroke: ${primary-600}; stroke-width: 1; font-color: ${paper}; bold: true; border-radius: 8}}
   muted: {style: {fill: ${paper}; stroke: ${ink-400}; stroke-width: 1; font-color: ${ink-600}; bold: false; border-radius: 8}}
   external: {style: {fill: ${paper}; stroke: ${ink-500}; stroke-width: 1; stroke-dash: 4; font-color: ${ink-700}; border-radius: 8}}
-  danger: {style: {fill: ${danger-50}; stroke: ${danger-600}; stroke-width: 1; font-color: ${danger-800}; border-radius: 8}}
-  success: {style: {fill: ${success-50}; stroke: ${success-600}; stroke-width: 1; font-color: ${success-800}; border-radius: 8}}
+  danger: {style: {fill: ${danger-100}; stroke: ${danger-600}; stroke-width: 1; font-color: ${danger-800}; border-radius: 8}}
+  success: {style: {fill: ${success-100}; stroke: ${success-600}; stroke-width: 1; font-color: ${success-800}; border-radius: 8}}
 
   # caption: lane/row/tick/time headers in grids (swimlane, roadmap, timeline), depgraph's key line
   caption: {shape: text; style: {font-size: 15; bold: true; text-transform: uppercase; font-color: ${ink-600}}}
@@ -115,4 +122,19 @@ classes: {
   async: {source-arrowhead.shape: arrow; target-arrowhead.shape: arrow; style: {stroke: ${async-600}; stroke-width: 1; stroke-dash: 5; font-color: ${async-800}; font-size: 14; italic: false}}
   failure: {source-arrowhead.shape: arrow; target-arrowhead.shape: arrow; style: {stroke: ${danger-600}; stroke-width: 1; stroke-dash: 3; font-color: ${danger-800}; font-size: 14; italic: false}}
   ok: {source-arrowhead.shape: arrow; target-arrowhead.shape: arrow; style: {stroke: ${success-600}; stroke-width: 2; font-color: ${success-800}; font-size: 14; italic: false}}
+
+  # ---- geometry: no color, so they combine with any role (the brand theme has the same) ----
+  # compact: a one-line box 48 tall (default 66); chip: a key or status tag
+  compact: {height: 48}
+  chip: {width: 104; height: 32; style.font-size: 14}
+  # tech: marker only; d2check draws label lines 2+ at 14px slate ("Name\nTechnology")
+  tech: {style.opacity: 1}
+  # ghost: invisible spacer node AND edge; label ghost edges like their siblings;
+  # a ghost is as tall as its rank-mates: 48 beside compact boxes, height: 66 otherwise
+  ghost: {width: 12; height: 48; style: {opacity: 0; font-size: 14; italic: false}}
+  # title: C4 only (the page caption titles the rest), centered above the diagram
+  title: {shape: text; near: top-center; style: {font-color: ${ink-900}; font-size: 18; bold: true}} # root level only: a nested title fails with constant near keys
+
+  # key: a row of chips in the real classes (statuses); line keys use vars.d2-legend
+  key: {label: ""; grid-rows: 1; horizontal-gap: 12; vertical-gap: 8; style: {fill: ${paper}; stroke: ${ink-300}; stroke-width: 1; border-radius: 8}} # decorative: the chips carry the meaning
 }

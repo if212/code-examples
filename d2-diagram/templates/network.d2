@@ -1,71 +1,76 @@
 # Network template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
 ...@neutral-theme
 
-# Arrows = allowed traffic, from the side that opens the connection,
-# labelled with the port (playbooks/infrastructure.md). One zone per subnet,
-# AZ and CIDR in its title: an AZ frame is one more nesting level (~100px
-# wider) and needs an ELK flag.
+# Arrows = allowed traffic, from the side that opens the connection
+# (playbooks/infrastructure.md). One zone per subnet, AZ and CIDR in its
+# title; no AZ frame (one more nesting level, ~100px wider).
 direction: down
 
-# One size for every node, so every subnet is 328px and the AZ columns line
-# up. Subnet title lines of 12 characters at most (13: n width 120 and a 600px
-# gateway; playbooks/infrastructure.md rule 2). pin hides the edge that stacks
-# the two data services.
+# Geometry only. One size for every node, so the AZ columns line up. port:
+# the port rides at the arrow's tail, beside the line (a mid-edge label
+# adds 59px per rank; 3 of them broke the 900px budget).
+# Snowflake brand: ${sf-gray} in place of ${ink-600}.
 classes: {
-  n: {width: 104; height: 56}
-  pin: {style.opacity: 0}
+  n: {width: 96}
+  port: {source-arrowhead.style: {font-color: ${ink-600}; font-size: 14}}
 }
 
-users: Internet users {class: actor}
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: allowed traffic {class: dep}
+    a -> b: egress {class: secondary}
+  }
+}
+
+users: Internet users {class: [actor; compact]}
 vpc: "VPC 10.0.0.0/16, us-east-1" {
   class: boundary
-  # As wide as the columns it serves: 4 straight edges (natural: 4 labels on bends).
-  igw: Internet gateway {class: service; width: 520}
-  # Both AZs wired alike, so each tier sits on one row. AZ b is declared
-  # mirrored: ingress runs down the outer columns and the top is centred
-  # (in the same order the gateway sat 62px left of centre).
+  # As wide as the columns it serves: its four edges drop straight.
+  igw: Internet gateway {class: [service; compact]; width: 520}
+  # Both AZs wired alike, AZ b mirrored: ingress runs down the outer columns.
+  # Subnet titles centred between the two columns' edges (top-left, the edge
+  # into the left node touched a 12-character CIDR line).
   pub_a: "Public 1a\n10.0.1.0/24" {
     class: zone
-    alb: "ALB\nnode 1a" {class: [service; n]}
-    nat: "NAT\ngateway 1a" {class: [service; n]}
+    label.near: top-center
+    alb: "ALB\nnode 1a" {class: [service; tech; compact; n]}
+    nat: "NAT\ngateway 1a" {class: [service; tech; compact; n]}
   }
   pub_b: "Public 1b\n10.0.2.0/24" {
     class: zone
-    nat: "NAT\ngateway 1b" {class: [service; n]}
-    alb: "ALB\nnode 1b" {class: [service; n]}
+    label.near: top-center
+    nat: "NAT\ngateway 1b" {class: [service; tech; compact; n]}
+    alb: "ALB\nnode 1b" {class: [service; tech; compact; n]}
   }
   app_a: "Private 1a\n10.0.11.0/24" {
     class: zone
-    api: "orders-api\nFargate 1a" {class: [service; n]}
-    worker: "worker\nFargate 1a" {class: [service; n]}
+    label.near: top-center
+    api: "orders-api\nFargate 1a" {class: [service; tech; compact; n]}
+    worker: "worker\nFargate 1a" {class: [service; tech; compact; n]}
   }
   app_b: "Private 1b\n10.0.12.0/24" {
     class: zone
-    worker: "worker\nFargate 1b" {class: [service; n]}
-    api: "orders-api\nFargate 1b" {class: [service; n]}
+    label.near: top-center
+    worker: "worker\nFargate 1b" {class: [service; tech; compact; n]}
+    api: "orders-api\nFargate 1b" {class: [service; tech; compact; n]}
   }
-  # Managed Multi-AZ services are ONE node below both AZs (one endpoint;
-  # the standby takes no connections), their subnets in the label. Each is
-  # as wide as the columns it serves, the cache narrower than the database,
-  # so all four edges drop straight past it (a copy per AZ drew the 1b app
-  # talking to the standby; a Data zone around them jogged 2 edges).
-  cache: "Redis\nElastiCache, Multi-AZ" {class: datastore; width: 300}
-  db: "Orders DB\nRDS Postgres, Multi-AZ\ndata subnets 10.0.21.0/24, 10.0.22.0/24" {class: datastore; width: 560}
+  # A Multi-AZ service is ONE node below both AZs (one endpoint), its data
+  # subnets in the label, as wide as the columns it serves.
+  db: "Orders DB, RDS Postgres Multi-AZ\ndata subnets 10.0.21.0/24, 10.0.22.0/24" {class: [datastore; tech]; width: 560; height: 107}
 }
 
-# Ingress = the focus path (flow); data access dep; egress secondary, written
-# `upper <- lower` (as `->` it crossed twice and struck 2 subnet titles).
-users -> vpc.igw: "HTTPS :443" {class: flow}
-vpc.igw -> vpc.pub_a.alb: ":443" {class: flow}
-vpc.igw -> vpc.pub_b.alb: ":443" {class: flow}
-vpc.pub_a.alb -> vpc.app_a.api: ":8080" {class: flow}
-vpc.pub_b.alb -> vpc.app_b.api: ":8080" {class: flow}
-vpc.app_a.api -> vpc.db: ":5432" {class: dep}
-vpc.app_b.api -> vpc.db: ":5432" {class: dep}
-vpc.app_a.worker -> vpc.cache: ":6379" {class: dep}
-vpc.app_b.worker -> vpc.cache: ":6379" {class: dep}
-vpc.pub_a.nat <- vpc.app_a.worker: egress {class: secondary}
-vpc.pub_b.nat <- vpc.app_b.worker: egress {class: secondary}
-vpc.igw <- vpc.pub_a.nat: egress {class: secondary}
-vpc.igw <- vpc.pub_b.nat: egress {class: secondary}
-vpc.cache -> vpc.db: {class: pin}
+# The ingress path forks into two AZ peers, so no flow (focus: none). Egress
+# is secondary, written `upper <- lower` (as `->` it crossed twice).
+users -> vpc.igw: {class: [port; dep]; source-arrowhead.label: "HTTPS :443"}
+vpc.igw -> vpc.pub_a.alb: {class: dep}
+vpc.igw -> vpc.pub_b.alb: {class: dep}
+vpc.pub_a.alb -> vpc.app_a.api: {class: [port; dep]; source-arrowhead.label: ":8080"}
+vpc.pub_b.alb -> vpc.app_b.api: {class: [port; dep]; source-arrowhead.label: ":8080"}
+vpc.app_a.api -> vpc.db: {class: [port; dep]; source-arrowhead.label: ":5432"}
+vpc.app_b.api -> vpc.db: {class: [port; dep]; source-arrowhead.label: ":5432"}
+vpc.pub_a.nat <- vpc.app_a.worker: {class: secondary}
+vpc.pub_b.nat <- vpc.app_b.worker: {class: secondary}
+vpc.igw <- vpc.pub_a.nat: {class: secondary}
+vpc.igw <- vpc.pub_b.nat: {class: secondary}

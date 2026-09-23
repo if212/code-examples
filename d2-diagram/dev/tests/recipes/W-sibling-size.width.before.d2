@@ -1,0 +1,15 @@
+# Before: two peer containers sized by their labels: 204 and 129 px wide, side by side under
+# the same caller.
+...@neutral-theme
+direction: down
+customer: Customer {class: actor}
+bank: Internet banking {
+  class: boundary
+  web: "Single-page web app\n[Container]" {class: service}
+  mobile: "Mobile app\n[Container]" {class: service}
+  api: "API\n[Container]" {class: service}
+  web -> api: Calls {class: dep}
+  mobile -> api: Calls {class: dep}
+}
+customer -> bank.web: Uses {class: dep}
+customer -> bank.mobile: Uses {class: dep}

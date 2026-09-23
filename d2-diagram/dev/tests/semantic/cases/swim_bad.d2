@@ -14,7 +14,7 @@ mgr: Manager {
   class: zone
   ok: Approve {class: service}
 }
-cust.ask -> sup.check: {class: flow}
-sup.check -> sup.pay: no {class: flow}
+cust.ask -> sup.check: {class: dep}
+sup.check -> sup.pay: no {class: dep}
 sup.check -> mgr.ok: {class: dep}
 mgr.ok -> sup.pay: {class: dep}

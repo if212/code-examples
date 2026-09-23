@@ -15,9 +15,13 @@ E- must be fixed, W- fix what a reader would notice, I- information only.
                E-node-overlap E-child-outside E-off-canvas
   routing      E-edge-through-node E-edge-through-label W-edge-through-container W-edge-crossing
                W-edge-overlap W-edge-label-on-border W-diagonal-edge W-curved-edge W-long-edge
-               W-fanout W-edge-jog W-label-on-bend W-short-label
+               W-dogleg W-fanout W-edge-jog W-label-on-bend W-label-on-lifeline W-short-label
   consistency  W-title-size W-unclassed W-sibling-size W-seq-group-ragged W-remote-image I-sparse
+Budget (doc column < 1200px): W-tall past 1.25 x column (target 1.125 x); W-aspect below 0.6 once >= 0.75 x
+column tall, above 2.5 once >= 0.75 x column wide. Slide (column >= 1200): W-tall past 0.55 x column,
+W-aspect below 1.2 / above 3.2.
 --sem-json merges semcheck's JSON report (S- codes) into the same listing and exit code.
+The key that svgpost.py builds (<g class="d2-key">) counts as drawn content but is not linted.
 
 How d2 output is decoded (verified on d2 v0.7.1):
   * every object is a <g class="BASE64(html-escaped id) [user classes]"> under <svg class="d2-svg">;
@@ -45,7 +49,21 @@ import zlib
 ANCHOR = "workflows/review-and-fix.md#"
 SMALL_ERR_PX = 10.0      # displayed text below this is an error
 SMALL_WARN_PX = 12.0     # ... below this a warning
-TALL_FACTOR = 1.6        # displayed height budget = 1.6 x column
+# the embed budget (FIXPLAN I2): a column of 1200px or more is a slide, anything narrower a doc column
+SLIDE_COLUMN = 1200
+DOC_TARGET = 1.125       # doc: aim for a displayed height <= 1.125 x column (900 at 800; the template gate)
+DOC_TALL = 1.25          # doc: W-tall past 1.25 x column (1000 at 800)
+DOC_ASPECT = (0.6, 2.5)  # doc: W-aspect below / above this content aspect ...
+DOC_GUARD = 0.75         # ... once the figure is >= 0.75 x column tall (tall) or wide (wide)
+SLIDE_TALL = 0.55        # slide: W-tall past 0.55 x column (880 at 1600)
+SLIDE_ASPECT = (1.2, 3.2)
+SLIDE_GUARD_TALL = 0.3   # slide: a portrait figure counts once it is >= 0.3 x column tall (480 at 1600)
+SPARSE_PX = 160.0        # I-sparse: a hole of max(160, 0.25 x displayed width) ...
+SPARSE_FRAC = 0.25
+FILL_FRAC = 0.5          # ... or a container whose children cover < 50% of it with >= 160px empty
+DOGLEG_PX = 40.0         # W-dogleg: a sideways run >= 40px ...
+DOGLEG_FRAC = 0.25       # ... and >= 25% of the edge
+DRIFT_FRAC = 0.15        # W-dogleg (main path): drift >= 40px and >= 15% of the path's length along the axis
 # Label widths come from the embedded font's advance table. With text-rendering:geometricPrecision
 # (d2check injects it) Chromium lays text out at those advances; without it, Chromium on Linux snaps
 # each glyph to whole pixels and labels come out ~2% wider on average (round-1 calibration, 365 labels).
@@ -62,11 +80,12 @@ CODE_ORDER = [
     "E-label-overlap", "E-label-overflow", "E-icon-collision", "E-edge-through-node", "E-edge-through-label",
     "E-edge-label-on-node",
     "W-small-text", "W-tall", "W-aspect", "W-edge-crossing", "W-edge-overlap", "W-edge-through-container",
-    "W-long-edge", "W-fanout", "W-curved-edge", "W-diagonal-edge", "W-edge-jog", "W-label-on-bend",
-    "W-edge-label-on-border", "W-seq-group-ragged", "W-title-size", "W-sibling-size", "W-unclassed",
-    "W-short-label", "W-remote-image", "W-non-ascii", "I-sparse",
+    "W-long-edge", "W-dogleg", "W-fanout", "W-curved-edge", "W-diagonal-edge", "W-edge-jog", "W-label-on-bend",
+    "W-label-on-lifeline", "W-edge-label-on-border", "W-seq-group-ragged", "W-title-size", "W-sibling-size",
+    "W-unclassed", "W-short-label", "W-remote-image", "W-non-ascii", "I-sparse",
 ]
 SEV_ORDER = {"error": 0, "warn": 1, "info": 2}
+SEV_WORD = {"error": "error", "warn": "warning", "info": "info"}
 
 
 def anchor(code):
@@ -649,8 +668,33 @@ def parse_color(v):
     m = re.match(r"rgba?\(([\d.]+)[, ]+([\d.]+)[, ]+([\d.]+)", v)
     if m:
         return tuple(int(float(m.group(k))) for k in (1, 2, 3))
-    named = {"white": (255, 255, 255), "black": (0, 0, 0)}
-    return named.get(v.lower())
+    hx = CSS_NAMED.get(v.lower())
+    return tuple(int(hx[i:i + 2], 16) for i in (0, 2, 4)) if hx else None
+
+
+# the 148 CSS named colours (style.fill: silver compiles, and must be audited like its hex)
+CSS_NAMED = dict(zip("""aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown
+burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod
+darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen
+darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue
+firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew
+hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan
+lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray
+lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid
+mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream
+mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen
+paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown
+royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow
+springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen""".split(),
+"""F0F8FF FAEBD7 00FFFF 7FFFD4 F0FFFF F5F5DC FFE4C4 000000 FFEBCD 0000FF 8A2BE2 A52A2A DEB887 5F9EA0 7FFF00 D2691E FF7F50
+6495ED FFF8DC DC143C 00FFFF 00008B 008B8B B8860B A9A9A9 006400 A9A9A9 BDB76B 8B008B 556B2F FF8C00 9932CC 8B0000 E9967A
+8FBC8F 483D8B 2F4F4F 2F4F4F 00CED1 9400D3 FF1493 00BFFF 696969 696969 1E90FF B22222 FFFAF0 228B22 FF00FF DCDCDC F8F8FF
+FFD700 DAA520 808080 008000 ADFF2F 808080 F0FFF0 FF69B4 CD5C5C 4B0082 FFFFF0 F0E68C E6E6FA FFF0F5 7CFC00 FFFACD ADD8E6
+F08080 E0FFFF FAFAD2 D3D3D3 90EE90 D3D3D3 FFB6C1 FFA07A 20B2AA 87CEFA 778899 778899 B0C4DE FFFFE0 00FF00 32CD32 FAF0E6
+FF00FF 800000 66CDAA 0000CD BA55D3 9370DB 3CB371 7B68EE 00FA9A 48D1CC C71585 191970 F5FFFA FFE4E1 FFE4B5 FFDEAD 000080
+FDF5E6 808000 6B8E23 FFA500 FF4500 DA70D6 EEE8AA 98FB98 AFEEEE DB7093 FFEFD5 FFDAB9 CD853F FFC0CB DDA0DD B0E0E6 800080
+663399 FF0000 BC8F8F 4169E1 8B4513 FA8072 F4A460 2E8B57 FFF5EE A0522D C0C0C0 87CEEB 6A5ACD 708090 708090 FFFAFA 00FF7F
+4682B4 D2B48C 008080 D8BFD8 FF6347 40E0D0 EE82EE F5DEB3 FFFFFF F5F5F5 FFFF00 9ACD32""".split()))
 
 
 def rel_lum(c):
@@ -763,6 +807,9 @@ class Text:
         self.alpha = 1.0
         self.mask = None      # edge labels: the knock-out rect d2 cuts into the edge line
         self.role = "main"    # edge labels: main | arrowhead
+        self.fs_min = fs      # smallest line size (svgpost sets `tech` lines 2..n to 14px)
+        self.line_colors = []  # per-line fill where a <tspan> sets its own
+        self.el = None        # the <text> element (svgpost edits it)
 
 
 class Node:
@@ -790,6 +837,8 @@ class Node:
         self.seq_role = None  # actor | group | span | note (sequence diagrams)
         self.is_group = False  # translucent sequence-diagram group (drawn with class "blend")
         self.strokes = []     # open inner strokes of the shape (cylinder rim, queue end cap)
+        self.core_poly = None  # style.multiple: the front card's outline (polys[0] is the back copy)
+        self.el = None        # the node's <g> (svgpost edits it)
 
     @property
     def is_container(self):
@@ -823,6 +872,7 @@ class Edge:
         self.curved = False
         self.hidden = False
         self.classes = []
+        self.el = None        # the edge's <g> (svgpost edits it)
 
     @property
     def lifeline(self):
@@ -852,8 +902,12 @@ class Diagram:
         self.mask_rects = []
         self.warnings = []
         self.seq_scopes = set()
-        self.legend = None        # Box of the native legend frame
+        self.legend = None        # Box of the native legend frame (or of svgpost's <g class="d2-key">)
+        self.legend_els = []      # the native legend's top-level elements, in document order (svgpost)
+        self.keyed = False        # svgpost already restyled the legend into <g class="d2-key">
         self.precise_text = False
+        self.root = self.inner = None  # the parsed tree (svgpost maps its elements back to the text)
+        self.cleaned = False      # parsed with <foreignObject> contents dropped (markdown labels)
 
 
 def _translate(el):
@@ -930,6 +984,8 @@ def load(path):
     except ET.ParseError:
         cleaned = re.sub(r"(<foreignObject[^>]*>).*?(</foreignObject>)", r"\1\2", raw, flags=re.S)
         root = ET.fromstring(cleaned.encode("utf-8"))
+        dg.cleaned = True
+    dg.root = root
     vb = [float(v) for v in (root.get("viewBox") or "0 0 0 0").split()]
     dg.W, dg.H = vb[2], vb[3]
     dg.width_attr = _num(root.get("width"))
@@ -940,6 +996,7 @@ def load(path):
             break
     if inner is None:
         raise ValueError("no <svg class='d2-svg'> found - is this a d2 SVG?")
+    dg.inner = inner
     ivb = [float(v) for v in (inner.get("viewBox") or "0 0 0 0").split()]
     dg.vb = Box(ivb[0], ivb[1], ivb[0] + ivb[2], ivb[1] + ivb[3])
     n_boards = sum(1 for el in root.iter() if _local(el.tag) == "svg" and "d2-svg" in (el.get("class") or ""))
@@ -986,14 +1043,17 @@ def load(path):
         fm = dg.fonts.get(fcls) or dg.fonts.get("text")
         lines = []
         tsp = [c for c in el if _local(c.tag) == "tspan"]
+        colors = []
         if tsp:
             by = y
             for t in tsp:
                 by += float(t.get("dy") or 0)
                 lx = float(t.get("x")) + tx if t.get("x") else x
-                lines.append((lx, by, "".join(t.itertext())))
+                lm = re.search(r"font-size:\s*([\d.]+)px", t.get("style") or "")
+                lines.append((lx, by, "".join(t.itertext()), float(lm.group(1)) if lm else fs))
+                colors.append(parse_color(t.get("fill")))
         else:
-            lines.append((x, y, "".join(el.itertext())))
+            lines.append((x, y, "".join(el.itertext()), fs))
         content = "\n".join(l[2] for l in lines)
         if not content.strip():
             return None
@@ -1001,8 +1061,8 @@ def load(path):
         glyphs = []
         line_boxes = []
         mono = "mono" in fcls
-        for lx, by, s in lines:
-            w = fm.width(s, fs) if fm else len(s) * fs * (0.6 if mono else 0.53)
+        for lx, by, s, lfs in lines:
+            w = fm.width(s, lfs) if fm else len(s) * lfs * (0.6 if mono else 0.53)
             w *= slack
             if anchor_ == "middle":
                 x0 = lx - w / 2
@@ -1012,16 +1072,16 @@ def load(path):
                 x0 = lx
             top = max(glyph_top(ch) for ch in s) if s else 0.5
             bot = max(glyph_bot(ch) for ch in s) if s else 0.0
-            b = Box(x0, by - top * fs, x0 + w, by + bot * fs)
+            b = Box(x0, by - top * lfs, x0 + w, by + bot * lfs)
             gx = x0
             for ch in s:
-                adv = (fm.width(ch, fs) if fm else fs * (0.6 if mono else 0.53)) * slack
+                adv = (fm.width(ch, lfs) if fm else lfs * (0.6 if mono else 0.53)) * slack
                 ib = fm.ink_box.get(ord(ch)) if fm else None
                 if ib and ib[2] > ib[0]:  # the glyph's real outline box
-                    k = fs / fm.upem
+                    k = lfs / fm.upem
                     glyphs.append(Box(gx + ib[0] * k, by - ib[3] * k, gx + ib[2] * k, by - ib[1] * k))
                 elif not ch.isspace():
-                    glyphs.append(Box(gx + adv * 0.06, by - glyph_top(ch) * fs, gx + adv * 0.94, by + glyph_bot(ch) * fs))
+                    glyphs.append(Box(gx + adv * 0.06, by - glyph_top(ch) * lfs, gx + adv * 0.94, by + glyph_bot(ch) * lfs))
                 gx += adv
             if s.strip():
                 line_boxes.append(b)
@@ -1030,6 +1090,9 @@ def load(path):
         t.cls = fill_cls(el)
         t.glyphs = glyphs
         t.line_boxes = line_boxes or [box]
+        t.fs_min = min(l[3] for l in lines)
+        t.line_colors = colors
+        t.el = el
         z[0] += 1
         t.z = z[0]
         return t
@@ -1104,7 +1167,8 @@ def load(path):
             node.sig = "table"  # sql_table / class: height follows the row count
         # style.multiple draws a back copy first and the node itself last, same size
         elif len(rects) >= 2 and abs(rects[0].w - rects[-1].w) < 0.5 and abs(rects[0].h - rects[-1].h) < 0.5:
-            node.core = rects[-1]
+            node.core = b = rects[-1]
+            node.core_poly = [(b.x0, b.y0), (b.x1, b.y0), (b.x1, b.y1), (b.x0, b.y1)]
 
     def _check_image(el):
         href = el.get("href") or el.get("{http://www.w3.org/1999/xlink}href") or ""
@@ -1134,11 +1198,16 @@ def load(path):
                     x, y = float(el.get("x") or 0), float(el.get("y") or 0)
                     b = Box(x, y, x + float(el.get("width")), y + float(el.get("height") or 0))
                     dg.legend = b if dg.legend is None else dg.legend.union(b)
+                    dg.legend_els.append(el)
                 continue
             if top and tag == "text":  # native legend title and item labels
                 t = text_from(el, tx, ty, "legend", "legend")
                 if t:
                     dg.texts.append(t)
+                dg.legend_els.append(el)
+                continue
+            if top and tag == "line":  # native legend: the rule between node and edge samples
+                dg.legend_els.append(el)
                 continue
             dtx, dty = _translate(el)
             cls = el.get("class") or ""
@@ -1150,7 +1219,18 @@ def load(path):
                 continue
             if tag != "g":
                 continue
+            if "d2-key" in cls.split():  # the key svgpost.py built: drawn content, but not linted
+                dg.keyed = True
+                for r in el.iter():
+                    if _local(r.tag) == "rect" and r.get("width"):
+                        x, y = float(r.get("x") or 0) + tx + dtx, float(r.get("y") or 0) + ty + dty
+                        b = Box(x, y, x + float(r.get("width")), y + float(r.get("height") or 0))
+                        dg.legend = b if dg.legend is None else dg.legend.union(b)
+                        break
+                continue
             if "scale(" in (el.get("transform") or ""):
+                if top:
+                    dg.legend_els.append(el)
                 continue  # legend sample (scaled copy of a node or edge): not part of the diagram
             oid = decode_id(cls)
             if oid is None:
@@ -1169,6 +1249,7 @@ def load(path):
                 e = Edge(oid, einfo)
                 e.classes = user_classes
                 e.hidden = ga < 0.05
+                e.el = el
                 z[0] += 1
                 e.z = z[0]
                 for ch in _iter_drawn(el):
@@ -1192,6 +1273,7 @@ def load(path):
             n.classes = user_classes
             n.hidden = ga < 0.05
             n.opacity = ga
+            n.el = el
             z[0] += 1
             n.z = z[0]
             for ch in el:
@@ -1313,9 +1395,60 @@ def content_box(dg):
     return union_all(boxes)
 
 
-def largest_empty_square(dg, content, cell=12.0, pad=6.0):
-    """largest square of the drawing with no node, label, edge or legend in it (container
-    interiors count as empty) - the 'dead space' readers notice. Returns a Box or None."""
+def medium_budget(column):
+    """the embed budget of the medium a column width stands for (FIXPLAN I2): a doc column or a slide"""
+    if column >= SLIDE_COLUMN:
+        return {"medium": "slide", "tall": SLIDE_TALL, "aspect": SLIDE_ASPECT, "guard_tall": SLIDE_GUARD_TALL,
+                "guard_wide": DOC_GUARD}
+    return {"medium": "doc", "tall": DOC_TALL, "aspect": DOC_ASPECT, "guard_tall": DOC_GUARD, "guard_wide": DOC_GUARD}
+
+
+def sparse_containers(dg, containers, scale, pad=50.0):
+    """I-sparse, container variant: a zone or grid row whose visible children cover < FILL_FRAC of its width or
+    height and leave a run of >= SPARSE_PX displayed px empty (beyond the ~50px ELK padding): a half-empty panel
+    reads as unfinished. One finding per container, the emptier axis."""
+    out = []
+    for c in containers:
+        if c.in_seq or c.is_group or c.hidden or not c.box:
+            continue
+        # what the panel shows: every visible descendant (a grid's hidden slots hold the visible dots)
+        kids = [n for n in dg.nodes.values() if n.id.startswith(c.id + ".") and not n.hidden and n.box]
+        if not kids:
+            continue
+        best = None
+        for axis, names_ in ((0, ("left", "middle", "right")), (1, ("top", "middle", "bottom"))):
+            a0, a1 = (c.box.x0, c.box.x1) if axis == 0 else (c.box.y0, c.box.y1)
+            span = a1 - a0
+            if span <= 0:
+                continue
+            iv = sorted(((k.box.x0, k.box.x1) if axis == 0 else (k.box.y0, k.box.y1)) for k in kids)
+            merged = []
+            for s, e in iv:
+                if merged and s <= merged[-1][1]:
+                    merged[-1][1] = max(merged[-1][1], e)
+                else:
+                    merged.append([s, e])
+            covered = sum(e - s for s, e in merged)
+            gaps = [(merged[0][0] - a0, names_[0])] + [(merged[i + 1][0] - merged[i][1], names_[1])
+                                                       for i in range(len(merged) - 1)] + [(a1 - merged[-1][1], names_[2])]
+            g, where_ = max(gaps)
+            if covered / span < FILL_FRAC and (g - pad) * scale >= SPARSE_PX:
+                cand = (g / span, where_, axis, covered, span, len(kids))
+                if best is None or cand[0] > best[0]:
+                    best = cand
+        if best:
+            frac, where_, axis, covered, span, n = best
+            out.append(Finding("info", "I-sparse", "container '%s' is %d%% empty (%s): its %d part(s) span %d of its %dpx %s"
+                               % (c.id, round(100 * frac), where_, n, round(covered), round(span),
+                                  "width" if axis == 0 else "height"), c.box, [c.id]))
+    return out
+
+
+def largest_empty_square(dg, content, cell=12.0, pad=6.0, lines=False):
+    """largest square of the drawing with no node, label or legend in it (container interiors count as empty,
+    and so do edges: a long edge through a void does not make it less empty) - the 'dead space' readers
+    notice. lines=True: a line drawing (gitflow, timeline: most nodes are dots), where the lines are the
+    content and do fill the space they cross. Returns a Box or None."""
     nx, ny = int(math.ceil(content.w / cell)), int(math.ceil(content.h / cell))
     if nx < 2 or ny < 2 or nx * ny > 400000:
         return None
@@ -1333,13 +1466,21 @@ def largest_empty_square(dg, content, cell=12.0, pad=6.0):
             mark(n.box)
     for t in dg.texts:
         mark(t.box)
-    for e in dg.edges:
-        if not e.hidden:
-            for l in e.lines:
-                for p in densify(l, cell / 2):
-                    mark(Box(p[0], p[1], p[0], p[1]))
     if dg.legend:
         mark(dg.legend)
+        # a key beside the diagram (d2's legend, or svgpost's key kept at the right) is a sidebar: the column
+        # over and under it is its margin, not dead space in the diagram
+        art = [n.box for n in dg.nodes.values() if n.box and not n.hidden]
+        art += [t.box for t in dg.texts if t.kind != "legend"]
+        art += [e.box for e in dg.edges if e.box and not e.hidden]
+        if art and dg.legend.x0 >= max(b.x1 for b in art) - 1:
+            mark(Box(dg.legend.x0, content.y0, dg.legend.x1, content.y1))
+    if lines:
+        for e in dg.edges:
+            if not e.hidden:
+                for l in e.lines:
+                    for q in densify(l, cell / 2):
+                        mark(Box(q[0], q[1], q[0], q[1]))
     best, where_ = 0, None
     h = [0] * nx
     for y in range(ny):
@@ -1444,7 +1585,7 @@ def run_checks(dg, column=800.0):
     disp_w, disp_h, scale = display(dg, column)
     content = content_box(dg)
     ar = (content.w / content.h) if content and content.h else (dg.W / dg.H if dg.H else 0)
-    fs_all = [t.fs for t in texts]
+    fs_all = [t.fs_min for t in texts]
     min_fs = min(fs_all) if fs_all else None
     summary = {
         "canvas_px": [round(dg.W), round(dg.H)],
@@ -1454,7 +1595,7 @@ def run_checks(dg, column=800.0):
         "scale": round(scale, 2),  # the same rounding as every message
         "min_font_px": min_fs,
         "min_text_display_px": floor1(min_fs * scale) if min_fs else None,
-        "aspect": round(ar, 2),
+        "aspect": round(ar, 3),  # 3 places: the gate and W-aspect agree at 0.598
         "nodes": len(leaves), "containers": len(containers), "edges": len(edges),
         "labels": len(texts),
         "fonts_measured": sorted(dg.fonts),
@@ -1462,35 +1603,48 @@ def run_checks(dg, column=800.0):
         "sequence_scopes": sorted(dg.seq_scopes),
     }
     col = "%dpx column" % column
-    small_e = [t for t in texts if t.fs * scale < SMALL_ERR_PX - 1e-6]
-    small_w = [t for t in texts if SMALL_ERR_PX - 1e-6 <= t.fs * scale < SMALL_WARN_PX - 1e-6]
+    small_e = [t for t in texts if t.fs_min * scale < SMALL_ERR_PX - 1e-6]
+    small_w = [t for t in texts if SMALL_ERR_PX - 1e-6 <= t.fs_min * scale < SMALL_WARN_PX - 1e-6]
     for code, sev, grp, limit in (("E-small-text", "error", small_e, SMALL_ERR_PX), ("W-small-text", "warn", small_w, SMALL_WARN_PX)):
         if grp:
-            worst = min(grp, key=lambda t: t.fs)
+            worst = min(grp, key=lambda t: t.fs_min)
             if scale < 0.999:  # shrunk to fit the column: how narrow must the canvas get for 12px text
-                need = "canvas must be <= %dpx wide for %gpx (now %d)" % (column * worst.fs / SMALL_WARN_PX, SMALL_WARN_PX, round(dg.W))
+                need = "canvas must be <= %dpx wide for %gpx (now %d)" % (column * worst.fs_min / SMALL_WARN_PX, SMALL_WARN_PX, round(dg.W))
             else:
                 need = "shown at full size: raise its font-size to >= %g" % SMALL_WARN_PX
             F.append(Finding(sev, code, "%d label(s) under %.0fpx at column %d (scale %.2f): '%s' %gpx -> %.1fpx; %s" % (
-                len(grp), limit, column, scale, short(worst.content, 24), worst.fs, floor1(worst.fs * scale), need),
+                len(grp), limit, column, scale, short(worst.content, 24), worst.fs_min, floor1(worst.fs_min * scale), need),
                 worst.box, [worst.owner]))
-    if disp_h > TALL_FACTOR * column + 0.5:
-        F.append(Finding("warn", "W-tall", "displays %dx%d in a %s: %d%% over the %dpx height budget (%.1fx the column)" % (
-            round(disp_w), round(disp_h), col, round(100 * (disp_h / (TALL_FACTOR * column) - 1)), round(TALL_FACTOR * column),
-            TALL_FACTOR)))
-    if ar and ((ar > 2.5 and scale < 0.95) or (ar < 0.4 and disp_h > column)):
-        F.append(Finding("warn", "W-aspect", "content aspect %.2f:1 (%s): %s" % (
-            ar, "wide" if ar > 1 else "tall and narrow",
-            "it shrinks to scale %.2f in a %s" % (scale, col) if ar > 1 else
-            "%dpx tall but only %dpx wide in a %s" % (round(disp_h), round(content.w * scale), col))))
+    budget = medium_budget(column)
+    summary["medium"] = budget["medium"]
+    summary["height_budget_px"] = round(budget["tall"] * column)
+    if disp_h > budget["tall"] * column + 0.5:
+        tall_px = budget["tall"] * column
+        F.append(Finding("warn", "W-tall", "displays %dx%d in a %s: %d%% over the %dpx height budget (%gx the %s)%s" % (
+            round(disp_w), round(disp_h), col if budget["medium"] == "doc" else "%dpx slide" % column,
+            round(100 * (disp_h / tall_px - 1)), round(tall_px), budget["tall"], "column" if budget["medium"] == "doc" else "width",
+            "; aim for <= %dpx" % round(DOC_TARGET * column) if budget["medium"] == "doc" else "")))
+    lo, hi = budget["aspect"]
+    if ar and ar < lo and disp_h >= budget["guard_tall"] * column:
+        # rounded away from the limit: 0.598 prints 0.59, never a 0.60 that looks like it passes
+        F.append(Finding("warn", "W-aspect", "content aspect %.2f:1 (tall and narrow): %dpx tall but only %dpx wide in a %s "
+                         "(a %s figure wants >= %g:1)" % (math.floor(ar * 100) / 100, round(content.h * scale),
+                                                          round(content.w * scale), col, budget["medium"], lo)))
+    elif ar and ar > hi and disp_w >= budget["guard_wide"] * column:
+        F.append(Finding("warn", "W-aspect", "content aspect %.2f:1 (wide): %s (a %s figure wants <= %g:1)" % (
+            math.ceil(ar * 100) / 100, "it shrinks to scale %.2f in a %s" % (scale, col) if scale < 0.995 else
+            "a %dx%dpx strip in a %s" % (round(disp_w), round(disp_h), col), budget["medium"], hi)))
     if content and content.w * content.h > 0 and leaves and not dg.seq_scopes:
-        hole = largest_empty_square(dg, content)
+        # a line drawing (half the leaves are dots: gitflow, timeline) is made of its lines
+        dots = [n for n in leaves if not n.is_text_shape and n.box.w <= 24 and n.box.h <= 24]
+        hole = largest_empty_square(dg, content, lines=2 * len(dots) >= len(leaves))
         if hole:
             side = hole.w * scale
             summary["largest_hole_px"] = round(side)
-            if side >= max(200.0, 0.3 * disp_w):
+            if side >= max(SPARSE_PX, SPARSE_FRAC * disp_w):
                 F.append(Finding("info", "I-sparse", "a %dx%dpx empty region (%s) - dead space in the column view" % (
                     round(side), round(side), where(hole, content)), hole))
+        F += sparse_containers(dg, containers, scale)
 
     # --- off-canvas --------------------------------------------------------
     for n in vis:
@@ -1588,7 +1742,8 @@ def run_checks(dg, column=800.0):
         if n.is_text_shape or not n.polys or (n.in_seq and n.parent):
             continue
         for t in n.labels:
-            if not n.contains_pt(t.box.cx, t.box.cy, 0):
+            # style.multiple: the label sits on the FRONT card (polys[0] is the back copy, offset up and right)
+            if not (point_in_poly(t.box.cx, t.box.cy, n.core_poly) if n.core_poly else n.contains_pt(t.box.cx, t.box.cy, 0)):
                 if (not n.icons and not n.in_seq and len(n.polys[0]) in (4, 5) and not n.box.intersects(t.box, 0)
                         and t.box.w > n.box.w * 0.9):
                     # d2 moves a label that does not fit outside the box; ~20px a side gives it room again
@@ -1601,7 +1756,7 @@ def run_checks(dg, column=800.0):
                   [(x, t.box.y1) for x in _frange(t.box.x0, t.box.x1, 2)] + \
                   [(t.box.x0, y) for y in _frange(t.box.y0, t.box.y1, 2)] + \
                   [(t.box.x1, y) for y in _frange(t.box.y0, t.box.y1, 2)]
-            poly = n.polys[0]
+            poly = n.core_poly or n.polys[0]
             out = [p for p in per if not point_in_poly(p[0], p[1], poly) and dist_to_poly(p[0], p[1], poly) > 1.5]
             if len(out) >= 2:
                 # the size at which the label clears the outline and the inner strokes (rim, end cap), per axis
@@ -1821,7 +1976,7 @@ def run_checks(dg, column=800.0):
                 F.append(Finding("warn", "W-label-on-bend", "label '%s' of %s sits on a bend of its edge" % (
                     short(t.content, 30), e.id), t.box.union(Box.of_points(near)).grow(4), [e.id]))
 
-    # --- fan-out: one node wired to 4+ children of one container ------------
+    # --- fan-out: one node wired to 4+ children of one container, as a comb of bent edges ------------
     fan = {}
     for e in real:
         for a, b in ((e.src, e.dst), (e.dst, e.src)):
@@ -1833,11 +1988,18 @@ def run_checks(dg, column=800.0):
             fan.setdefault((a, zc), {}).setdefault(b, []).append(e)
     fanned = set()
     for (a, zc), ends in sorted(fan.items()):
-        if len(ends) >= 4:
-            es = [x for v in ends.values() for x in v]
+        es = [x for v in ends.values() for x in v]
+        bent = [x for x in es if n_bends(x) >= 1]
+        if len(ends) >= 4 and len(bent) >= 2:  # a straight fan from a wide source reads fine: no finding
             fanned.update(x.id for x in es)
-            F.append(Finding("warn", "W-fanout", "'%s' has %d edges to children of '%s' (%s)" % (
-                a, len(es), zc, names(sorted(ends))), union_all(x.box for x in es).grow(4), [a, zc]))
+            F.append(Finding("warn", "W-fanout", "'%s' has %d edges to children of '%s', %d of them bent (%s)" % (
+                a, len(es), zc, len(bent), names(sorted(ends))), union_all(x.box for x in es).grow(4), [a, zc]))
+
+    axis, sign = reading_axis(real)
+    summary["reading_axis"] = "vertical" if axis == 1 else "horizontal"
+
+    # --- doglegs: the main path drifts sideways, or a tier does not line up with its callers ------------
+    F += doglegs(dg, real, fanned, axis)
 
     # --- long edges: back-edge detours, and a node hanging off one edge far from its partner ----------
     lens = sorted(e.length for e in real)
@@ -1847,17 +2009,17 @@ def run_checks(dg, column=800.0):
         for e in real:
             for x in (e.src, e.dst):
                 deg[x] = deg.get(x, 0) + 1
-        disp = [(e.lines[-1][-1][0] - e.lines[0][0][0], e.lines[-1][-1][1] - e.lines[0][0][1]) for e in real if e.lines]
-        # the reading direction most edges follow (counted per edge, so one long detour cannot flip it)
-        axis = 1 if sum(1 for d in disp if abs(d[1]) >= abs(d[0])) * 2 >= len(disp) else 0
-        sign = 1 if sum(1 for d in disp if d[axis] > 0) >= sum(1 for d in disp if d[axis] < 0) else -1
         for e in real:
             L = e.length
             if e.id in fanned:
                 continue  # already reported as W-fanout
             if not (L > 2.5 * med and L > 0.2 * (content.w + content.h) and L > 300):
                 continue
-            d = (e.lines[-1][-1][axis] - e.lines[0][0][axis]) * sign
+            if n_bends(e) < 2:
+                continue  # straight or one bend: a lifted sink or a grid edge is the fix, not the fault
+            tail, head = arrow_ends(e)
+            # the way the ARROW points decides a back-edge (`b <- a` draws the same edge as `a -> b`)
+            d = (head[axis] - tail[axis]) * sign if e.arrow in ("->", "<-") else 0
             lone = [x for x in (e.src, e.dst) if deg.get(x) == 1 and x in dg.nodes]
             if d < -20 and L > 3 * med:
                 why = "a back-edge detour against the reading direction"
@@ -1865,8 +2027,8 @@ def run_checks(dg, column=800.0):
                 why = "'%s' hangs off this one edge far from its partner" % lone[0]
             else:
                 continue  # a long run into a shared sink (terminal, side lane) is a layout choice
-            F.append(Finding("warn", "W-long-edge", "edge %s runs %dpx (%.1fx the median edge): %s" % (e.id, L, L / med, why),
-                             e.box.grow(4), [e.id]))
+            F.append(Finding("warn", "W-long-edge", "edge %s runs %dpx (%.1fx the median edge, %d bends): %s" % (
+                e.id, L, L / med, n_bends(e), why), e.box.grow(4), [e.id]))
 
     # --- short edge labels ----------------------------------------------------
     for e in edges:
@@ -1876,16 +2038,22 @@ def run_checks(dg, column=800.0):
                 F.append(Finding("warn", "W-short-label", "edge %s is labelled '%s': too short to read or mean much" % (e.id, s),
                                  t.box.grow(3), [e.id]))
 
-    # --- sequence groups with ragged left/right edges --------------------------
+    # --- sequence diagrams: ragged groups and operands, labels on foreign lifelines ---------------------
     for sc in sorted(dg.seq_scopes):
-        groups = [n for n in vis if n.is_group and _in_scope(n.id, sc)
-                  and not any(dg.nodes[x].is_group for x in _ancestors(dg, n.id))]
-        if len(groups) >= 2:
-            d0 = max(g.box.x0 for g in groups) - min(g.box.x0 for g in groups)
-            d1 = max(g.box.x1 for g in groups) - min(g.box.x1 for g in groups)
-            if d0 > 40 or d1 > 40:
-                F.append(Finding("warn", "W-seq-group-ragged", "%d sequence groups start/end at different x (spread %.0f / %.0fpx): %s" % (
-                    len(groups), d0, d1, names(g.id for g in groups)), None, [g.id for g in groups], [g.box for g in groups]))
+        groups = [n for n in vis if n.is_group and _in_scope(n.id, sc)]
+        top = [g for g in groups if not any(dg.nodes[x].is_group for x in _ancestors(dg, g.id))]
+        sets = [(None, top, 40.0)] + [(p.id, [g for g in groups if g.parent == p.id], 12.0) for p in groups]
+        for parent, grp, limit in sets:
+            if len(grp) < 2:
+                continue
+            d0 = max(g.box.x0 for g in grp) - min(g.box.x0 for g in grp)
+            d1 = max(g.box.x1 for g in grp) - min(g.box.x1 for g in grp)
+            if d0 > limit or d1 > limit:
+                what = "%d sequence groups start/end" % len(grp) if parent is None else \
+                    "the %d operands of '%s' start/end" % (len(grp), parent)
+                F.append(Finding("warn", "W-seq-group-ragged", "%s at different x (spread %.0f / %.0fpx): %s" % (
+                    what, d0, d1, names(g.id for g in grp)), None, [g.id for g in grp], [g.box for g in grp]))
+    F += labels_on_lifelines(dg, vis)
 
     # --- consistency: container title size, role classes, sibling sizes ---------
     leaf_fs = [t.fs for n in leaves if not n.is_text_shape and n.seq_role in (None, "actor") for t in n.labels]
@@ -1910,31 +2078,7 @@ def run_checks(dg, column=800.0):
         F.append(Finding("warn", "W-unclassed", "%d of %d edges carry no edge class (flow, dep, async...): %s" % (
             len(bare_e), len(styled), names(e.id for e in bare_e)), None, [e.id for e in bare_e],
             [e.box.grow(3) for e in bare_e]))
-    rows = {}
-    linked = {frozenset((e.src, e.dst)) for e in real}
-    for n in leaves:
-        if n.is_text_shape or n.in_seq or n.core is None or n.sig == "table":
-            continue
-        rows.setdefault((n.parent, n.sig), []).append(n)
-    for (_, sig), lst in sorted(rows.items(), key=lambda kv: (str(kv[0][0]), kv[0][1])):
-        lst.sort(key=lambda n: n.core.y0)
-        used = set()
-        for n in lst:
-            if n.id in used:
-                continue
-            row = [n]
-            for m in lst:  # side by side, and not one step of a chain (direction: right lines a chain up)
-                if m.id in used or m is n or not (abs(m.core.y0 - n.core.y0) <= 2 or abs(m.core.cy - n.core.cy) <= 2
-                                                 or abs(m.core.y1 - n.core.y1) <= 2):
-                    continue
-                if not any(frozenset((m.id, r.id)) in linked for r in row):
-                    row.append(m)
-            used.update(m.id for m in row)
-            hs = [m.core.h for m in row]
-            if len(row) >= 2 and max(hs) - min(hs) > 8:
-                F.append(Finding("warn", "W-sibling-size", "siblings in one row have different heights (%s): %s" % (
-                    "/".join("%.0f" % h for h in sorted(set(round(h) for h in hs))), names(m.id for m in row)),
-                    None, [m.id for m in row], [m.core for m in row]))
+    F += sibling_sizes(dg, leaves, containers, real, axis)
 
     # --- contrast (grouped per colour pair to keep the report short) ------
     pairs = {}
@@ -1943,14 +2087,17 @@ def run_checks(dg, column=800.0):
         if t.color is None:
             continue
         bg = background_at(dg, t.box.cx, t.box.cy, t.z, dark)
-        fg = dg.dark_colors.get(t.cls, t.color) if dark and t.cls else t.color
-        if t.alpha < 0.999:
-            fg = blend(fg, bg, t.alpha)
-        cr = contrast(fg, bg)
-        if cr >= 3.0:
-            continue
-        key = (tuple(fg), tuple(bg), dark)
-        pairs.setdefault(key, (cr, []))[1].append(t)
+        # a <tspan> with its own fill (svgpost's `tech` lines) is judged in its own colour
+        for col in [t.color] + [c for c in t.line_colors if c and c != t.color]:
+            fg = dg.dark_colors.get(t.cls, col) if dark and t.cls and col is t.color else col
+            if t.alpha < 0.999:
+                fg = blend(fg, bg, t.alpha)
+            cr = contrast(fg, bg)
+            if cr >= 3.0:
+                continue
+            key = (tuple(fg), tuple(bg), dark)
+            if t not in pairs.setdefault(key, (cr, []))[1]:
+                pairs[key][1].append(t)
     for (fg, bg, dark), (cr, ts) in pairs.items():
         lbl = ", ".join("'%s'" % short(t.content, 20) for t in ts[:4]) + (" +%d more" % (len(ts) - 4) if len(ts) > 4 else "")
         F.append(Finding("error", "E-contrast-dark" if dark else "E-contrast",
@@ -1970,6 +2117,288 @@ def run_checks(dg, column=800.0):
             F.append(Finding("warn", "W-non-ascii", "label '%s' contains non-ASCII %s" % (
                 short(t.content, 30), " ".join("U+%04X" % ord(c) for c in bad[:5])), t.box, [t.owner]))
     return F, summary
+
+
+def n_bends(e):
+    """number of corners on an edge's route (0 = straight: every grid edge)"""
+    return sum(max(0, len(c) - 2) for c in e.corners)
+
+
+def arrow_ends(e):
+    """(tail point, head point) of the drawn arrow: d2 draws `a <- b` from a to b with the head at the start"""
+    first, last = e.corners[0][0], e.corners[-1][-1]
+    return (last, first) if e.arrow == "<-" else (first, last)
+
+
+def arrow_nodes(e):
+    """(tail id, head id) of the drawn arrow"""
+    return (e.dst, e.src) if e.arrow == "<-" else (e.src, e.dst)
+
+
+def end_segment(e, at_head):
+    """the point and the segment vector of an edge at its head (or tail) end"""
+    tail_first = e.arrow != "<-"
+    at_start = (not at_head) == tail_first
+    pts = e.corners[0] if at_start else e.corners[-1]
+    if len(pts) < 2:
+        return pts[0], (0.0, 0.0)
+    if at_start:
+        return pts[0], (pts[1][0] - pts[0][0], pts[1][1] - pts[0][1])
+    return pts[-1], (pts[-1][0] - pts[-2][0], pts[-1][1] - pts[-2][1])
+
+
+def reading_axis(real):
+    """(axis, sign): the direction most arrows point (axis 1 = vertical), counted per edge so that one
+    long detour cannot flip it"""
+    disp = []
+    for e in real:
+        if e.corners:
+            t, h = arrow_ends(e)
+            disp.append((h[0] - t[0], h[1] - t[1]))
+    if not disp:
+        return 1, 1
+    axis = 1 if sum(1 for d in disp if abs(d[1]) >= abs(d[0])) * 2 >= len(disp) else 0
+    sign = 1 if sum(1 for d in disp if d[axis] > 0) >= sum(1 for d in disp if d[axis] < 0) else -1
+    return axis, sign
+
+
+def z_run(e, axis):
+    """the sideways run of an edge shaped as a Z (two bends, both end segments along the reading axis), else 0"""
+    if len(e.corners) != 1 or len(e.corners[0]) != 4 or e.curved:
+        return 0.0
+    p = e.corners[0]
+    segs = [(p[i + 1][0] - p[i][0], p[i + 1][1] - p[i][1]) for i in range(3)]
+    along = lambda v: abs(v[1 - axis]) <= 2 and abs(v[axis]) > 2
+    across = lambda v: abs(v[axis]) <= 2 and abs(v[1 - axis]) > 2
+    if along(segs[0]) and across(segs[1]) and along(segs[2]):
+        return abs(segs[1][1 - axis])
+    return 0.0
+
+
+def doglegs(dg, real, fanned, axis):
+    """W-dogleg: (a) the main path (flow / sf-flow edges, chained through nodes and into or out of
+    containers) drifts sideways; (b) 3+ edges between the same two containers bend into a Z because the
+    lower tier does not line up under its callers. Straight (grid) edges have no Z; W-fanout edges are
+    reported there."""
+    out = []
+    side = 1 - axis
+    along = lambda v: abs(v[side]) <= 2 and abs(v[axis]) > 2
+    flows = [e for e in real if set(e.classes) & {"flow", "sf-flow"} and e.corners and not e.curved]
+    if flows:
+        tails, heads = {}, {}
+        for e in flows:
+            t, h = arrow_nodes(e)
+            tails.setdefault(t, []).append(e)
+            heads.setdefault(h, []).append(e)
+        steps = []
+        for e1 in flows:
+            h = arrow_nodes(e1)[1]
+            nxt = list(tails.get(h, []))
+            if h in dg.nodes and dg.nodes[h].children:     # into a container: the chain starts at a child
+                nxt += [e2 for t, es in tails.items() if t != h and is_ancestor(dg, h, t) and t not in heads for e2 in es]
+            nxt += [e2 for t, es in tails.items() if t != h and t in dg.nodes and dg.nodes[t].children
+                    and is_ancestor(dg, t, h) and h not in tails for e2 in es]    # out of the container it ends in
+            p1, s1 = end_segment(e1, True)
+            for e2 in nxt:
+                if e2 is e1:
+                    continue
+                p2, s2 = end_segment(e2, False)
+                off = abs(p2[side] - p1[side])
+                if along(s1) and along(s2) and off >= 16:
+                    steps.append((off, h, e1, e2))
+        for e in flows:
+            r = z_run(e, axis)
+            if r >= 16:
+                steps.append((r, arrow_nodes(e)[0], e, e))
+        total = sum(s[0] for s in steps)
+        pts = [p for e in flows for c in e.corners for p in c]
+        extent = (max(p[axis] for p in pts) - min(p[axis] for p in pts)) if pts else 0
+        if steps and total >= DOGLEG_PX and total >= DRIFT_FRAC * extent:
+            worst = max(steps, key=lambda s: s[0])
+            out.append(Finding("warn", "W-dogleg", "the main path drifts %dpx sideways in %d step(s), %dpx at '%s': line "
+                               "its steps up on one %s axis" % (round(total), len(steps), round(worst[0]), worst[1],
+                                                                "vertical" if axis == 1 else "horizontal"),
+                               union_all([s[2].box for s in steps] + [s[3].box for s in steps]).grow(4),
+                               sorted({s[2].id for s in steps} | {s[3].id for s in steps})))
+    tiers = {}
+    for e in real:
+        if e.id in fanned or e.src not in dg.nodes or e.dst not in dg.nodes:
+            continue
+        a, b = dg.nodes[e.src].parent, dg.nodes[e.dst].parent
+        if not a or not b or a == b or is_ancestor(dg, a, b) or is_ancestor(dg, b, a):
+            continue
+        r = z_run(e, axis)
+        if r >= DOGLEG_PX and r >= DOGLEG_FRAC * e.length:
+            tiers.setdefault(tuple(sorted((a, b))), []).append((r, e))
+    for (a, b), zs in sorted(tiers.items()):
+        if len(zs) >= 3:
+            rs = sorted(r for r, _ in zs)
+            out.append(Finding("warn", "W-dogleg", "%d edges between '%s' and '%s' dogleg sideways (%d-%dpx): the lower tier "
+                               "does not line up with its callers" % (len(zs), a, b, round(rs[0]), round(rs[-1])),
+                               union_all(e.box for _, e in zs).grow(4), [e.id for _, e in zs]))
+    return out
+
+
+def labels_on_lifelines(dg, vis):
+    """W-label-on-lifeline: a message label sits on the lifeline or activation bar of a participant the message
+    does not touch, or a group title (alt guard) sits on any lifeline or bar"""
+    out = []
+    actors = {n.id for n in vis if n.seq_role == "actor"}
+
+    def actor_of(nid):
+        while nid and nid not in actors:
+            nid = dg.nodes[nid].parent if nid in dg.nodes else None
+        return nid
+    lines = []
+    for e in dg.edges:
+        if e.lifeline and e.lines and not e.hidden:
+            pts = [p for l in e.lines for p in l]
+            lines.append((e.src or e.dst, pts[0][0], min(p[1] for p in pts), max(p[1] for p in pts)))
+    spans = [(actor_of(n.id), n) for n in vis if n.seq_role == "span" and n.box]
+
+    def hits(box, touched):
+        b = box.shrink(1.0)
+        found = [a for a, x, y0, y1 in lines if a not in touched and b.x0 < x < b.x1 and b.y1 > y0 and b.y0 < y1]
+        found += [a for a, s in spans if a not in touched and b.intersects(s.box, 0.5)]
+        return sorted(set(x for x in found if x))
+    for e in dg.edges:
+        if not e.in_seq or e.lifeline or e.hidden:
+            continue
+        touched = {actor_of(e.src), actor_of(e.dst)}
+        for t in e.labels:
+            if t.role != "main":
+                continue
+            who = hits(t.box, touched)
+            if who:
+                out.append(Finding("warn", "W-label-on-lifeline", "label '%s' of %s sits on the lifeline of %s, which "
+                                   "the message does not touch" % (short(t.content, 30), e.id, names("'%s'" % w for w in who)),
+                                   t.box.grow(3), [e.id] + who))
+    for n in vis:
+        if n.is_group and n.in_seq:
+            for t in n.labels:
+                who = hits(t.box, set())
+                if who:
+                    out.append(Finding("warn", "W-label-on-lifeline", "group title '%s' of '%s' sits on the lifeline or "
+                                       "activation bar of %s" % (short(t.content, 30), n.id, names("'%s'" % w for w in who)),
+                                       t.box.grow(3), [n.id] + who))
+    return out
+
+
+BOXLIKE = ("rect", "path:MCCVCCVZ", "path:MHCCHCCZ")  # box, cylinder, queue: one row reads as one height
+
+
+def sibling_sizes(dg, leaves, containers, real, axis):
+    """W-sibling-size: siblings that share a rank should share a size. Rows (tops, centres or bottoms within
+    2px, not one step of a chain): heights within 8px (12px between a box and a cylinder), and in top-down
+    layouts widths within 16px or 15%. Stacked siblings of a left/right layout: the same, turned. Sequence
+    participant headers. Side-by-side sibling containers: bottoms within 8px."""
+    out = []
+    linked = {frozenset((e.src, e.dst)) for e in real}
+    cands = [n for n in leaves if not n.is_text_shape and not n.in_seq and n.core is not None and n.sig != "table"]
+    byparent = {}
+    for n in cands:
+        byparent.setdefault(n.parent, []).append(n)
+
+    def ranks(lst, pos):
+        """groups of siblings whose `pos` edges line up (and that are not one step of a chain)"""
+        lst = sorted(lst, key=lambda n: pos(n.core)[0])
+        used, groups = set(), []
+        for n in lst:
+            if n.id in used:
+                continue
+            grp = [n]
+            for m in lst:
+                if m.id in used or m is n or not any(abs(u - v) <= 2 for u, v in zip(pos(m.core), pos(n.core))):
+                    continue
+                if not any(frozenset((m.id, r.id)) in linked for r in grp):
+                    grp.append(m)
+            used.update(m.id for m in grp)
+            if len(grp) >= 2:
+                groups.append(grp)
+        return groups
+
+    def across(grp, dim, what):
+        """the rank's size across it (height of a row): 8px within a shape, 12px between box-like shapes"""
+        v = lambda m: m.core.h if dim == "h" else m.core.w
+        sig = {}
+        for m in grp:
+            sig.setdefault(m.sig, []).append(m)
+        bad = [g for g in sig.values() if len(g) >= 2 and max(map(v, g)) - min(map(v, g)) > 8]
+        box = [m for m in grp if m.sig in BOXLIKE]
+        if not bad and len({m.sig for m in box}) >= 2 and max(map(v, box)) - min(map(v, box)) > 12:
+            bad = [box]
+        for g in bad:
+            out.append(Finding("warn", "W-sibling-size", "siblings in one %s have different %s (%s): %s" % (
+                what, "heights" if dim == "h" else "widths", "/".join("%.0f" % x for x in sorted(set(round(v(m)) for m in g))),
+                names(m.id for m in g)), None, [m.id for m in g], [m.core for m in g]))
+
+    def spans(vals):
+        """sizes that are whole spans of one period, n x unit + (n - 1) x gap with one gap of 0-40px: the bars
+        of a roadmap or timeline grid, sized on purpose"""
+        unit = min(vals)
+        gaps = set()
+        for x in vals:
+            n = int(round(x / unit)) if unit > 0 else 0
+            if n < 1:
+                return False
+            if n > 1:
+                g = (x - n * unit) / (n - 1)
+                if not 0 <= g <= 40:
+                    return False
+                gaps.add(round(g))
+            elif abs(x - unit) > 2:
+                return False
+        return len(gaps) == 1 or (len(gaps) == 2 and max(gaps) - min(gaps) <= 1)
+
+    def along(grp, dim, what):
+        """the rank's size along it (width of a row): 16px and 15% within a shape, unless the sizes are whole
+        spans of one period (a roadmap row)"""
+        v = lambda m: m.core.w if dim == "w" else m.core.h
+        sig = {}
+        for m in grp:
+            sig.setdefault(m.sig, []).append(m)
+        for g in sig.values():
+            if len(g) < 2:
+                continue
+            lo, hi = min(map(v, g)), max(map(v, g))
+            if hi - lo > 16 and hi - lo > 0.15 * hi and not spans([v(m) for m in g]):
+                out.append(Finding("warn", "W-sibling-size", "siblings in one %s have different %s (%s): %s" % (
+                    what, "widths" if dim == "w" else "heights", "/".join("%.0f" % x for x in sorted(set(round(v(m)) for m in g))),
+                    names(m.id for m in g)), None, [m.id for m in g], [m.core for m in g]))
+    for lst in byparent.values():
+        for grp in ranks(lst, lambda b: (b.y0, b.cy, b.y1)):
+            across(grp, "h", "row")
+            if axis == 1:
+                along(grp, "w", "row")
+        if axis == 0:
+            for grp in ranks(lst, lambda b: (b.x0, b.cx, b.x1)):
+                across(grp, "w", "column")
+                along(grp, "h", "column")
+    heads = [n for n in leaves if n.seq_role == "actor" and n.core is not None]
+    for sc in sorted(dg.seq_scopes):
+        grp = [n for n in heads if _in_scope(n.id, sc)]
+        if len(grp) >= 2:
+            across(grp, "h", "participant row")
+            along(grp, "w", "participant row")
+    cbp = {}
+    for c in containers:
+        if not c.in_seq and not c.is_group and c.box:
+            cbp.setdefault(c.parent, []).append(c)
+    for lst in cbp.values():
+        lst.sort(key=lambda c: c.box.x0)
+        seen = set()
+        for c in lst:
+            row = [d for d in lst if abs(d.box.y0 - c.box.y0) <= 2 and d.id not in seen]
+            seen.update(d.id for d in row)
+            if len(row) < 2:
+                continue
+            ys = [d.box.y1 for d in row]
+            hs = [d.box.h for d in row]
+            if 8 < max(ys) - min(ys) <= 0.25 * max(hs):
+                out.append(Finding("warn", "W-sibling-size", "side-by-side containers end at different heights (%s): %s" % (
+                    "/".join("%.0f" % h for h in sorted(set(round(h) for h in hs))), names(d.id for d in row)),
+                    None, [d.id for d in row], [d.box for d in row]))
+    return out
 
 
 def _ancestors(dg, nid):
@@ -2137,9 +2566,11 @@ def compact(F, n_err, n_warn, n_info):
         fs = by[code]
         total = sum(1 for f in fs if not f.msg.startswith("... and ")) + sum(
             int(re.match(r"\.\.\. and (\d+)", f.msg).group(1)) for f in fs if f.msg.startswith("... and "))
-        lines.append("%s x%d -> %s" % (code, total, anchor(code)))
+        worst = min((f.sev for f in fs), key=lambda v: SEV_ORDER[v])
+        lines.append("%s x%d -> %s (%s)" % (code, total, anchor(code), SEV_WORD[worst]))
         for f in fs[:4]:
-            lines.append("  %s%s" % ("[%d] " % f.num if f.num else "", short(f.msg, 170)))
+            # the S-inferred list is the report's Assumed: line - never cut it
+            lines.append("  %s%s" % ("[%d] " % f.num if f.num else "", f.msg if code == "S-inferred" else short(f.msg, 170)))
         if len(fs) > 4:
             lines.append("  ...")
     return lines

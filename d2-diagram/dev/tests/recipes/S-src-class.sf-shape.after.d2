@@ -4,5 +4,5 @@ direction: down
 placed: Order placed {class: sf-node}
 paid: Payment taken? {class: [sf-node; sf-primary]; shape: diamond}
 shipped: Shipped {class: sf-node}
-placed -> paid: {class: sf-flow}
-paid -> shipped: yes {class: sf-flow}
+placed -> paid: {class: sf-edge}
+paid -> shipped: yes {class: sf-edge}

@@ -1,0 +1,16 @@
+# After: the label says what the reader needs (details go into the text): it fits the gap
+# next to the Resource API, and the post step moves it there.
+...@neutral-theme
+shape: sequence_diagram
+classes: {p: {width: 170}}
+user: User {class: [actor; p]}
+spa: Browser SPA {class: [actor; p]}
+auth: Authorization server {class: [actor; p]}
+api: Resource API {class: [actor; p]}
+user -> spa: "1. Log in" {class: dep}
+spa -> auth: "2. GET /authorize (code_challenge)" {class: dep}
+auth -> spa: "3. redirect with code" {class: secondary}
+spa -> auth: "4. POST /token (code, code_verifier)" {class: dep}
+auth -> spa: "5. access token" {class: secondary}
+spa -> api: "6. GET /orders (Bearer token)" {class: dep}
+api -> spa: "7. 200 orders" {class: secondary}

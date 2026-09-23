@@ -1,0 +1,29 @@
+# After: a `key` row of `chip`s in the real classes (the text style of each status shows
+# too), under the panels with `near: bottom-center`: as a grid cell it would widen one panel.
+...@neutral-theme
+grid-rows: 1
+horizontal-gap: 32
+classes: {box: {width: 150}}
+before: Before {
+  class: zone
+  shop: Shop monolith {class: [service; box]}
+  checkout: Checkout module {class: [service; box; muted]}
+  stripe: Stripe {class: [service; box; external]}
+  shop -> checkout: {class: dep}
+  checkout -> stripe: {class: dep}
+}
+after: After {
+  class: zone
+  shop: Shop monolith {class: [service; box]}
+  payments: Payments service {class: [service; box; success]}
+  stripe: Stripe {class: [service; box; external]}
+  shop -> payments: {class: dep}
+  payments -> stripe: {class: dep}
+}
+key: {
+  class: key
+  near: bottom-center
+  added: Added {class: [service; chip; success]}
+  removed: Removed {class: [service; chip; muted]}
+  third: Third party {class: [service; chip; external]}
+}

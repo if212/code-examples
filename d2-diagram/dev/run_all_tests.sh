@@ -12,9 +12,14 @@
 #   -h, --help   this text
 # Suites run one after another, in this order:
 #   structure lint d2check doctor semantic style templates snippets export recipes icons routing
+# Naming a suite is consent to what it needs: --only icons implies --network, --only routing --llm.
 # Logs: ${TMPDIR:-/tmp}/d2-diagram-tests/<suite>.log (the tail of a failed suite is printed);
 # the templates suite leaves each template's review PNGs in templates/work/ there.
-# exit: 0 every suite that ran passed | 1 a suite failed | 2 usage error or d2/python3 missing
+# Templates gate (column 800): d2check exit 0 against dev/tests/templates/<name>.brief, displayed height
+#   <= 900px and content aspect 0.6..2.5 on every board (read from the lint JSON), and no E-/W-/S- error
+#   or warning and no I-sparse beyond the brief's `# expect: W-code xN ... - <reason>` line.
+# exit: 0 every suite that ran passed | 1 a suite failed, or nothing ran | 2 usage error or d2/python3
+#   missing
 set -u
 unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
@@ -31,12 +36,14 @@ describe() {
   cat << 'EOF'
 suite      needs                         checks
 structure  python3 (d2 for fmt)          package structure: links, reachability, codes, ASCII, classes, ...
-lint       d2, python3 (Chromium)        d2lint codes on their cases; rasterizer and pngstats checks
+lint       d2, python3 (Chromium)        d2lint codes on their cases; svgpost steps (test_svgpost.sh);
+                                         rasterizer and pngstats checks
 d2check    d2, python3, Chromium         d2check end to end: exit codes, summary, files, routes, boards
 doctor     d2, python3, node, Chromium   doctor.sh on simulated machines, one dependency removed at a time; --help and usage exits
 semantic   d2, python3                   semcheck: brief parsing, S- codes, hints, dump/compare
 style      d2, python3, Chromium         theme contrast and fmt, class coverage, Snowflake rules
-templates  d2, python3 (Chromium)        every template: d2check exit 0 against its brief at 800px
+templates  d2, python3 (Chromium)        every template at 800px: d2check exit 0 against its brief, height <= 900,
+                                         aspect 0.6-2.5, no code outside the brief's # expect: line
 snippets   d2                            every d2 block in the docs renders (d2-bad blocks fail)
 export     d2, python3, node, Chromium   the commands of reference/export.md on fixtures
 recipes    d2, python3                   every Fix: in workflows/review-and-fix.md, by before/after pairs
@@ -75,6 +82,9 @@ case $jobs in '' | *[!0-9]*) echo "run_all_tests.sh: -j wants a number" >&2; exi
 for s in $only $skip; do
   case " $ALL " in *" $s "*) ;; *) echo "run_all_tests.sh: unknown suite '$s' (suites: $ALL)" >&2; exit 2 ;; esac
 done
+# naming a suite is consent to what it needs
+case " $only " in *" icons "*) net=1 ;; esac
+case " $only " in *" routing "*) llm=1 ;; esac
 if ! command -v d2 > /dev/null 2>&1 || ! command -v python3 > /dev/null 2>&1; then
   echo "run_all_tests.sh: d2 and python3 are required; run: sh $SKILL/scripts/doctor.sh" >&2
   exit 2
@@ -82,6 +92,54 @@ fi
 rm -rf "$LOG" && mkdir -p "$LOG" || exit 2
 
 # --- the templates suite: every template through d2check against its brief, on a copy ---------
+# gate NAME D2CHECK_TXT BRIEF WORKDIR -> one line: the size, then what breaks the budget; exit 1 on a breach
+gate() {
+  python3 - "$@" << 'PY'
+import glob, json, os, re, sys
+name, txt, brief, work = sys.argv[1:5]
+text = open(txt, encoding="utf-8", errors="replace").read()
+got = {}
+for code, n, sev in re.findall(r"(?m)^ *([EWIS]-[a-z0-9-]+) x(\d+) -> \S+ \((\w+)\)", text):
+    if sev == "info" and not code.startswith("I-"):
+        continue  # S-inferred, S-missing-node notes: reported, never gating
+    got[code] = got.get(code, 0) + int(n)
+allow, reason = {}, ""
+if brief and os.path.isfile(brief):
+    for line in open(brief, encoding="utf-8", errors="replace"):
+        m = re.match(r"\s*#\s*expect:\s*(.*)", line)
+        if m:
+            body, _, reason = m.group(1).partition(" - ")
+            for code, n in re.findall(r"([EWIS]-[a-z0-9-]+)(?:\s+x(\d+))?", body):
+                allow[code] = allow.get(code, 0) + (int(n) if n else 10 ** 6)
+extra = {c: n - allow.get(c, 0) for c, n in got.items() if n > allow.get(c, 0)}
+bad = []
+sizes = []
+for jf in sorted(glob.glob(os.path.join(work, "*.lint.json"))):
+    try:
+        rep = json.load(open(jf, encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        bad.append("%s unreadable (%s)" % (os.path.basename(jf), e))
+        continue
+    sm = rep.get("summary", {})
+    w, h = sm.get("display_px", [0, 0])
+    ar = sm.get("aspect", 0)
+    board = os.path.basename(jf)[:-len(".lint.json")]
+    tag = "" if board == name else board + " "
+    sizes.append("%s%dx%d aspect %.2f" % (tag, w, h, ar))
+    if h > 900:
+        bad.append("%sheight %d > 900" % (tag, h))
+    if not 0.6 <= ar <= 2.5:
+        bad.append("%saspect %.2f outside 0.6-2.5" % (tag, ar))
+if not sizes:
+    bad.append("no lint JSON in %s" % work)
+if extra:
+    bad.append("not in # expect: " + ", ".join("%s x%d" % kv for kv in sorted(extra.items())))
+print("; ".join(sizes) + ("  " + " ".join("%s x%d" % kv for kv in sorted(got.items())) if got else "") +
+      ("  |  " + "; ".join(bad) if bad else ""))
+sys.exit(1 if bad else 0)
+PY
+}
+
 suite_templates() {
   out="$LOG/templates"
   mkdir -p "$out/work" || return 1
@@ -100,13 +158,17 @@ suite_templates() {
     if [ -f "$b" ]; then set -- "$@" --brief "$b"; else echo "note: $name has no brief in dev/tests/templates/"; fi
     D2_WORK="$out/work" sh "$SKILL/scripts/d2check.sh" "$@" "$out/$name.d2" "$out/$name.svg" > "$out/$name.txt" 2>&1
     rc=$?
-    codes=$(sed -n 's/^ *\([EWIS]-[a-z0-9-]*\) x\([0-9]*\) -> .*/\1 x\2/p' "$out/$name.txt" | tr '\n' ' ')
-    disp=$(sed -n 's/^display: \([0-9]*x[0-9]*\).*min text \([0-9.]*px\).*/\1, min text \2/p' "$out/$name.txt" | head -1)
+    g=$(gate "$name" "$out/$name.txt" "$b" "$out/work/$name")
+    grc=$?
     case $rc in
-      0) printf 'ok    %-16s %s %s\n' "$name" "$disp" "$codes" ;;
-      3) printf 'ok    %-16s %s %s(not faithfully rasterized: see doctor.sh)\n' "$name" "$disp" "$codes" ;;
-      *) printf 'FAIL  %-16s d2check exit %s %s\n' "$name" "$rc" "$codes"
-         sed 's/^/      /' "$out/$name.txt" | grep -v '^      re-render:' | head -20
+      0 | 3) if [ "$grc" = 0 ]; then
+               printf 'ok    %-16s %s%s\n' "$name" "$g" "$([ "$rc" = 3 ] && printf ' (not faithfully rasterized: see doctor.sh)')"
+             else
+               printf 'FAIL  %-16s %s\n' "$name" "$g"
+               bad=$((bad + 1))
+             fi ;;
+      *) printf 'FAIL  %-16s d2check exit %s: %s\n' "$name" "$rc" "$g"
+         sed 's/^/      /' "$out/$name.txt" | grep -v -e '^      re-render:' -e '^      READ:' | head -20
          bad=$((bad + 1)) ;;
     esac
   done
@@ -125,7 +187,7 @@ suite_snippets() {
 run_suite() {  # run_suite NAME -> 0 pass | 1 fail | 3 skipped (the log says why)
   case $1 in
     structure) sh "$T/structure/check.sh" ;;
-    lint) python3 "$T/lint/run_tests.py" ;;
+    lint) python3 "$T/lint/run_tests.py" && sh "$T/lint/test_svgpost.sh" ;;
     d2check) sh "$T/lint/test_d2check.sh" ;;
     doctor) sh "$T/lint/test_doctor.sh" ;;
     semantic) python3 "$T/semantic/run_tests.py" ;;

@@ -1,32 +1,48 @@
-# Snowflake brand sample: a realistic diagram with one accent (every class:
-# snowflake-guide.sf.d2). Focus: MARTS, the served product.
+# Snowflake brand sample (every class: snowflake-guide.sf.d2). Request it
+# stands for: "Our Snowflake pipeline: the app DB, clickstream and a nightly
+# CSV land in RAW; dbt builds STAGING and MARTS; Tableau and Snowpark ML read
+# MARTS; a freshness alert watches STAGING." One Snowflake box holds the three
+# layers (white cylinders); co-equal sources, so sf-flow starts at the hub
+# (RAW) and stops at the consumer fork; MARTS is the one sf-primary (# brand);
+# a ghost opposite the alert keeps the dbt spine straight.
 ...@../../../templates/snowflake-brand
 direction: down
-
-sources: Sources {
-  class: sf-container
-  app: "App DB\nPostgres" {class: sf-datastore}
-  clicks: "Clickstream\nKafka" {class: sf-external}
-  legacy: "Nightly CSV\nexport" {class: sf-muted}
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    ext: third party {class: sf-external}
+    old: retiring (gray label) {class: sf-muted}
+    a -> b: dbt build {class: sf-flow}
+    a -> b: load or read {class: sf-edge}
+    a -> b: alert {class: sf-failure}
+  }
 }
+classes: {
+  src: {width: 150}
+  layer: {width: 150; height: 90}
+}
+
+app: "App DB\nPostgres" {class: [sf-node; tech; src]}
+clicks: "Clickstream\nKafka" {class: [sf-external; tech; src]}
+legacy: "Nightly CSV\nexport" {class: [sf-muted; src]}
 snowflake: Snowflake {
   class: sf-container
-  raw: RAW {class: sf-node}
-  staging: STAGING {class: sf-node}
-  marts: MARTS {class: sf-primary}
+  raw: RAW {class: [sf-datastore; layer]}
+  staging: STAGING {class: [sf-datastore; layer]}
+  g: "" {class: ghost; height: 90}
+  marts: MARTS {class: [sf-datastore; sf-primary; layer]}
+  alert: Freshness alert {class: [sf-node; layer]}
+  raw -> staging: dbt {class: sf-flow}
+  staging -> g: dbt {class: ghost}
+  staging -> marts: dbt {class: sf-flow}
+  staging -> alert: stale over 1 h {class: sf-failure}
 }
-consumers: Consumers {
-  class: sf-container
-  bi: Tableau {class: sf-node}
-  ml: Snowpark ML {class: sf-node}
-}
-alert: Freshness alert {class: sf-accent-orange}
+bi: Tableau {class: [sf-node; compact; src]}
+ml: Snowpark ML {class: [sf-node; compact; src]}
 
-sources.clicks -> snowflake.raw: Snowpipe {class: sf-flow}
-sources.app -> snowflake.raw: CDC {class: sf-edge}
-sources.legacy -> snowflake.raw: retiring {class: sf-edge}
-snowflake.raw -> snowflake.staging: dbt {class: sf-flow}
-snowflake.staging -> snowflake.marts: dbt {class: sf-flow}
-snowflake.marts -> consumers.bi: serve {class: sf-flow}
-snowflake.marts -> consumers.ml: features {class: sf-edge}
-snowflake.staging -> alert: stale over 1 h {class: sf-failure}
+app -> snowflake.raw: CDC {class: sf-edge}
+clicks -> snowflake.raw: Snowpipe {class: sf-edge}
+legacy -> snowflake.raw: retiring {class: sf-edge}
+snowflake.marts -> bi: serves {class: sf-edge}
+snowflake.marts -> ml: features {class: sf-edge}

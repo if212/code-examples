@@ -2,24 +2,51 @@
 ...@neutral-theme
 direction: down
 
-# Initial state: a dot with no label.
-start: "" {class: dot}
-queued: Queued {class: state}
-# Composite state: its substates run inside one zone.
-active: In progress {
-  class: zone
-  building: Building {class: state}
-  deploying: Deploying {class: [state; focal]}
-}
-# Final states: terminal + double border, coloured by outcome.
-live: Live {class: [success; terminal]; style.double-border: true}
-failed: Failed {class: [danger; terminal]; style.double-border: true}
+# One width for every state, one height (compact): the spine comes out even.
+classes: {box: {width: 140}}
 
-# Main path first, as flow. Labels are events; quote them when they hold
-# a guard: "start [runner free]".
-start -> queued: {class: flow}
-queued -> active.building: "start [runner free]" {class: flow}
-active.building -> active.deploying: build passes {class: flow}
-active.deploying -> live: checks pass {class: flow}
-# One transition out of the composite state covers every state inside it.
-active -> failed: any step fails {class: failure}
+# The initial state is a dot with no label. States are named as conditions.
+start: "" {class: dot}
+pending: Pending {class: [state; compact; box]}
+paid: Paid {class: [state; compact; box]}
+shipped: Shipped {class: [state; compact; box]}
+# Final states: terminal + double border. A good end is success, a bad end
+# danger; a neutral end stays a plain, full-weight pill.
+delivered: Delivered {class: [success; compact; box; terminal]; style.double-border: true}
+cancelled: Cancelled {class: [compact; box; terminal]; style.double-border: true}
+refunded: Refunded {class: [compact; box; terminal]; style.double-border: true}
+returned: Returned {class: [compact; box; terminal]; style.double-border: true}
+# A state with a side exit gets a ghost on the far side, its edge labelled
+# like the real one: the main path is then the middle branch and stays straight.
+g1: "" {class: ghost}
+g2: "" {class: ghost}
+g3: "" {class: ghost}
+
+# Main path first, flow because the request writes it as a chain; labels
+# are the events that fire a transition.
+# Side exits dep, in the order they happen: one column on the right, each
+# final one rank below the state it leaves.
+start -> pending: {class: flow}
+pending -> g1: pay {class: ghost}
+pending -> paid: pay {class: flow}
+pending -> cancelled: cancel {class: dep}
+paid -> g2: ship {class: ghost}
+paid -> shipped: ship {class: flow}
+paid -> refunded: refund {class: dep}
+shipped -> g3: deliver {class: ghost}
+shipped -> delivered: deliver {class: flow}
+shipped -> returned: return {class: dep}
+
+# The key: the start dot and the final state (the request asks to mark them;
+# a swatch loses the double border, so the entry names it), then one line per
+# transition class, in the real classes.
+vars: {
+  d2-legend: {
+    a: {class: ghost}
+    b: {class: ghost}
+    s: start {class: dot}
+    f: final state (double border) {class: [compact; box; terminal]; style.double-border: true}
+    a -> b: main path {class: flow}
+    a -> b: side exit {class: dep}
+  }
+}

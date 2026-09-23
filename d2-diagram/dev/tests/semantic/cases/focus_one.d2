@@ -1,0 +1,8 @@
+# the API focal, one edge class: no key needed
+...@mini-theme
+direction: down
+web: Web app {class: actor}
+api: API {class: [service; focal]}
+db: Orders DB {class: datastore}
+web -> api: calls {class: dep}
+api -> db: reads {class: dep}

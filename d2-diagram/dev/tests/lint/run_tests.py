@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Regression suite for scripts/d2lint.py, d2raster.py and pngstats.py.
 
-Each cases/*.d2 is rendered the way d2check renders (`d2 --scale 1`, plus any `# flags:`) and linted.
+Each cases/*.d2 is rendered the way d2check renders (`d2 --scale 1`, ELK layers 40px apart - 72 with a
+sql_table - and 30px under a container's last row - 50 under a bottom title -, plus any `# flags:`) and
+linted. A case that imports neutral-theme or snowflake-brand renders in a staging folder beside copies of
+templates/<theme>.d2 and the icons of cases/, with the bundled fonts of its family, as d2check would.
 Header comments in a case:
   # flags: -l dagre          extra d2 render flags
+  # post: svgpost            finish the SVG with scripts/svgpost.py first, as d2check does
   # column: 800              doc column width for the lint (default 800)
   # expect: CODE CODE        every listed code must be reported
   # expect-clean: E- W-      no reported code may start with these prefixes
@@ -46,12 +50,12 @@ GENERATED = {
     "bad_nonascii": "# expect: W-non-ascii\nvars: {d2-config: {layout-engine: elk; pad: 24}}\n"
                     "a: \"Caf\u00e9 service\"\nb: \"Deploy \u2192 prod\"\na -> b\n",
 }
-# PLAN.md 5.1: the only codes d2lint may emit (each has a heading in workflows/review-and-fix.md)
+# PLAN.md 5.1 + FIXPLAN I1: the only codes d2lint may emit (each has a heading in workflows/review-and-fix.md)
 FROZEN = set("""E-label-overlap E-edge-label-on-node E-edge-through-node E-edge-through-label E-icon-collision
 E-label-overflow E-node-overlap E-child-outside E-off-canvas E-contrast E-contrast-dark W-edge-crossing W-edge-overlap
 W-edge-through-container W-edge-label-on-border W-diagonal-edge W-aspect W-remote-image W-non-ascii E-small-text
 W-small-text W-curved-edge W-tall W-title-size W-unclassed W-sibling-size W-long-edge W-fanout W-edge-jog
-W-label-on-bend W-short-label W-seq-group-ragged I-sparse""".split())
+W-label-on-bend W-short-label W-seq-group-ragged I-sparse W-dogleg W-label-on-lifeline""".split())
 
 results = []
 
@@ -69,17 +73,41 @@ def header(path, key):
     return vals
 
 
+def stage(case):
+    """a themed case renders in OUT/stage/<name>/ beside the shipped theme files and the case icons"""
+    text = open(case, encoding="utf-8").read()
+    m = re.search(r"@(neutral-theme|snowflake-brand)\b", re.sub(r"#[^\n]*", "", text))
+    if not m:
+        return os.path.dirname(case), []
+    d = os.path.join(OUT, "stage", os.path.basename(case)[:-3])
+    shutil.rmtree(d, ignore_errors=True)
+    os.makedirs(d)
+    for f in glob.glob(os.path.join(SKILL, "templates", "*-theme.d2")) + \
+            glob.glob(os.path.join(SKILL, "templates", "snowflake-brand.d2")) + glob.glob(os.path.join(CASES, "*.svg")):
+        shutil.copy(f, d)
+    shutil.copy(case, d)
+    fam = "brand-snowflake" if m.group(1) == "snowflake-brand" else "default"
+    r = subprocess.run(["sh", os.path.join(SCRIPTS, "font-flags.sh"), fam], capture_output=True, text=True)
+    return d, r.stdout.split()
+
+
 def render(case):
     name = os.path.basename(case)[:-3]
     svg = os.path.join(OUT, name + ".svg")
     flags = shlex.split(" ".join(header(case, "flags")))
     if not any(f.startswith("--scale") for f in flags):
         flags = ["--scale", "1"] + flags
-    # d2check's ELK spacing defaults (ignored by dagre)
-    flags = ["--elk-nodeNodeBetweenLayers", "40", "--elk-edgeNodeBetweenLayers", "20",
-             "--elk-padding", "[top=50,left=50,bottom=30,right=50]"] + flags
-    r = subprocess.run(["d2"] + flags + [os.path.basename(case), svg], cwd=os.path.dirname(case),
+    # d2check's ELK spacing (ignored by dagre), from the same render hints d2check reads
+    hints = subprocess.run([sys.executable, os.path.join(SCRIPTS, "semcheck.py"), "--render-hints", case],
+                           capture_output=True, text=True).stdout.split()
+    flags = ["--elk-nodeNodeBetweenLayers", "72" if "sql_table" in hints else "40", "--elk-edgeNodeBetweenLayers", "20",
+             "--elk-padding", "[top=50,left=50,bottom=%d,right=50]" % (50 if "bottom-title" in hints else 30)] + flags
+    cwd, fonts = stage(case)
+    r = subprocess.run(["d2"] + fonts + flags + [os.path.basename(case), svg], cwd=cwd,
                        capture_output=True, text=True)
+    if r.returncode == 0 and "svgpost" in " ".join(header(case, "post")):
+        r = subprocess.run([sys.executable, os.path.join(SCRIPTS, "svgpost.py"), "--quiet", svg],
+                           capture_output=True, text=True)
     return case, svg, r.returncode, r.stderr.strip()[-200:]
 
 
@@ -132,7 +160,7 @@ def synthetic():
         subprocess.run(["d2", "--scale", "1", "ok_pipeline_grid.d2", src], cwd=CASES, capture_output=True)
     s = open(src, encoding="utf-8").read()
     cls = base64.b64encode(b"src.kafka").decode()
-    i = s.index('<g class="%s"' % cls)
+    i = re.search(r'<g class="%s[" ]' % re.escape(cls), s).start()  # user classes may follow the id
     j = s.index("<text", i)
     blk = re.sub(r'\by="([-\d.]+)"', lambda m: 'y="%.6f"' % (float(m.group(1)) - 140), s[i:j])
     t = s[:i] + blk + s[j:]
@@ -252,7 +280,8 @@ def output_modes():
     nums = re.findall(r'text-anchor="middle">(\d+)</text>', a)
     listed = re.findall(r"^  \[(\d+)\]", out, re.M)
     check("annotation numbers match", nums and nums == listed, "svg=%s listed=%s" % (nums, listed))
-    check("S- finding with a box is numbered", "  [1] label case differs" in out and len(nums) == 2, "listed=%s" % listed)
+    check("S- finding with a box is numbered", "  [1] label case differs" in out and len(nums) == len(listed) >= 2,
+          "listed=%s" % listed)
 
 
 def contract_codes(emitted):

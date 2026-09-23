@@ -1,0 +1,25 @@
+# Before: the exit labels are sentences: no straight run of their edges holds them, so the
+# post step leaves them on the elbows.
+...@neutral-theme
+direction: down
+classes: {s: {width: 140}}
+start: "" {class: dot}
+pending: Pending {class: [state; compact; s]}
+paid: Paid {class: [state; compact; s]}
+shipped: Shipped {class: [state; compact; s]}
+delivered: Delivered {class: [success; compact; s; terminal]; style.double-border: true}
+cancelled: Cancelled {class: [compact; s; terminal]; style.double-border: true}
+refunded: Refunded {class: [compact; s; terminal]; style.double-border: true}
+g1: "" {class: ghost}
+g2: "" {class: ghost}
+g3: "" {class: ghost}
+start -> pending: {class: flow}
+pending -> g1: pay {class: ghost}
+pending -> paid: pay {class: flow}
+pending -> cancelled: "customer cancels before paying" {class: dep}
+paid -> g2: ship {class: ghost}
+paid -> shipped: ship {class: flow}
+paid -> refunded: "refund issued by support" {class: dep}
+shipped -> g3: deliver {class: ghost}
+shipped -> delivered: deliver {class: flow}
+shipped -> refunded: "parcel returned by the customer" {class: dep}

@@ -4,12 +4,13 @@
 #  service, both over HTTPS; they pass them on over mTLS to Auth and
 #  Payments. Auth reads the password hash from the users DB; Payments sends
 #  the token and amount to Stripe over HTTPS and writes the charge id to the
-#  payments DB. The review is about the card token; number the processes."
+#  payments DB. The review is about the Payments process and the card token;
+#  number the processes."
 type: threat-model
 reader: security reviewers in the STRIDE session
 width: 800
 direction: down
-focus: internal.pay
+focus: internal.pay  # "the Payments process"
 out: card entry in the browser (Stripe.js), sessions, logging, admin tools
 nodes:
   browser: Customer browser
@@ -20,14 +21,14 @@ nodes:
   internal.auth: 3. Auth
   internal.pay: 4. Payments
   data: Data
-  data.users: Users DB\nPostgres {shape: cylinder}
-  data.ledger: Payments DB\nPostgres {shape: cylinder}
-  stripe: Stripe\n3rd party {external}
+  data.users: Users DB {shape: cylinder}
+  data.ledger: Payments DB {shape: cylinder}
+  stripe: Stripe
 edges:
   browser -> dmz.login: credentials\nHTTPS
   browser -> dmz.checkout: card token\nHTTPS
   dmz.login -> internal.auth: credentials\nmTLS
   dmz.checkout -> internal.pay: card token\nmTLS
   data.users -> internal.auth: password hash\nSQL
-  internal.pay -> stripe: token, amount\nHTTPS
+  internal.pay -> stripe: token,\namount\nHTTPS
   internal.pay -> data.ledger: charge id\nSQL

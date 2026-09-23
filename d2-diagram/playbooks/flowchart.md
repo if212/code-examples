@@ -1,131 +1,149 @@
 # Playbook: flowcharts, CI/CD pipelines, swimlanes
 
-Use for a process with decisions: request handling, approval flows, CI/CD
-and release pipelines, runbooks. Not for data moving between systems
-(`playbooks/pipeline.md`) or an object's lifecycle (`playbooks/state.md`).
-Templates: `templates/flowchart.d2` (parallel checks, a decision, a failure
-boundary, one failure lane) and `templates/swimlane.d2` (who does each step,
-rule 8). Step-by-step boards: `playbooks/change.md` section 3.
+A process with decisions: requests, approvals, CI/CD, runbooks. Not data moving between
+systems (`playbooks/pipeline.md`) or one object's lifecycle (`playbooks/state.md`).
+Templates: `templates/flowchart.d2` (parallel checks, a go/no-go decision, a failure
+scope laid out as a row, both ends on the last rank), `templates/swimlane.d2` (rule 8).
 
 ## Skeleton
 
 | Part | How |
 |---|---|
-| Direction | `direction: down` for docs; the happy path is the spine |
-| Start and ends | `terminal` pills: start `terminal`, outcomes `[success; terminal]` / `[danger; terminal]` |
-| Steps | `service` boxes, verb first: `Deploy to staging` |
-| Decisions | `decision` diamond, a short question: `All checks pass?`; the gate that matters `[decision; focal]` |
-| Parallel steps | one `zone` holding them; one edge in, one edge out |
-| "Any failure in X..Y" | a `boundary` around X..Y with ONE `failure` edge out |
-| Edges | happy path `flow`, last hop into success `ok`, failures `failure` |
+| Direction | `direction: down`: the happy path is one straight spine |
+| Steps | `[service; compact; step]`, verb first (`Deploy to staging`); one local `step: {width: 160}` on every step and end |
+| Start and ends | pills: start `[compact; step; terminal]`, ends `[success; compact; step; terminal]` and `[danger; ...]` |
+| Decisions | `decision` diamond, a short question, a fixed size (`width: 240; height: 64`); `focal` only when the request highlights it |
+| Parallel steps | one `zone` holding them as a one-row grid (`grid-rows: 1`), no arrows between them |
+| "Any failure in X..Y" | a `boundary` around X..Y, named in 1-3 words, one `failure` edge out (rule 4) |
+| Edges | the happy path the request describes `flow`, the hop into success `ok`, failures `failure` |
+| Key | `vars.d2-legend`, one line per edge class drawn (`reference/design-system.md` section 8) |
 
 ## Budget at 800px (measured on the template)
 
-- A layer gap is 40px; a labelled edge adds a label layer (98px). The
-  template (7 steps, 2 containers, one decision) is 639x997px.
-- Past about 15 steps, or three nested decisions, split into boards
-  (`playbooks/change.md` section 3) or two diagrams.
+- A compact rank is 48px plus a 40px gap; a labelled edge adds a label layer (98px
+  instead of 40). The template (5 ranks, a 3-step row in each container) is 723 x 735.
+- A 3-wide parallel row over a 1-wide column leaves a void beside the column
+  (`I-sparse`): lay 2-4 sequential steps under it as a row (rule 4). Past 7 ranks:
+  fold (rule 7: 11 nodes and the key in 794 x 733); past about 15 steps: `steps` boards.
 
 ## Notation checklist
 
-- [ ] Exactly one start; every step reachable from it (`S-unreachable`).
-- [ ] Every decision has 2+ exits, each labelled (`S-decision`).
-- [ ] Every path ends in a terminal; nothing leaves an end (`S-dead-end`).
-- [ ] One focus (`focal`), and the happy path is `flow` from start to success.
-- [ ] Failures leave through one side lane, never across the happy path.
+- [ ] One start; every step reachable (`S-unreachable`); every path ends in a terminal.
+- [ ] Every decision has 2+ labelled exits (`S-decision`); in a failure scope its reject
+      exit is the scope's failure edge (rule 4): list it without `{decision}` in the brief.
+- [ ] The success end and the failure end on the last rank; the story ends on success.
+- [ ] Emphasis per the brief (`workflows/brief.md` section 3): `flow` only on the happy
+      path the request describes, `focal` only on the node it asks to highlight.
+- [ ] A key naming every edge class drawn (`S-key`).
 
 ## Rules
 
-### 1. Declare the happy path first and make it the spine
+### 1. One straight spine: happy path first, a ghost across every fork
 
-ELK ranks nodes in declaration order. Write the nodes top to bottom, then the
-happy-path edges (`flow`), then the failure edges: the failure lane then runs
-on the right (declared first, it runs on the left). ELK centres a decision
-over the two things below it (the next step and the lane), so the spine
-below a decision sits off the spine above it (about 100px in the template);
-no declaration order removes that. The hidden third target of W-label-on-bend
-does (`gate -> ghost` declared before the main edge), at a cost: an empty
-column on the left (I-sparse), 81px more height and a bend in the failure lane.
+ELK ranks by the edges; declaration order breaks ties: which sibling goes left and which
+branch becomes the spine (`reference/layout.md` section 3). ELK centres a node over its
+branches, so the spine steps sideways at every node with a side exit: give it a `ghost`
+on the far side, its edge labelled like the real one (`gate -> g1: all pass {class:
+ghost}`, as in the template). The real branch is then the middle of three and drops
+straight (`reference/design-system.md` section 7).
 
-### 2. Label decision branches, and only them
+### 2. Labels: decision exits and scope exits, nothing else
 
-Every edge out of a decision carries its condition (`all pass` / `any fails`,
-or `yes` / `no`); other hops stay unlabelled. A labelled edge takes a label
-layer (a 98px gap instead of 40px), so labels on some plain hops but not
-others make the rhythm uneven. Label every hop of a kind or none of them.
+A decision's exits carry their condition (`all pass` / `any check fails`, `yes` / `no`),
+a failure scope's exits theirs (`all done` / `any step fails`); other hops stay bare. A
+label takes a layer: label both exits of a node or neither, or the labelled one drops its
+end a rank below the other. d2check moves a decision's label next to it.
 
-### 3. Parallel steps: one zone, one edge in, one edge out
+### 3. Parallel steps: one zone, a one-row grid, one edge in and one out
+
+A `zone` with `grid-rows: 1` holds them; its one exit is the join (`checks -> gate`, or a
+labelled `all pass` edge when no decision follows). Not three edges in and three out: six
+converging arrows read as three paths. An edge into a zone reaches every step in it.
+
+### 4. A failure scope: one boundary, one failure edge, both ends on the last rank
+
+Wrap the steps that fail the same way in a `boundary` named in 1-3 words (`Release`),
+the rule on its failure edge (`any failure`); a decision inside gets no reject edge of its
+own (`any failure or rejected`). The success end leaves the scope too: both ends sit on
+the last rank, and the story ends on success, where the happy path ends:
+- 2-4 steps: a one-row grid inside the boundary (`grid-rows: 1; horizontal-gap: 24`),
+  arrows between the steps. The row ends at the right, so the success end goes right and
+  the failure end left: declare the failure end first (the template).
+- More steps than a row holds: a column (`grid-columns: 1`) on the spine, as wide as its
+  two ends (`width: 320` for two 160px pills), the success end declared first (left):
+  both exits drop straight. Past 7 ranks, fold (rule 7).
+Enter and leave by container edges (an edge to the first step inside crosses the title).
+
+### 5. Terminals are pills colored by outcome
+
+The modifier goes before `terminal` (`[success; ...; terminal]` is a green pill, `[terminal;
+success]` a green box). `ok` is the hop into success only; one failure end takes every failure.
+
+### 6. CI/CD specifics
+
+Stages are named by what they do (`Deploy to staging`), a tool only on a `tech` second line
+the request names (`"Build image\nDocker"`); a manual approval is a `decision`.
+
+### 7. Past 7 ranks: fold into two columns
+
+A root grid, 2 x 2: the first stages, the scope, a hidden hole, the failure end under the
+scope, `vertical-gap: 80` so its edge shows past the label (edges between cells are
+straight); the success end is the scope's last step.
 
 ```d2
 # cwd: ../templates
 ...@neutral-theme
-direction: down
-push: Commit pushed {class: terminal}
-checks: Checks run in parallel {
+grid-rows: 2
+grid-columns: 2
+horizontal-gap: 32
+vertical-gap: 80
+classes: {step: {width: 176}; check: {width: 96}}
+build: Build {
   class: zone
-  lint: Lint {class: service}
-  unit: Unit tests {class: service}
-  build: Build image {class: service}
+  direction: down
+  pr: Pull request opened {class: [compact; step; terminal]}
+  checks: In parallel {class: zone; grid-rows: 1; horizontal-gap: 12; vertical-gap: 12}
+  checks.lint: Lint {class: [service; compact; check]}
+  checks.unit: Unit tests {class: [service; compact; check]}
+  checks.image: Build image {class: [service; compact; check]}
+  scan: Security scan {class: [service; compact; step]}
+  staging: Deploy to staging {class: [service; compact; step]}
+  pr -> checks: {class: flow}
+  checks -> scan: all pass {class: flow}
+  scan -> staging: {class: flow}
 }
-gate: All green? {class: [decision; focal]}
-push -> checks: {class: flow}
-checks -> gate: {class: flow}
+release: Release {
+  class: boundary
+  direction: down
+  e2e: Run e2e tests {class: [service; compact; step]}
+  approval: Approve? {class: decision}
+  canary: Canary 10% {class: [service; compact; step]}
+  rollout: Full rollout {class: [success; compact; step; terminal]}
+  e2e -> approval: {class: flow}
+  approval -> canary: approved {class: flow}
+  canary -> rollout: {class: ok}
+}
+empty: {label: ""; width: 10; height: 10; style.opacity: 0}
+rollback: Roll back {class: [danger; compact; step; terminal]}
+build -> release: {class: flow}
+release -> rollback: any failure or rejected {class: failure}
+vars: {d2-legend: {a: {class: ghost}; b: {class: ghost}
+  a -> b: happy path {class: flow}; a -> b: success {class: ok}; a -> b: failure {class: failure}
+}}
 ```
-
-Not three edges in and three out: six converging arrows read as three
-separate paths. semcheck treats an edge into a zone as reaching every step in it.
-
-### 4. "Any failure in these steps": a boundary with one failure edge
-
-Wrap the steps in `boundary`, name the rule in its title (`"Release: any
-failure rolls back"`), and draw one `failure` edge from the boundary itself.
-Enter and leave it with container edges (`gate -> release`, `release ->
-done`): they come out straight, while an edge to the first step inside runs
-through the title (`E-edge-through-label`). Never draw one failure edge per step.
-
-### 5. Failures share one side lane
-
-Send every failure to the same outcome on one side: a single `[danger;
-terminal]` collecting them keeps the happy path clear. The first edge of the
-lane runs the length of the diagram by design; one failure end per step would
-put a red pill in every row instead.
-
-### 6. Terminals are pills coloured by outcome
-
-`terminal` alone is a white pill for the start. For the ends, the modifier
-goes FIRST: `[success; terminal]` is a green pill, `[terminal; success]` a
-green box. The last hop into success is `ok` (green); nothing else is green.
-
-### 7. CI/CD specifics
-
-- Stages are steps named by what they do (`Deploy to staging`), not by tool.
-- A manual approval is a `[decision; focal]` gate with `approved` / `rejected`.
-- Put tools in the label's second line only when the request names them:
-  `"Build image\nDocker"`.
 
 ### 8. Swimlanes: who does each step, and where work changes hands
 
-`templates/swimlane.d2`, `type: swimlane`: a process where 2+ named people, roles or
-teams hand work over (approvals, escalations, refunds). Agents or services as the
-actors: a plain flowchart. Rules 2 and 6 hold; the layout is a grid:
-- One grid row per lane (`[zone; lane]`). Every lane has the same `grid-columns` and
-  cell size, so steps line up across lanes; time runs right.
-- The lane name is a `caption` in a hidden fixed-width slot (a bare caption sticks to
-  the top of its cell); the brief lists it as `cust.h.t: Customer {note}`.
-- Staircase: inside a lane the next step takes the next column; a handoff goes straight
-  up or down in the same column. Empty cells stay, hidden with `style.opacity: 0`.
-- Never skip a lane: that edge cuts through the lane between
-  (`W-edge-through-container`). Route the handoff through a real step there, reorder
-  the lanes, or end in the lane that produces the outcome (`Claim paid` in Finance).
-- Rework is a later step in time, never an edge back across lanes. Label decision
-  exits only: the 24px gaps hold nothing more.
-- 3 lanes x 4 step columns of 128px: 794x434 at 14px. A 5th column needs 112px cells
-  (12.9px text), too narrow for a 2-line decision. More steps: lanes as grid columns,
-  time running down (`grid-columns: N` at the root, `grid-rows: K` in every lane).
-- A decision cell holds two lines of about 9 characters (`Within\n30 days?`):
-  `On sanctions\nlist?` needed 189px (E-label-overflow).
-- A grid edge is a straight line between cell centres: a step hands work only to the
-  lane above or below it. A process that needs more (a step handing work to two lanes
-  on one side; requester, procurement, legal and finance all trading work: 4 E-, 10 W-)
-  is a flowchart, the role first in each label (`"Legal review:\nclear the vendor?"`);
-  say so under `Assumed:`.
+`type: swimlane`: 2+ named people, roles or teams hand work over; services: a flowchart.
+- One grid row per lane (`[zone; lane]`), the same `grid-columns` and cell size in every
+  lane: steps line up, time runs right. The lane name is a `caption` in a hidden slot
+  (brief: `cust.h.t: Customer {note}`). A decision cell holds two 9-character lines.
+- Staircase: a lane's next step takes the next column; a handoff goes straight up or down;
+  empty cells stay hidden. Never skip a lane (`W-edge-through-container`); rework is a
+  later step, never an edge back.
+- Pre-check: list each lane's handoff partners. A lane trading work with 3+ lanes
+  (support in a triage) cannot keep every handoff adjacent: keep the lanes asked for, run
+  the spine down one column and send the return handoff straight up another through
+  empty hidden cells; the finding it leaves goes under `Open:` with the recipe tried. A
+  flowchart with the role first in each label only when the request names no lanes.
+- 3 lanes x 4 columns of 128px: 794 x 494, key under the lanes; more: lanes as columns.

@@ -6,6 +6,8 @@ direction: down
 grid-columns: 1
 grid-gap: 24
 
+title: "Style guide: snowflake-brand" {class: title}
+
 nodes: Node roles {
   class: sf-container
   node: sf-node {class: sf-node}
@@ -34,4 +36,26 @@ edges: Edge roles {
   a1 -> b1: sf-edge {class: sf-edge}
   a2 -> b2: sf-flow {class: sf-flow}
   a3 -> b3: sf-failure {class: sf-failure}
+}
+
+geometry: Geometry classes (as in neutral-theme) {
+  class: sf-container
+  compact: compact {class: [sf-node; compact]}
+  tech: "tech\nline 2 is 14px gray" {class: [sf-node; tech]}
+  key: {
+    class: key
+    chip: chip {class: [sf-node; chip]}
+    retired: retired {class: [sf-node; chip; sf-muted]}
+  }
+}
+
+ghosts: "ghost: an invisible third child keeps the main path straight" {
+  class: sf-container
+  fork: fork {class: [sf-node; compact]}
+  g: "" {class: ghost}
+  main: main {class: [sf-node; compact]}
+  exit: exit {class: [sf-node; compact]}
+  fork -> g: exit {class: ghost}
+  fork -> main: next {class: sf-edge}
+  fork -> exit: exit {class: sf-edge}
 }

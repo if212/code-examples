@@ -61,11 +61,12 @@ doc() {
   return 1
 }
 # cmd LINE TARGET: LINE with its placeholders filled in (D2W = d2check's
-# work dir for TARGET's name)
+# work dir for TARGET's name). Paths go in single-quoted, as a user types a
+# path with spaces: a TMPDIR like "/tmp/my dir" stays one argument.
 cmd() {
   nm=$(basename "$2")
-  printf '%s\n' "$1" | sed -e "s|[\$]{CLAUDE_SKILL_DIR}|$S|g" -e "s|<target>|$2|g" \
-    -e "s|<flags>|$FLAGS_SH|g" -e "s|D2W|$D2_WORK/$nm|g" -e "s|<name>|$nm|g"
+  printf '%s\n' "$1" | sed -e "s|[\$]{CLAUDE_SKILL_DIR}|'$S'|g" -e "s|<target>|'$2'|g" \
+    -e "s|<flags>|$FLAGS_SH|g" -e "s|D2W|'$D2_WORK/$nm'|g" -e "s|<name>|$nm|g"
 }
 run() { (cd "$T" && sh -c "$1") > "$T/run.log" 2>&1; }
 svgw() { sed -n 's/.*<svg[^>]*width="\([0-9]*\)".*/\1/p' "$1" | head -n 1; }
@@ -96,10 +97,10 @@ printf '# request: "the client calls the API, which queries the DB"\ntype: steps
 ONE=$T/one/demo
 FLOW=$T/one/flow
 
-# ---- header: env overrides d2-config; the check and the unset
-L='unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE; d2 ...'
-E="env | grep -E '^(D2_(LAYOUT|THEME|DARK_THEME|PAD|SKETCH|CENTER|WATCH)|SCALE)='"
-if doc "$L" && doc "$E"; then
+# ---- header: env overrides d2-config; the check and the unset (d2check's list, plus D2_TIMEOUT and D2_ASCII_MODE)
+L='unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE D2_BUNDLE D2_FORCE_APPENDIX D2_ANIMATE_INTERVAL D2_CHECK D2_NO_XML_TAG D2_TIMEOUT D2_ASCII_MODE D2_FONT_REGULAR D2_FONT_ITALIC D2_FONT_BOLD D2_FONT_SEMIBOLD D2_FONT_MONO D2_FONT_MONO_BOLD D2_FONT_MONO_ITALIC D2_FONT_MONO_SEMIBOLD; d2 ...'
+E="env | grep -E '^(D2_[A-Z_]+|SCALE)='"
+if doc "$L" && doc "$E" && doc 'more than `D2_WORK` or'; then
   vb() { grep -o 'viewBox="[^"]*"' "$1" | head -n 1; }
   d2 "$ONE.d2" "$T/env0.svg" > /dev/null 2>&1
   D2_PAD=100 d2 "$ONE.d2" "$T/pad.svg" > /dev/null 2>&1
@@ -108,13 +109,23 @@ if doc "$L" && doc "$E"; then
   D2_CENTER=true d2 "$ONE.d2" "$T/ctr.svg" > /dev/null 2>&1
   SCALE=2 d2 "$ONE.d2" "$T/sc.svg" > /dev/null 2>&1
   (eval "D2_PAD=100; export D2_PAD; ${L% d2 ...}" && d2 "$ONE.d2" "$T/nopad.svg") > /dev/null 2>&1
-  seen=$(D2_PAD=100 D2_WORK=x sh -c "$E")
+  seen=$(env -i PATH="$PATH" D2_PAD=100 D2_WORK=x sh -c "$E" | sort | tr '\n' ' ')
   if [ "$(vb "$T/pad.svg")" != "$(vb "$T/env0.svg")" ] && [ "$(vb "$T/nopad.svg")" = "$(vb "$T/env0.svg")" ] &&
     [ "$(vb "$T/lay.svg")" != "$(vb "$T/env0.svg")" ] && grep -q 'prefers-color-scheme' "$T/dark.svg" &&
-    grep -q 'xMidYMid' "$T/ctr.svg" && [ "$(svgw "$T/sc.svg")" -gt 0 ] 2> /dev/null && [ "$seen" = "D2_PAD=100" ]; then
-    pass "env D2_PAD, D2_LAYOUT, D2_DARK_THEME, D2_CENTER, SCALE take effect; the env check shows them; unset restores"
+    grep -q 'xMidYMid' "$T/ctr.svg" && [ "$(svgw "$T/sc.svg")" -gt 0 ] 2> /dev/null && [ "$seen" = "D2_PAD=100 D2_WORK=x " ]; then
+    pass "env D2_PAD, D2_LAYOUT, D2_DARK_THEME, D2_CENTER, SCALE take effect; the env check shows them (and D2_WORK); unset restores"
   else
     fail "env overrides: pad $(vb "$T/pad.svg") lay $(vb "$T/lay.svg") nopad $(vb "$T/nopad.svg") check '$seen'"
+  fi
+  # D2_ANIMATE_INTERVAL turns a board render into one animated file; the unset line restores the board folder
+  mkdir -p "$T/ai"
+  cp "$FLOW.d2" "$T/ai/b.d2"
+  (cd "$T/ai" && D2_ANIMATE_INTERVAL=1000 d2 b.d2 anim.svg) > /dev/null 2>&1
+  (cd "$T/ai" && eval "D2_ANIMATE_INTERVAL=1000; export D2_ANIMATE_INTERVAL; ${L% d2 ...}" && d2 b.d2 plain.svg) > /dev/null 2>&1
+  if [ -f "$T/ai/anim.svg" ] && grep -q '@keyframes' "$T/ai/anim.svg" && [ ! -d "$T/ai/anim" ] && [ -f "$T/ai/plain/index.svg" ]; then
+    pass "env D2_ANIMATE_INTERVAL: one animated file instead of the board folder; the unset line restores the folder"
+  else
+    fail "env D2_ANIMATE_INTERVAL: $(ls "$T/ai" | tr '\n' ' ')"
   fi
 fi
 
@@ -164,18 +175,16 @@ if doc "$L" && doc 'add `--salt <name>` after it'; then
   fi
 fi
 
-# ---- header: the re-render line reproduces the layout, not d2check's post-processing
-if doc 'reproduces the layout only' && doc 'geometricPrecision` to the SVG and sets mode 644' && [ -n "$HAVE_CHECK" ]; then
+# ---- header: the re-render line (render + post step) reproduces the SVG; raw d2 writes mode 600
+if doc 'reproduces the SVG, but a' && doc 'raw `d2` writes mode 600' && [ -n "$HAVE_CHECK" ]; then
   mkdir -p "$T/rr" && cp "$ONE.d2" "$T/rr/demo.d2"
   (cd "$T/rr" && sh "$S/scripts/d2check.sh" --no-raster demo.d2 checked.svg) > "$T/rr.log" 2>&1
-  rr=$(sed -n 's/^re-render: //p' "$T/rr.log" | sed 's/ checked\.svg$/ again.svg/')
+  rr=$(sed -n 's/^re-render: //p' "$T/rr.log" | sed 's/checked\.svg/again.svg/g')
   (cd "$T/rr" && sh -c "$rr") > /dev/null 2>&1
-  a=$(grep -o 'viewBox="[^"]*"' "$T/rr/checked.svg" | head -n 1) b=$(grep -o 'viewBox="[^"]*"' "$T/rr/again.svg" 2> /dev/null | head -n 1)
-  if [ -n "$a" ] && [ "$a" = "$b" ] && grep -q geometricPrecision "$T/rr/checked.svg" && ! grep -q 'text{text-rendering:geometricPrecision}' "$T/rr/again.svg" &&
-    [ "$(mode "$T/rr/checked.svg")" = 644 ] && [ "$(mode "$T/rr/again.svg")" = 600 ]; then
-    pass "re-render line: same layout ($a); no geometricPrecision rule, mode 600 (d2check: rule added, 644)"
+  if [ -n "$rr" ] && cmp -s "$T/rr/checked.svg" "$T/rr/again.svg" && [ "$(mode "$T/rr/checked.svg")" = 644 ]; then
+    pass "re-render line: byte-identical SVG (mode $(mode "$T/rr/again.svg"); d2check writes 644)"
   else
-    fail "re-render line: '$rr' gave '$b' vs '$a'"
+    fail "re-render line: '$rr' did not reproduce checked.svg ($(wc -c < "$T/rr/checked.svg" 2> /dev/null) vs $(wc -c < "$T/rr/again.svg" 2> /dev/null) bytes)"
   fi
 fi
 
@@ -311,21 +320,22 @@ fi
 
 # ---- section 6 tip: a class list re-assigned in a step is ignored; reset first. The rule lives in
 # syntax.md section 7 (one home) and export.md links it: check both, then prove the rule itself
-L='db.class: null; db.class: [datastore; focal]'
+L1='db.class: null' L2='db.class: [datastore; danger]'
 if doc 'reference/syntax.md` section 7' &&
-  { grep -F -q -- "$L" "$S/reference/syntax.md" || { fail "syntax.md section 7 no longer contains: $L"; false; }; }; then
-  printf '%s\n' 'classes: {datastore: {shape: cylinder}; focal: {style.stroke: "#2563EB"}}' \
+  { grep -F -q -- "\`$L1\` then" "$S/reference/syntax.md" && grep -F -q -- "\`$L2\`" "$S/reference/syntax.md" ||
+    { fail "syntax.md section 7 no longer contains: $L1 then $L2"; false; }; }; then
+  printf '%s\n' 'classes: {datastore: {shape: cylinder}; danger: {style.stroke: "#DC2626"}}' \
     'db: DB {class: datastore}' 'a -> db' \
-    'steps: {s1: {db.class: [datastore; focal]}; s2: {db.class: focal}; s3: {'"$L"'}}' > "$T/cls.d2"
+    'steps: {s1: {db.class: [datastore; danger]}; s2: {db.class: danger}; s3: {'"$L1; $L2"'}}' > "$T/cls.d2"
   d2 "$T/cls.d2" "$T/cls.svg" > /dev/null 2>&1
-  n1=$(grep -o 'stroke="#2563EB"' "$T/cls/s1.svg" 2> /dev/null | wc -l)
-  n3=$(grep -o 'stroke="#2563EB"' "$T/cls/s3.svg" 2> /dev/null | wc -l)
+  n1=$(grep -o 'stroke="#DC2626"' "$T/cls/s1.svg" 2> /dev/null | wc -l)
+  n3=$(grep -o 'stroke="#DC2626"' "$T/cls/s3.svg" 2> /dev/null | wc -l)
   # db's group is <g class="ZGI= ..."> (base64 of its key); its shape is a <path> while it is a cylinder
   rect2=$(grep -c '<g class="ZGI=[^"]*"><g class="shape" ><rect' "$T/cls/s2.svg" 2> /dev/null)
-  if [ "$n1" -eq 0 ] && [ "$n3" -gt 0 ] && [ "$rect2" = 1 ] && grep -q 'class="[^"]* datastore focal"' "$T/cls/s3.svg"; then
+  if [ "$n1" -eq 0 ] && [ "$n3" -gt 0 ] && [ "$rect2" = 1 ] && grep -q 'class="[^"]* datastore danger"' "$T/cls/s3.svg"; then
     pass "class list in a step: ignored as is; one class drops the cylinder; applied after the reset"
   else
-    fail "class reset claim: list gave $n1 focal strokes, one class gave rect=$rect2, reset gave $n3"
+    fail "class reset claim: list gave $n1 danger strokes, one class gave rect=$rect2, reset gave $n3"
   fi
 fi
 

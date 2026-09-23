@@ -7,16 +7,16 @@ type: class
 reader: engineers reading the payments design doc
 width: 800
 direction: down
-focus: Order
+focus: Order  # "Focus on Order"
 out: refunds, currency conversion
 nodes:
-  Order: Order {fields: id total()}
+  Order: Order {fields: id total() checkout()}
   LineItem: LineItem {fields: sku qty}
-  PaymentMethod: "<<interface>> PaymentMethod"
+  PaymentMethod: "<<interface>> PaymentMethod" {fields: charge(amount)}
   CardPayment: CardPayment {fields: token}
   Wallet: Wallet {fields: balance}
 edges:
-  LineItem -> Order: "1..*" {dst: diamond-filled}
-  Order -> PaymentMethod: pays with
-  CardPayment -> PaymentMethod {dst: triangle-hollow, dashed}
-  Wallet -> PaymentMethod {dst: triangle-hollow, dashed}
+  Order <- LineItem: contains {src: diamond-filled, dst-label: 1..*}
+  Order -> PaymentMethod: pays with {dst-label: 0..1}
+  PaymentMethod <- CardPayment {src: triangle-hollow, dashed}
+  PaymentMethod <- Wallet {src: triangle-hollow, dashed}

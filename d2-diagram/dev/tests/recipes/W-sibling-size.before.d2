@@ -5,6 +5,6 @@ gateway: API gateway {class: service}
 orders: Orders {class: [service; focal]}
 payments: "Payments\nPCI zone" {class: service}
 search: Search {class: service}
-gateway -> orders: {class: flow}
+gateway -> orders: {class: dep}
 gateway -> payments: {class: dep}
 gateway -> search: {class: dep}

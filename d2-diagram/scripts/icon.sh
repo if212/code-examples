@@ -20,10 +20,12 @@
 #
 # ref: prefix:name (lucide:database, logos:kafka-icon, k8s:pod) or https URL.
 # hex: 6 digits, no '#' (an unquoted # starts a shell comment).
-# api.iconify.design unreachable or rate limited: lucide refs fall back to
-# unpkg lucide-static (verify, get), then get copies the bundled pack.
-# exit codes (shared by every script of the skill):
-#   0 ok | 1 not found, no results | 3 network down, rate limited (429) or no curl | 64 usage
+# api.iconify.design unreachable, rate limited (429), blocked (403) or down (5xx):
+# lucide refs fall back to unpkg lucide-static (verify, get), then get copies the
+# bundled pack. Only a 404 means the name does not exist.
+# exit codes (the skill's convention; semcheck.py differs):
+#   0 ok | 1 not found (404), no results | 3 network trouble: unreachable, 429, 403,
+#   5xx, or no curl | 64 usage
 # Env ICONIFY_API, LUCIDE_STATIC, TERRASTRUCT override the hosts.
 #
 # examples:
@@ -66,6 +68,19 @@ http() {
   printf '%s' "${c:-000}"
 }
 
+# transient <status>: network trouble, not a verdict on the name - unreachable (000), rate limited
+# (429), a proxy's block page (403) or a server error (5xx)
+transient() { case $1 in 000 | 429 | 403 | 5??) return 0 ;; esac; return 1; }
+# why <status>: the words for a transient status
+why() {
+  case $1 in
+    000) printf 'host unreachable' ;;
+    429) printf 'rate limited (429): retry in a minute' ;;
+    403) printf 'blocked request (403): a proxy or firewall? retry later' ;;
+    *) printf 'server error (%s): retry later' "$1" ;;
+  esac
+}
+
 check_ref() {
   case "$1" in
     https://* | http://*) return 0 ;;
@@ -89,7 +104,7 @@ recolor() { # $1 = hex, $2 = one-color SVG file -> stdout
 }
 
 # ---------------------------------------------------------------- search
-iconify_query() { # $1 = words joined by +, $2 = prefixes or all
+iconify_query() { # $1 = words joined by +, $2 = prefixes or all; not 200: prints the status, returns 3
   if [ "$2" = all ]; then
     u="$API/search?query=$1&limit=999"
   else
@@ -97,9 +112,9 @@ iconify_query() { # $1 = words joined by +, $2 = prefixes or all
   fi
   qf=$(mktemp) || return 3
   c=$(http "$u" "$qf")
-  if [ "$c" != 200 ]; then
+  if [ "$c" != 200 ]; then  # print the status instead of names
     rm -f "$qf"
-    [ "$c" = 429 ] && return 4
+    printf '%s' "$c"
     return 3
   fi
   sed -n 's/.*"icons":\[\([^]]*\)\].*/\1/p' "$qf" | tr ',' '\n' | tr -d '"' | grep ':'
@@ -141,18 +156,13 @@ cmd_search() {
     tmp=$(mktemp) || exit 1
     # group 0 = the whole phrase (Iconify ANDs its words), 1..n = one word each
     phrase=$(printf '%s' "$*" | tr ' ' '+')
-    res=$(iconify_query "$phrase" "$pfx")
-    case $? in
-      0) ;;
-      4)
-        rm -f "$tmp"
-        die 3 "api.iconify.design rate limited (429): retry in a minute"
-        ;;
-      *)
-        rm -f "$tmp"
-        die 3 "api.iconify.design unreachable: take names from reference/icons.md; get falls back to unpkg, then the bundled pack"
-        ;;
-    esac
+    if ! res=$(iconify_query "$phrase" "$pfx"); then
+      rm -f "$tmp"
+      case $res in
+        429) die 3 "api.iconify.design rate limited (429): retry in a minute" ;;
+        *) die 3 "api.iconify.design: $(why "${res:-000}") - take names from reference/icons.md; get falls back to unpkg, then the bundled pack" ;;
+      esac
+    fi
     printf '%s\n' "$res" | sed -e '/^$/d' -e 's/^/0 /' > "$tmp"
     if [ $# -gt 1 ]; then
       g=0
@@ -210,9 +220,9 @@ cmd_verify() {
           else
             case "$meta" in *'"hidden":true'*) note="(deprecated: search for the current name)" ;; esac
           fi
-        elif [ "$p" = lucide ] && { [ "$code" = 000 ] || [ "$code" = 429 ]; }; then
+        elif [ "$p" = lucide ] && transient "$code"; then
           c2=$(http "$LUCIDE_STATIC/$n.svg")
-          if [ "$c2" != 000 ]; then
+          if ! transient "$c2"; then
             code=$c2
             note="(checked on unpkg lucide-static)"
             fellback=1
@@ -220,27 +230,28 @@ cmd_verify() {
         fi
         ;;
     esac
-    [ "$code" = 000 ] && note="(host unreachable)"
-    [ "$code" = 429 ] && note="(rate limited: retry in a minute)"
+    if transient "$code"; then note="($(why "$code"))"
+    elif [ "$code" = 404 ]; then note="(no such icon: search for the name)"
+    elif [ "$code" != 200 ]; then note="(unexpected HTTP status)"; fi
     echo "$code $ref${note:+ $note}"
     case "$code" in
       200) ;;
-      000 | 429) [ "$rc" = 1 ] || rc=3 ;;
+      000 | 429 | 403 | 5??) [ "$rc" = 1 ] || rc=3 ;;
       *) rc=1 ;;
     esac
   done
   [ -z "$fellback" ] ||
-    echo "api.iconify.design unreachable or rate limited: Iconify URLs will not render here; make local copies with get" >&2
+    echo "api.iconify.design unreachable, rate limited, blocked or down: Iconify URLs will not render here; make local copies with get" >&2
   return "$rc"
 }
 
 # ---------------------------------------------------------------- get
 # fetch_one <ref> <hex|-> <out.svg> <1 if color explicit>
-# returns 0 written | 1 not found | 3 network down or 429 (message on stderr)
+# returns 0 written | 1 not found (404) or not an SVG | 3 network trouble (000, 429, 403, 5xx; message on stderr)
 fetch_one() {
   ref=$1 hex=${2#\#} out=$3
   tmp=$(mktemp) || return 1
-  pin='' p='' n='' why=''
+  pin='' p='' n='' fell=''
   case "$ref" in
     http*)
       src=$ref
@@ -253,15 +264,14 @@ fetch_one() {
       ;;
   esac
   code=$(http "$src" "$tmp")
-  if [ "$p" = lucide ] && { [ "$code" = 000 ] || [ "$code" = 429 ]; }; then
-    why=unreachable
-    [ "$code" = 000 ] || why="rate limited (429)"
+  if [ "$p" = lucide ] && transient "$code"; then
+    fell=$(why "$code")
     src="$LUCIDE_STATIC/$n.svg"
     pin=1
     code=$(http "$src" "$tmp")
     if [ "$code" = 200 ]; then
-      echo "api.iconify.design $why: $ref fetched from unpkg lucide-static" >&2
-    elif { [ "$code" = 000 ] || [ "$code" = 429 ]; } && [ -f "$PACK/$n.svg" ]; then
+      echo "api.iconify.design ${fell%%:*}: $ref fetched from unpkg lucide-static" >&2
+    elif transient "$code" && [ -f "$PACK/$n.svg" ]; then
       h=$hex
       [ "$h" != - ] || h=$DEFAULT_HEX
       recolor "$h" "$PACK/$n.svg" > "$tmp" && code=200 pin=
@@ -270,15 +280,17 @@ fetch_one() {
   fi
   if [ "$code" != 200 ]; then
     rm -f "$tmp"
-    case "$code" in
-      000 | 429)
-        [ "$code" = 000 ] && m="host unreachable" || m="rate limited (429): retry in a minute"
-        [ -z "$why" ] || m="$m (not in the bundled pack)"
-        echo "$ref: $m" >&2
-        return 3
-        ;;
-    esac
-    echo "$code $ref: not fetched (check the name with verify)" >&2
+    if transient "$code"; then
+      m=$(why "$code")
+      [ -z "$fell" ] || m="$m (not in the bundled pack)"
+      echo "$ref: $m" >&2
+      return 3
+    fi
+    if [ "$code" = 404 ]; then
+      echo "404 $ref: no such icon (check the name with verify, or search)" >&2
+    else
+      echo "$code $ref: not fetched (unexpected HTTP status)" >&2
+    fi
     return 1
   fi
   if ! grep -q '<svg' "$tmp"; then

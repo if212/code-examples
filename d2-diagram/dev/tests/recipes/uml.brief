@@ -4,7 +4,7 @@ type: class
 reader: engineers reading the design doc
 width: 800
 direction: down
-focus: Order
+focus: Order  # "Focus on Order"
 out: payments
 nodes:
   Order: Order {fields: id total()}

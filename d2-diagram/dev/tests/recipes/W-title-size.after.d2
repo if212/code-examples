@@ -7,5 +7,5 @@ svc: Services {
   orders: Orders {class: [service; focal]}
   billing: Billing {class: service}
 }
-client -> svc.orders: {class: flow}
+client -> svc.orders: {class: dep}
 client -> svc.billing: {class: dep}

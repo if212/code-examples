@@ -1,0 +1,17 @@
+# Before: the request asks for icons, so every node gets one: k8s icons for the resources,
+# lucide for the rest, but the lucide files keep the theme's slate: two families side by side.
+# column: 800
+...@neutral-theme
+direction: down
+classes: {card: {width: 150; height: 64; icon.near: top-center; label.near: bottom-center}}
+internet: "Internet\nusers" {class: [service; card]; icon: ./icons/globe.svg}
+lb: "Load balancer\ncloud" {class: [service; card]; icon: ./icons/split.svg}
+ingress: "web\nIngress" {class: [service; card]; icon: ./k8s-icons/k8s-ingress.svg}
+svc: "web\nService" {class: [service; card]; icon: ./k8s-icons/k8s-service.svg}
+deploy: "web\nDeployment" {class: [service; card]; icon: ./k8s-icons/k8s-deployment.svg}
+pg: "Postgres\nmanaged" {class: [service; card]; icon: ./icons/database.svg}
+internet -> lb: {class: dep}
+lb -> ingress: {class: dep}
+ingress -> svc: {class: dep}
+svc -> deploy: {class: dep}
+deploy -> pg: {class: dep}

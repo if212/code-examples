@@ -1,8 +1,8 @@
 #!/bin/sh
 # run.sh - blind routing eval of workflows/route.md (dev only; needs the claude CLI).
 # usage: sh run.sh [gate|tuning|all] [OUT_DIR]
-#   gate    (default) release gate on heldout.json: one session for all 30 requests AND one
-#           session per request; each must reach >= 27/30 templates and >= 25/30 calls
+#   gate    (default) release gate on heldout.json: one session for all requests AND one
+#           session per request; each must get >= 90% of the templates and >= 83% of the calls
 #   tuning  dev.json, validation.json, validation2.json, one session each: re-run after any
 #           route.md change (never tune on heldout.json)
 #   all     both
@@ -24,8 +24,8 @@ if [ "$what" != gate ]; then
   done
 fi
 if [ "$what" != tuning ]; then
-  python3 "$HERE/blind_eval.py" "$HERE/heldout.json" "$ROUTE" --gate 27,25 --out "$OUT/one" > "$OUT/gate-one.log" 2>&1 &
-  python3 "$HERE/blind_eval.py" "$HERE/heldout.json" "$ROUTE" --gate 27,25 --per-request --out "$OUT/per" > "$OUT/gate-per.log" 2>&1 &
+  python3 "$HERE/blind_eval.py" "$HERE/heldout.json" "$ROUTE" --gate 90%,83% --out "$OUT/one" > "$OUT/gate-one.log" 2>&1 &
+  python3 "$HERE/blind_eval.py" "$HERE/heldout.json" "$ROUTE" --gate 90%,83% --per-request --out "$OUT/per" > "$OUT/gate-per.log" 2>&1 &
 fi
 wait
 for f in "$OUT"/*.log; do

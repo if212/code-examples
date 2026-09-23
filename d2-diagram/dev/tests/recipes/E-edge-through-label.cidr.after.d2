@@ -9,6 +9,6 @@ app: "Private 1a\n10.40.11.0/24" {
   worker: "worker\n1a" {class: [service; n]}
 }
 db: "Orders DB\nPostgres" {class: datastore; width: 300}
-lb -> app.api: ":8443" {class: flow}
+lb -> app.api: ":8443" {class: dep}
 app.api -> db: ":5432" {class: dep}
 app.worker -> db: ":5432" {class: dep}

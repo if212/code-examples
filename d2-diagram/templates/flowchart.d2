@@ -2,35 +2,65 @@
 ...@neutral-theme
 direction: down
 
-# Terminals are pills, decisions diamonds, steps service boxes.
-placed: Order placed {class: terminal}
-# Parallel steps share one zone: one edge in, one edge out.
-checks: Checks run in parallel {
-  class: zone
-  stock: Reserve stock {class: service}
-  card: Authorize card {class: service}
-  fraud: Fraud screen {class: service}
-}
-gate: All checks pass? {class: [decision; focal]}
-# "Any failure in these steps" = a boundary with ONE failure edge out.
-fulfil: "Fulfilment: any failure cancels" {
-  class: boundary
-  pick: Pick items {class: service}
-  pack: Pack parcel {class: service}
-  ship: Hand to carrier {class: service}
-}
-shipped: Shipped {class: [success; terminal]}
-cancelled: Order cancelled {class: [danger; terminal]}
+# One width for every step and end, one height (compact): the ranks come out even.
+classes: {step: {width: 160}}
 
-# Happy path first, as flow. Only decision branches carry labels.
+# Terminals are pills: the start plain, the ends colored by outcome.
+placed: Order placed {class: [compact; step; terminal]}
+# Parallel steps: one zone, a one-row grid, no arrows between them; one edge
+# in, one edge out (the join).
+checks: Checks in parallel {
+  class: zone
+  grid-rows: 1
+  horizontal-gap: 16
+  vertical-gap: 16
+  stock: Reserve stock {class: [service; compact; step]}
+  card: Authorize card {class: [service; compact; step]}
+  fraud: Fraud screen {class: [service; compact; step]}
+}
+# The decision the request highlights is focal; a fixed size keeps it a diamond.
+gate: All checks pass? {class: [decision; focal]; width: 240; height: 64}
+# Steps that fail the same way: a boundary named in 1-3 words, laid out as a
+# one-row grid with arrows (sequence reads left to right). Its failure edge
+# states the rule; both of its exits carry a label, because a label takes a
+# rank: a lone label drops its end below the other.
+fulfil: Fulfilment {
+  class: boundary
+  grid-rows: 1
+  horizontal-gap: 24
+  vertical-gap: 16
+  pick: Pick items {class: [service; compact; step]}
+  pack: Pack parcel {class: [service; compact; step]}
+  ship: Hand to carrier {class: [service; compact; step]}
+}
+# Both ends on the last rank. The row ends at the right, so the success end
+# sits there and the failure end at the left (declared first): the story
+# ends bottom-right, on success.
+cancelled: Order cancelled {class: [danger; compact; step; terminal]}
+shipped: Shipped {class: [success; compact; step; terminal]}
+# A node with a side exit gets a ghost on the far side, its edge labelled like
+# the real branch: the real branch is then the middle one and drops straight.
+g1: "" {class: ghost}
+
+# The happy path the request describes is flow; the hop into success is ok;
+# failures are failure. Labels: decision exits and scope exits only.
 placed -> checks: {class: flow}
 checks -> gate: {class: flow}
+gate -> cancelled: any check fails {class: failure}
 gate -> fulfil: all pass {class: flow}
+gate -> g1: all pass {class: ghost}
 fulfil.pick -> fulfil.pack: {class: flow}
 fulfil.pack -> fulfil.ship: {class: flow}
-fulfil -> shipped: {class: ok}
+fulfil -> cancelled: any step fails {class: failure}
+fulfil -> shipped: all done {class: ok}
 
-# One side lane: a single failure end collects every failure, so the long
-# first edge of the lane is intended.
-gate -> cancelled: any fails {class: failure}
-fulfil -> cancelled: {class: failure}
+# The key: one line per edge class drawn, in the real classes.
+vars: {
+  d2-legend: {
+    a: {class: ghost}
+    b: {class: ghost}
+    a -> b: happy path {class: flow}
+    a -> b: success {class: ok}
+    a -> b: failure {class: failure}
+  }
+}

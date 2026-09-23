@@ -17,12 +17,14 @@
 #   PLAYWRIGHT_BROWSERS_PATH, system Chrome/Chromium/Edge, macOS apps), an end-to-end faithful
 #   PNG, rsvg-convert (optional, approximate fallback), curl (icon.sh), the bundled fonts,
 #   api.iconify.design (optional), a writable work dir (D2_WORK or $TMPDIR/d2work).
-# exit codes (shared by every script of the skill):
+# exit codes (the skill's convention; semcheck.py differs):
 #   0 ready: d2check can render and faithfully review
-#   1 cannot render: d2 missing, too old or broken, or no writable work dir
+#   1 cannot render: d2 missing, too old or broken, or the work dir is not writable
 #   3 degraded: renders SVG, but no faithful review (no python3, or no Chromium: d2check then
 #     reports "approximate (rsvg)" or "NOT visually reviewed")
 #   64 usage error
+# env: D2CHECK_ROUTE (read by d2check) is ignored by the raster check here, which always tries every
+#   route; a set value other than auto gets its own WARN row.
 # examples:
 #   sh doctor.sh              the PASS/WARN/FAIL table, with install commands for each gap
 #   sh doctor.sh --install    install what can be installed without sudo, then check again
@@ -91,7 +93,13 @@ trap cleanup EXIT
 trap 'exit 130' INT TERM
 
 # run with a time limit when timeout(1) exists (macOS has none by default)
-limited() { s=$1; shift; if command -v timeout > /dev/null 2>&1; then timeout "$s" "$@"; else "$@"; fi; }
+# a time limit where the system has one that works as `timeout SECS CMD` (GNU; macOS coreutils: gtimeout)
+limited() {
+  lim_s=$1
+  shift
+  lim_t=$(command -v timeout || command -v gtimeout || true)
+  if [ -n "$lim_t" ] && "$lim_t" 5 true > /dev/null 2>&1; then "$lim_t" "$lim_s" "$@"; else "$@"; fi
+}
 # 1 when version $1 >= $2 (dotted numbers; a leading v is ignored)
 ver_ge() {
   awk -v a="${1#v}" -v b="${2#v}" 'BEGIN { na = split(a, x, "."); nb = split(b, y, ".")
@@ -162,14 +170,31 @@ check_all() {
   if [ "$d2ok" = 0 ]; then
     fix d2 "brew install d2" "$D2_USER   (d2 has no apt package; then put ~/.local/bin on PATH)" "$D2_SCRIPT   or: $D2_GO   (then put \$(go env GOPATH)/bin on PATH)"
   fi
-  fontsok=0
-  if [ -f "$HERE/font-flags.sh" ] && sh "$HERE/font-flags.sh" default > /dev/null 2>&1 &&
-    sh "$HERE/font-flags.sh" brand-snowflake > /dev/null 2>&1; then
-    fontsok=1
-    kb=$(du -sk "$SKILL/assets/fonts" 2> /dev/null | cut -f1)
-    row PASS fonts "bundled fonts present (IBM Plex Sans, Geist Mono, Lato; ${kb:-?} KB)"
+  # every family d2check can pick; only the default one decides fontsok (the test render uses it)
+  fontsok=0 ferr="" fbad=""
+  if [ -f "$HERE/font-flags.sh" ]; then
+    for fam in default brand-snowflake geist; do
+      if ! e=$(sh "$HERE/font-flags.sh" "$fam" 2>&1 > /dev/null); then
+        fbad="$fbad${fbad:+, }$fam"
+        [ -n "$ferr" ] || ferr=$(printf '%s' "$e" | head -1 | sed 's/^font-flags: //; s/ - reinstall.*//; s|missing .*/assets/fonts/|missing assets/fonts/|' | cut -c1-100)
+      elif [ "$fam" = default ]; then
+        fontsok=1
+      fi
+    done
   else
-    row WARN fonts "$(sh "$HERE/font-flags.sh" default 2>&1 > /dev/null | head -1 | cut -c1-100) - d2check falls back to d2's built-in fonts"
+    fbad="default, brand-snowflake, geist" ferr="scripts/font-flags.sh is missing"
+  fi
+  if [ -z "$fbad" ]; then
+    kb=$(du -sk "$SKILL/assets/fonts" 2> /dev/null | cut -f1)
+    row PASS fonts "bundled fonts present (IBM Plex Sans, Geist, Geist Mono, Lato; ${kb:-?} KB)"
+  else
+    case $fbad in
+      *default*) what="every diagram falls back to d2's built-in fonts" ;;
+      brand-snowflake) what="Snowflake-brand diagrams fall back to d2's built-in fonts (the others are fine)" ;;
+      geist) what="only D2_FONT_FAMILY=geist falls back to d2's built-in fonts (the default is fine)" ;;
+      *) what="$fbad diagrams fall back to d2's built-in fonts (the default is fine)" ;;
+    esac
+    row WARN fonts "$ferr: $what"
     fix fonts "reinstall the skill (assets/fonts is part of the package)" "reinstall the skill (assets/fonts is part of the package)" "reinstall the skill (assets/fonts is part of the package)"
   fi
   svg=""
@@ -273,8 +298,15 @@ EOF
   fi
   # --- the whole raster chain on the test SVG ---------------------------------------------------------------
   approx=0
+  # d2check honours D2CHECK_ROUTE; this check tries every route, and a forced one gets its own row
+  case ${D2CHECK_ROUTE:-auto} in
+    auto) ;;
+    playwright | chrome | rsvg | cairosvg)
+      row WARN route "D2CHECK_ROUTE=$D2CHECK_ROUTE forces one rasterizer for d2check; unset it for auto" ;;
+    *) row WARN route "D2CHECK_ROUTE='$D2CHECK_ROUTE' is not a route (auto, playwright, chrome, rsvg, cairosvg): d2check stops with a usage error; unset it" ;;
+  esac
   if [ -n "$svg" ] && [ -n "$py" ]; then
-    rout=$(limited 180 "$py" "$HERE/d2raster.py" "$svg" --out "$TMPD/doctor.png" --scale 1 --quiet 2>&1)
+    rout=$(D2CHECK_ROUTE=auto limited 180 "$py" "$HERE/d2raster.py" "$svg" --out "$TMPD/doctor.png" --scale 1 --quiet 2>&1)
     rrc=$?
     route=$(printf '%s\n' "$rout" | sed -n 's/^route: \([a-z]*\).*/\1/p' | head -1)
     case $rrc in
@@ -346,7 +378,8 @@ attempt() {
   tries=$((tries + 1))
   say_i "$verb: $(cmdline "$@")"
   [ "$dry" = 1 ] && return 0
-  "$@"
+  # --json keeps stdout for the one JSON object: the installers' own output goes to stderr
+  if [ "$json" = 1 ]; then "$@" 1>&2; else "$@"; fi
   r=$?
   [ "$r" = 0 ] || say_i "FAILED (exit $r): $(cmdline "$@")"
   return "$r"

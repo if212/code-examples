@@ -1,0 +1,12 @@
+# After: reset first, then the list: step 2 draws the failed primary.
+...@neutral-theme
+direction: down
+app: App servers {class: service}
+db: "Primary DB\nPostgres" {class: datastore}
+app -> db: SQL {class: dep}
+steps: {
+  down: {
+    db.class: null
+    db.class: [datastore; danger]
+  }
+}

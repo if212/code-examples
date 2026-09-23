@@ -1,8 +1,19 @@
 # ERD sample for the neutral theme, styled as playbooks/erd.md says: tables take
 # no role class (stroke paints the body); the globs at the end give 16px rows,
-# 1px rules and slate headers; the focus table is focal-solid, body reset to white.
+# 1px rules and slate headers; the focus table is focal-solid, body reset to
+# white. The crow's-foot key: four lines, 4px (d2 draws the legend at half scale).
 ...@../../../templates/neutral-theme
 direction: right
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: exactly one {style.stroke-width: 4; target-arrowhead.shape: cf-one-required}
+    a -> b: zero or one {style.stroke-width: 4; target-arrowhead.shape: cf-one}
+    a -> b: one or many {style.stroke-width: 4; target-arrowhead.shape: cf-many-required}
+    a -> b: zero or many {style.stroke-width: 4; target-arrowhead.shape: cf-many}
+  }
+}
 
 orgs: organizations {
   shape: sql_table
@@ -29,4 +40,4 @@ users.id <-> members.user_id: {class: dep; source-arrowhead.shape: cf-one-requir
 
 # Filtered globs go after the tables they style.
 *: {&shape: sql_table; style: {font-size: 16; stroke-width: 1}}
-*: {&shape: sql_table; !&class: focal-solid; style.fill: ${ink-600}}
+*: {&shape: sql_table; !&class: focal-solid; style.fill: ${ink-500}}

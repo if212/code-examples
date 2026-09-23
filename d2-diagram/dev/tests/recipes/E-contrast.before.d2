@@ -4,5 +4,5 @@ direction: down
 web: Web app {class: actor}
 api: Payments API {class: service; style.fill: "#1E3A8A"}
 db: "Ledger\nPostgres" {class: datastore}
-web -> api: {class: flow}
+web -> api: {class: dep}
 api -> db: {class: dep}

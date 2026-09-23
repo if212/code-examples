@@ -3,6 +3,9 @@
 How to get clean, balanced, embeddable layouts from d2 v0.7.1. Measured on
 real renders: ELK with its default spacing unless noted, `pad: 24`-`32`, 16
 px labels, d2's default font (the bundled IBM Plex Sans adds 2-5% width).
+Counts over random graphs ("in 20 random graphs") and sizes of small test
+graphs are approximate: their fixtures do not ship, so read them as
+tendencies; sizes measured on a template or a named case are exact.
 Syntax: `${CLAUDE_SKILL_DIR}/reference/syntax.md`. Symptoms: section 10.
 
 ## 1. Engine
@@ -23,7 +26,7 @@ Syntax: `${CLAUDE_SKILL_DIR}/reference/syntax.md`. Symptoms: section 10.
 
 ## 2. Direction by medium
 
-One `direction` per board, at the root. Measured sizes (ELK, `pad: 32`):
+One `direction` per board, at the root. Approximate sizes (ELK, `pad: 32`):
 
 | Graph | `direction: down` | `direction: right` |
 |---|---|---|
@@ -33,7 +36,7 @@ One `direction` per board, at the root. Measured sizes (ELK, `pad: 32`):
 
 - Doc, README or wiki column: `down`. Switch to `right` only when the graph
   is much wider than deep (the lanes row); fan-outs stay narrower in `down`
-  (1-4-1 nodes: 504 px `down`, 628 px `right`). A chain too tall for the
+  (1-4-1 nodes: about 500 px `down`, 630 px `right`). A chain too tall for the
   height budget (section 9) becomes a serpentine grid (section 7).
 - 16:9 slide: `right` for up to ~5 ranks (aspect 1.6-2.9 with 3-4 nodes in
   the middle ranks). At 6+ ranks `right` becomes a strip (aspect ~3 and up):
@@ -43,11 +46,13 @@ One `direction` per board, at the root. Measured sizes (ELK, `pad: 32`):
 
 | Lever | Effect (measured) |
 |---|---|
-| Declaration order at the root | ELK breaks ties by the order nodes AND edges are declared. Siblings of one source: the target of the first-declared edge goes left (`down`) or top (`right`), whatever the node order. Elsewhere node order counts too: in 20 random graphs node order alone changed the layout 9 times, edge order alone 15 times. Declare both in reading order |
+| Declaration order at the root | ELK ranks by the edges and breaks ties by the order nodes AND edges are declared. Siblings of one source: the target of the first-declared edge goes left (`down`) or top (`right`), whatever the node order. Elsewhere node order counts too: in 20 random graphs node order alone changed the layout about half the time, edge order alone more often. Declare both in reading order |
 | Declaration order of container children | kept even when it causes a crossing: declare children in the order of the nodes they connect to (1 crossing -> 0, and 140 px shorter, on the architecture template) |
 | Label every sibling edge from a node, or none | a labeled edge takes an extra rank (+91 px): label one of two siblings and its target drops a rank (staircase) |
-| `upper <- lower: label` for an edge that points against the flow across containers | `->` leaves the source's bottom and loops around the whole diagram into the target's top; `<-` draws the same arrow as a short edge. ELK only: dagre ignores the trick. Within one container or at the root a cycle is drawn cleanly anyway (`test -> build: retry`: a short parallel arrow) |
-| Side branches off a main path | ELK centers a node between its children, so every 2-way fork shifts the main path half a column (the ghost example below, ghosts removed: 121 px drift over 5 nodes). Alternate branch sides (63 px) or add an invisible third child so the main child is the middle one (0 px, costs one column) |
+| `upper <- lower: label` for an edge that points against the flow across containers | `->` leaves the source's bottom and loops around the whole diagram into the target's top; `<-` draws the same arrow as a short edge. ELK only: dagre ignores the trick. Within one container or at the root it is unnecessary: a cycle is drawn cleanly anyway (`test -> build: retry`: a short parallel arrow) |
+| `sink <- caller: label` for a node whose only edge comes from deep in the diagram | ELK gets the edge reversed, so the sink no longer ranks under everything: it rises beside the upper tiers and its edge runs up. A C4 database written `db <- api` joined the apps' row (610x1034 -> 680x834); a managed Postgres written `pg <- api` left the bottom band of a Kubernetes diagram. The arrow still points at the sink |
+| `owner <- attachment: label` for an attachment whose arrow points at its owner (an HPA scales its Deployment) | `deploy <- hpa: scales` ranks the HPA right under its Deployment, beside the ConfigMap and Secret the Deployment reads, not in the tier of the Deployment's siblings; the arrow still points at the Deployment |
+| Side branches off a main path | ELK centers a node between its children, so every 2-way fork shifts the main path half a column (the ghost example below, ghosts removed: 121 px drift over 5 nodes). Alternate branch sides (63 px) or add an invisible third child so the main child is the middle one (0 px, costs a 12 px column) |
 
 Back-edge across containers (the consumer sits above its queue):
 
@@ -60,12 +65,18 @@ services.orders -> data.kafka: publishes
 services.notify <- data.kafka: consumes
 ```
 
-A straight main path with invisible balancing children (label the ghost edges
-like their siblings so they stay in the same rank):
+A straight main path with invisible balancing children. A ghost is an
+empty-labelled node as tall as its rank-mates and 12 px wide (the themes'
+`ghost` class: 48 px tall for `compact` rank-mates; set `height: 66` beside
+default boxes), and its edge carries the same label as its sibling so both
+stay in one rank. Without a `height`, the empty box is taller than its
+rank-mates and every rank below drops (+68 px over the two forks here); a
+ghost that keeps its key as its label (`g1.class: ghost`, no `""`) does not
+fit 12 px and drops them too (+52 px):
 
 ```d2
 vars: {d2-config: {layout-engine: elk; pad: 24}}
-classes: {ghost: {style.opacity: 0}}
+classes: {ghost: {width: 12; height: 66; style.opacity: 0}}
 start -> pending
 pending -> cancelled: cancel
 pending -> paid: pay
@@ -74,7 +85,8 @@ paid -> refunded: refund
 paid -> shipped: ship
 paid -> g2: refund {class: ghost}
 shipped -> delivered: deliver
-g1.class: ghost; g2.class: ghost
+g1: "" {class: ghost}
+g2: "" {class: ghost}
 ```
 
 ## 4. Crossings and fan-outs
@@ -83,13 +95,14 @@ g1.class: ghost; g2.class: ghost
    containers.
 2. Move the node whose edges cross into the other container, or out of its
    own (a container is ordered as one block); render both and keep the one
-   with fewer crossings. The move changed the count in 44-48 of 60 random
-   graphs; a node left at the root between the containers crossed most.
+   with fewer crossings. The move changed the count in about three random
+   graphs of four; a node left at the root between the containers crossed most.
 3. One edge to a group instead of one per member, when the relation holds
    for every member. ELK widens a hub to 40 px per edge and stacks a fan-out
    band that grows 25 px per edge (80 px for 2 edges, 230 px for 8); one edge
    to a container removes both. Wrap the members with `grid-rows`: 8 in one
-   row were wider than the fan-out (974 vs 874 px), in 2 rows 652 px.
+   row came out wider than the fan-out (about 970 vs 870 px), in 2 rows
+   about 650 px.
 4. Split the board (layers, steps: syntax.md section 15).
 
 ```d2
@@ -106,7 +119,7 @@ gw -> svc: routes
 
 In `direction: down`, edges enter a container through its top edge, and that
 is where the title sits. Share of 40 random zone diagrams (2-4 stacked
-containers, d2check's flags) where an edge runs through a title:
+containers, d2check's flags; approximate) where an edge runs through a title:
 
 | Title | Hit |
 |---|---|
@@ -132,7 +145,8 @@ the architecture template, `W-diagonal-edge`); in `down` edges stay straight (0 
 33 on four templates), but the title floats in the gap between ranks, loosely
 tied to its box. `border-*` titles bent no edge in either direction.
 
-Container icons (20 random zone diagrams, ELK `down`, one-word titles):
+Container icons (20 random zone diagrams, ELK `down`, one-word titles;
+approximate):
 
 | Combination | Clean |
 |---|---|
@@ -246,9 +260,14 @@ a container and connect the outside nodes to it.
 
 d2check adds `--elk-nodeNodeBetweenLayers 40 --elk-edgeNodeBetweenLayers 20
 --elk-padding "[top=50,left=50,bottom=30,right=50]"` to every ELK render (d2-config
-rejects them: render error, `d2 validate` passes). Flags after `--` come later
+rejects them: render error, `d2 validate` passes); 72 between layers when a
+source has a `sql_table` (crow's feet need the room), and bottom=50 when a
+container title sits at `bottom-*`. Flags after `--` come later
 and win: `sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh in.d2 out.svg -- --elk-padding "[top=50,left=100,bottom=30,right=50]"`.
-Its `re-render:` line records the flags: copy it into the report.
+Its `re-render:` line records the flags and the post step for raw exports
+(export.md sections 7-8). The report names the d2check command instead
+(SKILL.md step 6): for a layers/steps source the raw line first deletes
+`<target>/` and everything in it (export.md section 5), and writes mode 600.
 
 | Flag (default) | Controls | 3-zone diagram, `down` | same, `right` |
 |---|---|---|---|
@@ -257,10 +276,10 @@ Its `re-render:` line records the flags: copy it into the report.
 | `--elk-padding` (`[top=50,left=50,bottom=50,right=50]`; d2check: bottom=30) | container inner padding | 20: -60 w, -147 h | 20: -180 px width |
 | `--dagre-nodesep` (60) | gap between siblings | 30: -69 px width | 30: -65 px height |
 
-- The two layer flags took 140 and 290 px off two 3-zone diagrams
+- The two layer flags took about 140 and 290 px off two 3-zone diagrams
   (`down`; the same width off in `right`); all three ELK flags at 40/20/20:
-  468 x 1107 -> 408 x 820. `--dagre-edgesep` gained nothing; the gap between
-  siblings in one ELK rank is fixed at 20 px.
+  about 470 x 1110 -> 410 x 820. `--dagre-edgesep` gained nothing; the gap
+  between siblings in one ELK rank is fixed at 20 px.
 - Lower `--elk-padding` only when containers have no title; raise its `left`
   value for long titles (section 5).
 
@@ -272,25 +291,46 @@ Its `re-render:` line records the flags: copy it into the report.
   wiki, HTML) stretches it to the column, UP or down (a 119 px wide diagram
   showed 800 px wide in an 800 px column). d2check renders with `--scale 1`:
   width and height are written, so the image keeps its size and only shrinks.
-- Budget at the brief's column (d2check `--column`, 800 by default): text
-  >= 12 px (`W-small-text`; `E-small-text` under 10 px) and displayed height
-  <= 1.6 x the column (`W-tall`: 1280 px at 800). At 800 px, 12.6-13.3 px
-  labels read well, 11 px is small, at 8.4 px letters merge.
-- Widest SVG for a smallest label: column x font px / 12 (16 px in 800: 1067).
+- At 800 px, 12.6-13.3 px labels read well, 11 px is small, at 8.4 px
+  letters merge. Widest SVG for a smallest label: column x font px / 12
+  (16 px labels in 800: 1067; 14 px edge labels: 933).
 
-| Medium | Column | Direction | Target SVG |
-|---|---|---|---|
-| Doc, README, wiki | 800 | `down` | width <= 1067 px for 16 px labels; height <= 1280 px, or <= 1.6 x width once wider than the column |
-| 16:9 slide | 1600 | `right` | width about 2 x height to fill the body; on a 1920 x 1080 slide (body ~1700 x 850, 1 pt = 2 px) 16 px labels reach 14 pt only when the SVG is <= ~950 px wide: raise font sizes for wider ones |
+The budget d2check holds at the brief's column (`--column`, 800 by default):
+
+| Check | Doc column (under 1200 px) | Slide column (1200 px and up) |
+|---|---|---|
+| text | 12 px or more (`W-small-text`), never under 10 (`E-small-text`) | the same |
+| height | aim for 1.125x the column (900 at 800); `W-tall` past 1.25x (1000) | `W-tall` past 0.55x (880 at 1600) |
+| shape: content width / height | `W-aspect` under 0.6 once the height reaches 0.75x the column, over 2.5 once the width does | under 1.2 once the height reaches 0.3x (480 at 1600), over 3.2 once the width reaches 0.75x |
+| dead space | `I-sparse`: an empty square of max(160 px, a quarter of the displayed width); a container whose children fill under half of it with 160 px or more empty | the same |
+
+A 16:9 slide body (about 1700 x 850 px on a 1920 x 1080 slide, 1 pt = 2 px)
+shows 16 px labels at 14 pt only when the SVG is at most ~950 px wide: raise
+font sizes for wider ones. A picture for both a slide and a doc: 800 px,
+landscape (workflows/brief.md section 2).
+
+Compaction, by type (d2 v0.7.1, the bundled font, column 800):
+
+| Type | Lever | Measured |
+|---|---|---|
+| any spine of one-line boxes | the theme class `compact` (48 px tall, not 66) and one width class for the spine | 18 px less per rank |
+| flowchart past 7 ranks | the 2x2 fold: row 1 the build zone and the release boundary (grid cells, each `direction: down`), row 2 a hidden hole and the failure end, `vertical-gap: 80`; one step class `{width: 184; height: 48}`; `-- --elk-padding "[top=44,left=24,bottom=20,right=24]"` (workflows/review-and-fix.md#w-tall) | 10-rank CI/CD: 550x1263 -> 754x657 |
+| sequence | d2 fixes the message pitch (about 88 px) and nothing in the source changes it: compact by rows. At most 9 messages and one one-line note (`[note; compact]`: 41 px less), or 7 messages and one two-operand `alt`; prune inferred replies, then notes; split a longer protocol into two diagrams by phase | a default note row costs about 169 px |
+| state | the happy path down a spine of `compact` states in one width class, exits in one side column, a `ghost` opposite each 2-way fork (section 3) | order lifecycle: 356x779 -> 395x599 |
+| C4 container | `db <- api` (section 3), a `title` node and a key | without title and key: 610x1034 -> 680x834 |
+| ERD | the key goes under the diagram (height, not width); d2check sets the layer gap to 72 so crow's feet stay apart | - |
+| pipeline | serpentine rows only when each row is one stage; else stage zones stacked `down`, at most 6 ranks | - |
+| wide fan-out | one edge to a grid container (section 4) | 8-way fan-out: about 910 -> 670 px wide |
+
+Other levers:
 
 | Lever | Measured |
 |---|---|
-| `direction: down` | 1-3-3-3-1 nodes: 866 -> 392 px wide |
-| `\n` in long labels / shorter labels | 3 siblings: 910 -> 537 / 538 px wide |
-| short edge labels in `right` | one 203 px label: ELK +163 px; dagre +604 px (it sizes EVERY rank gap by the longest edge label) |
-| spacing flags (section 8) | 1192 -> 872 px wide (`right`); 1107 -> 820 px tall (`down`) |
+| `direction: down` | 1-3-3-3-1 nodes: about 870 -> 390 px wide |
+| `\n` in long labels / shorter labels | 3 siblings: about 910 -> 540 px wide |
+| short edge labels in `right` | one 203 px label: ELK about +160 px; dagre about +600 px (one long label widens every dagre rank gap: 100 -> 263 px beside a 486 px labelled gap) |
+| spacing flags (section 8) | about 1190 -> 870 px wide (`right`); 1110 -> 820 px tall (`down`) |
 | serpentine grid (section 7) | 6-step chain: 1120 x 111 (`right`) or 170 x 766 (`down`) -> 650 x 432 |
-| one edge to a grid container (section 4) | 8-way fan-out: 911 -> 668 px wide |
 | split the board | layers, steps: syntax.md section 15 |
 
 ## 10. Symptom -> lever (layout only)
@@ -301,6 +341,7 @@ Its `re-render:` line records the flags: copy it into the report.
 | one sibling sits a rank lower (staircase) | label all sibling edges or none | 3 |
 | main path zig-zags | declaration order; alternate branch sides; invisible third child | 3 |
 | edge loops around the whole diagram | `upper <- lower` | 3 |
+| a node hangs far below its only partner | `sink <- caller` | 3 |
 | crossing inside a container | reorder its children | 3 |
 | crossing between containers | move the node, one edge to the group, split | 4 |
 | tall stepped band under a hub | one edge to a container of the targets | 4 |
@@ -312,5 +353,5 @@ Its `re-render:` line records the flags: copy it into the report.
 | grid edge label hides the arrow | gap 60+ | 7 |
 | lopsided grid row | equal counts | 7 |
 | text too small in the column (`W-small-text`, `E-small-text`) | width levers | 9 |
-| too tall or sparse (`W-tall`) | spacing flags, serpentine grid, split | 7-9 |
+| too tall, a tower or sparse (`W-tall`, `W-aspect`, `I-sparse`) | the compaction table of the type; lift a sink with `sink <- caller`; serpentine grid; split | 3, 7-9 |
 | small diagram blown up in a doc | render through d2check (`--scale 1`) | 9 |

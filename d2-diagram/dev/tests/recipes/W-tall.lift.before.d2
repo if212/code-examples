@@ -1,0 +1,23 @@
+# Before: the database hangs under the API, a rank of its own, so the external systems drop a
+# rank lower and the view grows into a tower.
+# expect: W-aspect
+...@neutral-theme
+direction: down
+classes: {app: {width: 220}}
+customer: "Customer\n[Person]" {shape: c4-person; class: actor}
+bank: "Internet banking\n[Software System]" {
+  class: boundary
+  web: "Web app\n[Container]" {class: [service; app]}
+  mobile: "Mobile app\n[Container]" {class: [service; app]}
+  api: "API\n[Container]" {class: service; width: 460}
+  db: "Database\n[Container]" {class: datastore}
+}
+mainframe: "Mainframe\n[Software System]" {class: [service; external]}
+email: "Email system\n[Software System]" {class: [service; external]}
+customer -> bank.web: Uses {class: dep}
+customer -> bank.mobile: Uses {class: dep}
+bank.web -> bank.api: Calls {class: dep}
+bank.mobile -> bank.api: Calls {class: dep}
+bank.api -> bank.db: "Reads, writes" {class: dep}
+bank.api -> mainframe: Uses {class: dep}
+bank.api -> email: Sends email {class: dep}

@@ -6,8 +6,8 @@
 type: compare
 reader: engineers reviewing the auth ADR
 width: 800
-direction: down   # two panels side by side, each top-down
-focus: after.api
+direction: down   # two panels side by side, each top-down, the key below
+focus: after.api  # "Mark what is added, removed and changed"
 out: token refresh, logout, the login redirect details, admin users
 nodes:
   before: Before: server sessions

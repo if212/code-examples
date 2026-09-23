@@ -9,7 +9,7 @@ type: roadmap
 reader: engineers at the all-hands (slide, shown at doc width)
 width: 800
 direction: down   # periods run right, streams stack down
-focus: data.cutover
+focus: data.cutover  # "highlight the cutover"
 out: owners, dependencies between items, exact start and end dates
 nodes:
   head.a: Q3 2026

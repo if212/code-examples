@@ -2,11 +2,11 @@
 ...@neutral-theme
 direction: down
 web: Web app {class: actor}
-api: Orders API {class: [service; focal]}
+api: Orders API {class: service}
 db: "Orders DB\nPostgres" {class: datastore}
 kafka: "Order events\nKafka"
 jobs: Fulfilment worker {class: service}
-web -> api: {class: flow}
+web -> api: {class: dep}
 api -> db: {class: dep}
 api -> kafka: {class: async}
 kafka -> jobs: {class: async}

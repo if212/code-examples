@@ -6,7 +6,7 @@ type: depgraph
 reader: engineers reading the monorepo README
 width: 800
 direction: down   # dependents above their dependencies
-focus: orders
+focus: orders  # "We are refactoring orders, highlight it"
 out: third-party packages, dev dependencies, type-only imports
 nodes:
   caption: "Monorepo: arrow = imports, red = cycle" {note}

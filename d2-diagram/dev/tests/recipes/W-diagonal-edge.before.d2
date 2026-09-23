@@ -8,6 +8,6 @@ web: Web app {class: actor}
 db: "Orders DB\nPostgres" {class: datastore}
 api: Orders API {class: [service; focal]}
 cache: "Cache\nRedis" {class: datastore}
-web -> api: {class: flow}
-api -> db: {class: flow}
+web -> api: {class: dep}
+api -> db: {class: dep}
 cache -> db: {class: dep}

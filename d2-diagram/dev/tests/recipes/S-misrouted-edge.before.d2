@@ -5,5 +5,5 @@ direction: right
 src: Sources {class: zone; app: "App DB\nPostgres" {class: datastore}}
 ingest: Ingest {class: zone; fivetran: Fivetran {class: service}}
 wh: Snowflake {class: zone; raw: RAW {class: [datastore; focal]}}
-src -> ingest: {class: flow}
-ingest -> wh: {class: flow}
+src -> ingest: {class: dep}
+ingest -> wh: {class: dep}

@@ -4,5 +4,5 @@ direction: down
 web: Web app {class: actor}
 cdn: "Edge CDN\nCloudFront" {shape: cloud; class: service; icon: icons/globe.svg}
 origin: Origin {class: service}
-web -> cdn: {class: flow}
+web -> cdn: {class: dep}
 cdn -> origin: {class: dep}

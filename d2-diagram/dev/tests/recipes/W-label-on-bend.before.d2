@@ -1,9 +1,0 @@
-# Before: ELK centres Pending between its two targets, so both edges step sideways and the
-# main-path label lands on an elbow.
-...@neutral-theme
-direction: down
-pending: Pending {class: state}
-paid: Paid {class: [state; focal]}
-cancelled: Cancelled {class: [state; danger]}
-pending -> paid: payment received {class: flow}
-pending -> cancelled: customer cancels {class: failure}

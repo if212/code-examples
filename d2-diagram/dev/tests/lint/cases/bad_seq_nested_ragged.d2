@@ -1,0 +1,27 @@
+# expect: W-seq-group-ragged
+# expect-text: operands of 'alt'
+# From the round-3 checkout saga: the two operands nested in 'alt' span different lifelines, so
+# one band starts 72px right of the other (the note in the second operand widens it to the left).
+...@neutral-theme
+shape: sequence_diagram
+
+order: Order service {class: actor}
+payment: Payment service {class: actor}
+inventory: Inventory service {class: actor}
+
+order.t -> inventory: "3. Reserve stock" {class: dep}
+alt: "alt" {
+  class: zone
+  ok: "[stock reserved]" {
+    class: zone
+    style: {text-transform: none; bold: false}
+    inventory -> order.t: "4. stock reserved" {class: secondary}
+  }
+  failed: "[reservation fails]" {
+    class: zone
+    style: {text-transform: none; bold: false}
+    inventory -> order.t: "4. reservation failed" {class: failure}
+    order.t -> payment: "5. Refund charge" {class: dep}
+    order.cancel: Cancels order {class: note}
+  }
+}

@@ -4,7 +4,7 @@ type: architecture
 reader: test
 width: 800
 direction: down
-focus: checkout
+focus: checkout  # "The checkout service reads prices"
 out: -
 nodes:
   checkout: Checkout service

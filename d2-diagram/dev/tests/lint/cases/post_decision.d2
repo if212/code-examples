@@ -1,0 +1,22 @@
+# post: svgpost
+# expect-clean: E- W-label-on-bend
+# From the round-3 CI/CD deliverable: d2 centres 'rejected' on the middle of its long lane, 200px
+# below its decision and level with 'Full rollout'; svgpost moves it to the first straight run out of
+# the diamond, where it reads as the decision's other exit (test_svgpost.sh).
+...@neutral-theme
+direction: down
+staging: Deploy to staging {class: service}
+release: "Release" {
+  class: boundary
+  e2e: Run e2e tests {class: service}
+  approval: "Manual approval?" {class: decision}
+  canary: "Production canary at 10%" {class: service}
+  rollout: Full rollout {class: [success; terminal]}
+}
+rollback: Roll back release {class: [danger; terminal]}
+staging -> release.e2e: {class: dep}
+release.e2e -> release.approval: {class: dep}
+release.approval -> release.canary: approved {class: dep}
+release.canary -> release.rollout: {class: ok}
+release.approval -> rollback: rejected {class: failure}
+release -> rollback: {class: failure}

@@ -8,8 +8,8 @@ before: Before {
   web -> mono: {class: dep}
 }
 after: After {
-  class: zone-blue
+  class: zone
   web: Web app {class: service}
   api: API {class: [service; focal]}
-  web -> api: {class: flow}
+  web -> api: {class: dep}
 }

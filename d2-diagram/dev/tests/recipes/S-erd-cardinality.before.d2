@@ -1,6 +1,16 @@
 # Before: the nullable FK is drawn cf-one-required ("exactly one"): wrong cardinality.
 # brief: erd.brief
 ...@neutral-theme
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: exactly one {style.stroke-width: 4; target-arrowhead.shape: cf-one-required}
+    a -> b: zero or one {style.stroke-width: 4; target-arrowhead.shape: cf-one}
+    a -> b: one or many {style.stroke-width: 4; target-arrowhead.shape: cf-many-required}
+    a -> b: zero or many {style.stroke-width: 4; target-arrowhead.shape: cf-many}
+  }
+}
 direction: right
 users: {
   shape: sql_table

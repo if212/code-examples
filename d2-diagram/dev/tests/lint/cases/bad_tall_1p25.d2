@@ -1,0 +1,14 @@
+# expect: W-tall
+# expect-clean: E- W-aspect
+# expect-text: 7% over the 1000px height budget (1.25x the column)
+# seven 10-step chains: 760x1070 in an 800px column, just over the doc budget of 1.25x the column
+# (1000px); aspect 0.7, so W-tall alone
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+c1s1 -> c1s2 -> c1s3 -> c1s4 -> c1s5 -> c1s6 -> c1s7 -> c1s8 -> c1s9 -> c1s10
+c2s1 -> c2s2 -> c2s3 -> c2s4 -> c2s5 -> c2s6 -> c2s7 -> c2s8 -> c2s9 -> c2s10
+c3s1 -> c3s2 -> c3s3 -> c3s4 -> c3s5 -> c3s6 -> c3s7 -> c3s8 -> c3s9 -> c3s10
+c4s1 -> c4s2 -> c4s3 -> c4s4 -> c4s5 -> c4s6 -> c4s7 -> c4s8 -> c4s9 -> c4s10
+c5s1 -> c5s2 -> c5s3 -> c5s4 -> c5s5 -> c5s6 -> c5s7 -> c5s8 -> c5s9 -> c5s10
+c6s1 -> c6s2 -> c6s3 -> c6s4 -> c6s5 -> c6s6 -> c6s7 -> c6s8 -> c6s9 -> c6s10
+c7s1 -> c7s2 -> c7s3 -> c7s4 -> c7s5 -> c7s6 -> c7s7 -> c7s8 -> c7s9 -> c7s10

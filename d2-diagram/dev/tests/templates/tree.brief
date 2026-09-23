@@ -8,7 +8,7 @@ type: tree
 reader: data team wiki
 width: 800
 direction: down
-focus: head
+focus: none
 out: individual engineers, open roles, dotted-line reports
 nodes:
   head: M. Garcia\nHead of Data

@@ -4,7 +4,7 @@ type: pipeline
 reader: test
 width: 800
 direction: right
-focus: sf
+focus: sf  # "Highlight Snowflake"
 out: -
 nodes:
   ingest: Ingestion

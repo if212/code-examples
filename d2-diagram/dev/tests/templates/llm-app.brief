@@ -9,28 +9,27 @@ type: llm-app
 reader: engineers reading the AI platform docs
 width: 800
 direction: down
-focus: app
+focus: app  # "Highlight the Assistant API"
 out: evals, guardrails, observability, auth, the Slack bot plumbing
 nodes:
   user: Support agent\nSlack
-  app: Assistant API\nFastAPI
   llm: LLM\nClaude API {external}
+  memory: Chat history\nRedis {shape: cylinder}
+  app: Assistant API\nFastAPI
+  docs: Help center\nZendesk {shape: cylinder; external}
+  retriever: Retriever\nhybrid search
   tools: Tools
   tools.tickets: Ticket lookup
   tools.orders: Order status
   tools.refunds: Issue refund
-  memory: Chat history\nRedis {shape: cylinder}
-  retriever: Retriever\nhybrid search
-  index: Nightly indexing
-  index.docs: Help center\nZendesk {external}
-  index.embed: Embed job\nAirflow
+  embed: Embed job\nAirflow
   vectors: Vector index\npgvector {shape: cylinder}
 edges:
   user <-> app: question / answer
-  app <-> llm: prompt / reply
-  app <-> tools: call / result
-  app <-> memory: history
+  llm <-> app: prompt / reply
+  memory <-> app: history
   app <-> retriever: query / chunks
-  retriever <-> vectors: search / top-8
-  index.docs -> index.embed: articles
-  index.embed -> vectors: upsert {dashed}
+  app <-> tools: call / result
+  retriever <-> vectors: search / top 8
+  docs -> embed: articles {dashed}
+  embed -> vectors: upsert {dashed}

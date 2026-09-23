@@ -1,0 +1,8 @@
+# Before: a Snowflake copy of a template that kept its neutral import: both themes load, the
+# later one wins each class, and the picture is neither.
+...@snowflake-brand
+...@neutral-theme
+direction: down
+placed: Order placed {class: sf-node}
+paid: Payment taken {class: sf-primary}
+placed -> paid: {class: sf-flow}

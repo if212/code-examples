@@ -1,19 +1,38 @@
-# Order lifecycle state machine sample for the neutral theme. Focus: Delivered.
+# Order lifecycle state machine sample for the neutral theme. Request it stands
+# for: "Order lifecycle: pending -> paid -> shipped -> delivered; a failed
+# payment cancels, refunds follow payment or a return. Mark start and final
+# states." The chain is the focus (flow); ghosts keep the spine straight.
 ...@../../../templates/neutral-theme
 direction: down
-
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    s: start {class: dot}
+    f: final state (double border) {class: [state; terminal]; style.double-border: true}
+    a -> b: lifecycle {class: flow}
+    a -> b: other exit {class: dep}
+  }
+}
+classes: {
+  s: {width: 140}
+}
 init: "" {class: dot}
-pending: Pending {class: state}
-paid: Paid {class: state}
-shipped: Shipped {class: state}
-delivered: Delivered {class: [success; terminal]; style.double-border: true}
-cancelled: Cancelled {class: [danger; terminal]; style.double-border: true}
-refunded: Refunded {class: [muted; terminal]; style.double-border: true}
+pending: Pending {class: [state; compact; s]}
+paid: Paid {class: [state; compact; s]}
+shipped: Shipped {class: [state; compact; s]}
+delivered: Delivered {class: [success; terminal; compact; s]; style.double-border: true}
+cancelled: Cancelled {class: [danger; terminal; compact; s]; style.double-border: true}
+refunded: Refunded {class: [state; terminal; compact; s]; style.double-border: true}
+g1: "" {class: ghost}
+g2: "" {class: ghost}
 
 init -> pending: {class: flow}
+pending -> g1: payment ok {class: ghost}
 pending -> paid: payment ok {class: flow}
+pending -> cancelled: payment failed {class: dep}
+paid -> g2: ship {class: ghost}
 paid -> shipped: ship {class: flow}
+paid -> refunded: refund {class: dep}
 shipped -> delivered: deliver {class: flow}
-pending -> cancelled: payment failed {class: failure}
-paid -> refunded: refund {class: secondary}
-delivered -> refunded: return {class: secondary}
+delivered -> refunded: return {class: dep}

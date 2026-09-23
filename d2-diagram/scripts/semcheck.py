@@ -16,9 +16,15 @@ usage:
   semcheck.py --compare OLD NEW                      meaning-level diff of two versions
   semcheck.py --hint "<d2 error text>" | -           one fix line per known d2 compile error
   semcheck.py --field KEY BRIEF                      print one brief header value (e.g. width)
+  semcheck.py --render-hints IN.d2                   what d2check's ELK spacing depends on (sql_table,
+                                                     bottom-title)
 options: --target BOARD (one board of a multi-board file), --json
 
-exit: 0 clean (warnings allowed) | 1 S- errors | 2 missing or unusable input, compile error, no d2, or usage
+The focus: line is grounded: `focus: none` (the default), or keys/chains followed by the request's own
+words, `focus: aws.worker  # "Highlight the worker"` (Snowflake: `# brand` grounds one sf-primary).
+Nodes inside a `key` container, the native legend and `title` nodes are chrome: never in the inventory.
+exit (differs from the other scripts of the skill): 0 clean (warnings allowed) | 1 S- errors |
+  2 missing or unusable input, compile error, no d2, or usage; --compare: 0 identical, 1 changes listed
 Every finding ends with its recipe: workflows/review-and-fix.md#<code>.
 """
 import base64
@@ -26,6 +32,7 @@ import html
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -41,7 +48,14 @@ RECIPES = 'workflows/review-and-fix.md#'
 
 FOCAL_NODE = ('focal', 'focal-solid', 'sf-primary')
 FOCAL_EDGE = ('flow', 'sf-flow')
-SHAPE_ONLY = ('terminal', 'icon-card')     # set no colour, so they may follow a focal class
+# set no colour, so they may follow a focal class (FIXPLAN: the geometry classes too)
+SHAPE_ONLY = ('terminal', 'icon-card', 'compact', 'tech', 'chip', 'ghost')
+# S-key: what makes a key necessary (FIXPLAN F2)
+KEY_EDGES = ('flow', 'dep', 'secondary', 'async', 'failure', 'ok', 'sf-flow', 'sf-edge', 'sf-failure')
+KEY_NODES = ('external', 'muted', 'sf-external', 'sf-muted')
+KEY_ZONES = ('zone-green', 'zone-amber', 'zone-violet')
+KEY_EXEMPT = ('sequence', 'class', 'gitflow', 'timeline', 'tree', 'stack', 'steps')
+CHROME = ('key', 'title')      # a node with one of these classes (and a key's chips) is not inventory
 TYPES = ('architecture', 'deployment', 'c4', 'pipeline', 'sequence', 'erd', 'class',
          'flowchart', 'state', 'steps')
 TYPE_ALIASES = {'flow': 'flowchart', 'cicd': 'flowchart', 'ci-cd': 'flowchart', 'uml': 'class',
@@ -163,6 +177,30 @@ def closest(word, choices):
 # brief / inventory parsing
 # ---------------------------------------------------------------------------
 
+def comment_of(line):
+    """The text after the first `#` outside quotes, or None."""
+    q = None
+    for i, ch in enumerate(line):
+        if q:
+            if ch == q:
+                q = None
+        elif ch in '"\'':
+            q = ch
+        elif ch == '#':
+            return line[i + 1:].strip()
+    return None
+
+
+def short(s, n=48):
+    s = str(s or '')
+    return s if len(s) <= n else s[:n - 3] + '...'
+
+
+def ql(s):
+    """A label in a message: quoted as written (a brief's `\\n` stays one backslash, unlike repr)."""
+    return "'%s'" % s
+
+
 def strip_comment(line):
     out, q = '', None
     for ch in line:
@@ -214,7 +252,15 @@ def split_attrs(s, allowed, where):
                              (" - the brief records meaning ({dashed}, {inferred}); classes and styles go in the .d2"
                               if d2ish else '') + f"; allowed here: {', '.join(allowed)}")
         attrs[k] = unquote(v.strip()) if v is not None else True
-    return s[:m.start()].rstrip(), attrs
+    rest = s[:m.start()].rstrip()
+    m2 = re.search(r'(^|\s)\{([^{}]*)\}\s*$', rest)
+    if m2:
+        more = [x.strip() for x in re.split('[;,]', m2.group(2)) if x.strip()]
+        if more and all(re.match(r'^[A-Za-z][\w.-]*\s*(:.*)?$', x) and x.split(':')[0].strip().lower() in allowed
+                        for x in more):
+            both = ', '.join(more + items)
+            raise BriefError(f"{where}: two attribute blocks - write one: {{{both}}}")
+    return rest, attrs
 
 
 def split_outside_quotes(s, sep_re):
@@ -324,7 +370,7 @@ def template_types():
 
 def parse_brief(path):
     inv = {'path': path, 'type': 'other', 'nodes': {}, 'edges': [], 'meta': {}, 'notes': [],
-           'focus_nodes': [], 'focus_edges': [], 'has_focus': False}
+           'focus_nodes': [], 'focus_edges': [], 'has_focus': False, 'focus_comment': None, 'focus_line': 0}
     section, request, in_request, quoted, open_q = None, [], False, False, False
     try:
         fh = open(path, encoding='utf-8')
@@ -371,6 +417,8 @@ def parse_brief(path):
             elif k == 'focus':
                 inv['has_focus'] = True
                 inv['focus_nodes'], inv['focus_edges'] = parse_focus(v)
+                inv['focus_comment'] = comment_of(raw)
+                inv['focus_line'] = lineno
             inv['meta'][k] = v
             continue
         if section is None:
@@ -453,7 +501,21 @@ def uncovered_request_terms(inv):
     for e in inv['edges']:
         hay += [e['src'], e['dst'], e['label'] or '']
     hay = norm_label(' '.join(hay)).lower()
-    return [t for t in request_terms(req) if t.lower() not in hay and t.lower().rstrip('s') not in hay]
+    covered = lambda t: t.lower() in hay or t.lower().rstrip('s') in hay
+    out = []
+    for t in request_terms(req):
+        if covered(t):
+            continue
+        # `code_verifier/code_challenge`: each part is a name of its own
+        parts = [p for p in t.split('/') if len(p) > 1 and p.lower() not in STOP] if '/' in t else [t]
+        out += [p for p in parts if not covered(p) and p not in out]
+    return out
+
+
+def non_latin(text):
+    """The request is written (partly) in a non-Latin script: its nouns cannot be matched to English labels."""
+    return bool(re.search(r'[\u0370-\u03ff\u0400-\u04ff\u0590-\u06ff\u0900-\u0dff\u0e00-\u0fff\u1100-\u11ff'
+                          r'\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff]', text or ''))
 
 
 # ---------------------------------------------------------------------------
@@ -596,6 +658,7 @@ def parse_svg(path, board=''):
                 if b:
                     masks.append(b)
     nodes, edges, lifelines, hidden_nodes = {}, [], set(), set()
+    legend_classes, keyed = set(), [False]
     order = 0
 
     def hidden(el):
@@ -608,10 +671,16 @@ def parse_svg(path, board=''):
             if not isinstance(ch.tag, str):
                 continue
             tag = ch.tag.split('}')[-1]
-            # d2 >= 0.7 draws the native legend (vars.d2-legend) inside a scaled <g transform>
-            legend = in_legend or (tag == 'g' and 'scale(' in (ch.get('transform') or ''))
+            # d2 >= 0.7 draws the native legend (vars.d2-legend) inside a scaled <g transform>; svgpost.py
+            # wraps the whole key in <g class="d2-key">
             toks = (ch.get('class') or '').split()   # BASE64(id) first, then the user's classes
+            legend = in_legend or (tag == 'g' and ('scale(' in (ch.get('transform') or '') or 'd2-key' in toks))
+            if tag == 'g' and 'd2-key' in toks:
+                keyed[0] = True
             cls = toks[0] if toks else ''
+            if tag == 'g' and cls and B64_RE.match(cls) and cls != 'shape' and legend:
+                legend_classes.update(toks[1:])     # the encodings the key explains
+                keyed[0] = True
             if tag == 'g' and cls and B64_RE.match(cls) and cls != 'shape':
                 try:
                     ident = html.unescape(base64.b64decode(cls, validate=True).decode('utf-8'))
@@ -696,7 +765,8 @@ def parse_svg(path, board=''):
 
     walk(root, False)
     return {'nodes': nodes, 'edges': edges, 'lifelines': lifelines, 'hidden_nodes': hidden_nodes,
-            'lifelines_norm': {norm_key(x) for x in lifelines}, 'boards': [board]}
+            'lifelines_norm': {norm_key(x) for x in lifelines}, 'boards': [board],
+            'legend_classes': legend_classes if keyed[0] else None}
 
 
 def board_name(rel):
@@ -736,9 +806,11 @@ def load_graph(path):
                 best[key] = grp
         lifelines |= g['lifelines']
     edges = sorted((e for grp in best.values() for e in grp), key=lambda e: e['order'])
+    legends = [g['legend_classes'] for g in graphs if g.get('legend_classes') is not None]
     return {'nodes': nodes, 'edges': edges, 'lifelines': lifelines,
             'hidden_nodes': set().union(*(g.get('hidden_nodes', set()) for g in graphs)),
-            'lifelines_norm': {norm_key(x) for x in lifelines}, 'boards': [g['boards'][0] for g in graphs]}
+            'lifelines_norm': {norm_key(x) for x in lifelines}, 'boards': [g['boards'][0] for g in graphs],
+            'legend_classes': set().union(*legends) if legends else None}
 
 
 # ---------------------------------------------------------------------------
@@ -832,10 +904,24 @@ def hint_lines(text):
                 pass
         imp = re.search(r'failed to import "([^"]+)"', text)
         name = os.path.basename(imp.group(1)) if imp else 'the imported file'
-        impfix = (f'cp ${{CLAUDE_SKILL_DIR}}/templates/{name} <dir>/'
-                  if name in ('neutral-theme.d2', 'snowflake-brand.d2') else
-                  'copy it there; the skill themes are in ${CLAUDE_SKILL_DIR}/templates/')
-        msg = msg.replace('{imp}', f'`{name}`' if imp else name).replace('{impfix}', impfix)
+        shown = name
+        if imp and '{imp}' in msg:
+            want = imp.group(1)
+            # the importing file: d2 names it by its absolute path, which may hold spaces
+            src = (re.search(r'(/[^:"\n]*?\.d2):\d+:\d+: failed to import', text) or
+                   re.search(r'([^\s:"]+\.d2):\d+:\d+: failed to import', text))
+            if src and os.path.isabs(want):
+                shown = os.path.relpath(want, os.path.dirname(os.path.abspath(src.group(1))))
+            folder = shlex.quote(os.path.dirname(want)) if os.path.isabs(want) else '<the folder of the .d2>'
+            impfix = (f'cp {shlex.quote(os.path.join(SKILL_TEMPLATES, name))} {folder}/'
+                      if name in ('neutral-theme.d2', 'snowflake-brand.d2') else
+                      f'copy it to {folder}/ (the skill themes are in {shlex.quote(SKILL_TEMPLATES)}/)')
+            if os.sep in shown:
+                msg = msg.replace('is not next to the .d2', 'is not where the import looks')
+            msg = msg.replace('{impfix}', impfix)
+        msg = msg.replace('{imp}', f'`{shown}`' if imp else name).replace('{impfix}', 'copy it next to the .d2')
+        # runnable as printed: the skill's own path instead of ${CLAUDE_SKILL_DIR}
+        msg = re.sub(r'\$\{CLAUDE_SKILL_DIR\}/([\w./-]*)', lambda mm: shlex.quote(os.path.join(SKILL_DIR, mm.group(1))), msg)
         out.append('hint: ' + msg.replace('{tok}', tok))
     return out
 
@@ -844,7 +930,8 @@ D2_ENV_OVERRIDES = ('D2_LAYOUT', 'D2_THEME', 'D2_DARK_THEME', 'D2_PAD', 'D2_SKET
                     'D2_ANIMATE_INTERVAL', 'D2_BUNDLE', 'D2_FORCE_APPENDIX', 'SCALE')
 
 
-SKILL_TEMPLATES = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'templates'))
+SKILL_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+SKILL_TEMPLATES = os.path.join(SKILL_DIR, 'templates')
 
 
 def _d2(d2file, out, layout, target):
@@ -950,7 +1037,8 @@ def _code_lines(d2file):
     return out
 
 
-IMPORT_RE = re.compile(r'@("[^"]+"|[A-Za-z0-9_./-]+)')
+# `@"my themes/x"`, and the unquoted `@my themes/x` d2 fmt writes: up to the end of the statement
+IMPORT_RE = re.compile(r'@("[^"]+"|[^\s"#;{}][^"#;{}]*?)\s*(?=$|[;#}])')
 
 
 def import_candidates(name):
@@ -1011,6 +1099,7 @@ class D2Source:
         self.paths = []        # (key path tuple, lineno): every key, with the maps around it
         self.refs = []         # (class name, lineno, info of the map the use sits in)
         self.imports = []      # (spec, key path it lands at, lineno)
+        self.values = []       # (key path, raw value, lineno): every `key: value`, in document order
 
     def peek(self, k=0):
         j = self.i + k
@@ -1143,6 +1232,7 @@ class D2Source:
             return
         if not segs:
             return
+        self.values.append((path + segs, value, n))
         if segs == ('shape',):
             info['shape'] = unquote(value).lower()
         if segs[-1] != 'class' or key.startswith(('&', '!&')) or (path[-1:] == ('classes',) and len(segs) == 1):
@@ -1211,6 +1301,75 @@ def source_model(d2file, prefix=(), sub=(), depth=0, seen=None):
 
 def defined_classes(paths):
     return {p[j + 1] for p in paths for j in range(len(p) - 1) if p[j] == 'classes'}
+
+
+# keys that set something ON an object, not a child of it
+RESERVED = {'label', 'style', 'icon', 'near', 'shape', 'class', 'width', 'height', 'link', 'tooltip', 'direction',
+            'grid-rows', 'grid-columns', 'grid-gap', 'vertical-gap', 'horizontal-gap', 'source-arrowhead',
+            'target-arrowhead', 'constraint', 'top', 'left', 'vars', 'classes', 'layers', 'scenarios', 'steps',
+            'filled', 'tooltip', 'opacity'}
+BOARDS = ('steps', 'layers', 'scenarios')
+
+
+def is_container(owner, keys):
+    """a key with a child object (not only style/label/... settings)"""
+    n = len(owner)
+    return any(len(k) > n and k[:n] == owner and k[n] not in RESERVED and not k[n].startswith('(') for k in keys)
+
+
+def board_relative(path):
+    """(board prefix, path inside that board): steps.2.x.class -> (('steps', '2'), ('x', 'class'))"""
+    i = 0
+    while len(path) - i > 2 and path[i] in BOARDS:
+        i += 2
+    return path[:i], path[i:]
+
+
+def legend_classes(d2file):
+    """The classes the native legend (vars.d2-legend) names, from the source (d2 writes no user class on a
+    legend sample); None when the file has no d2-legend."""
+    try:
+        src = D2Source(_code_lines(d2file)).parse()
+    except (OSError, UnicodeDecodeError, RecursionError):
+        return None
+    if not any(p[:2] == ('vars', 'd2-legend') for p, _ in src.paths):
+        return None
+    out = set()
+    for p, v, _ in src.values:
+        if p[:2] == ('vars', 'd2-legend') and p[-1] == 'class':
+            raw = v.strip()
+            names = raw[1:-1].split(';') if raw.startswith('[') and raw.endswith(']') else [raw]
+            out |= {unquote(x.strip()) for x in names if x.strip()}
+    return out
+
+
+def render_hints(d2file):
+    """What d2check's ELK flags depend on: 'sql_table' (a table anywhere: layers 72px apart, so crow's feet
+    stay apart) and 'bottom-title' (a container title at bottom-*: 50px padding under the last row)."""
+    out, seen = set(), set()
+
+    def visit(f, depth):
+        ap = os.path.abspath(f)
+        if ap in seen or depth > 4:
+            return
+        seen.add(ap)
+        try:
+            lines = _code_lines(f)
+            src = D2Source(lines).parse()
+        except (OSError, UnicodeDecodeError, RecursionError):
+            return
+        keys = [p for p, _ in src.paths]
+        for p, v, _ in src.values:
+            v = unquote(v).lower()
+            if p[-1:] == ('shape',) and v == 'sql_table':
+                out.add('sql_table')
+            elif p[-2:] == ('label', 'near') and v.startswith('bottom-') and p[:-2] and 'classes' not in p \
+                    and is_container(p[:-2], keys):
+                out.add('bottom-title')
+        for imp in _imports(f, lines):
+            visit(imp, depth + 1)
+    visit(d2file, 0)
+    return sorted(out)
 
 
 # the same role in the other skill theme: a neutral class in a Snowflake file and back
@@ -1351,7 +1510,72 @@ def icon_family(ref, base):
     return None
 
 
-def lint_source(d2file, typ, notes=None):
+# a request that asks for icons, in English or in the user's own words (Chinese, Japanese, Korean,
+# French, Spanish, Portuguese); written as escapes: the skill's files stay ASCII
+ICONS_ASKED = re.compile(r'\bicons?\b|\bic[o\u00f4]nes?\b|\b[i\u00ed]conos?\b|\u56fe\u6807|\u5716\u6a19|'
+                         r'\u30a2\u30a4\u30b3\u30f3|\uc544\uc774\ucf58', re.I)
+
+
+def tinted_k8s(ref, base):
+    """a lucide icon fetched with --color 326CE5 (the k8s blue): D6 lets it stand beside k8s icons"""
+    if re.match(r'https?://', ref):
+        return '326ce5' in ref.lower()
+    try:
+        with open(os.path.join(base, ref), encoding='utf-8', errors='replace') as fh:
+            return '326ce5' in fh.read(20000).lower()
+    except OSError:
+        return False
+
+
+def source_structure(lines):
+    """S-src-direction: `direction` in a plain container (ELK ignores it: only the root, a board's root and
+    grid cells honour it). S-src-class: both skill themes imported; a class LIST assigned over a SINGLE class
+    without `class: null` first (d2 ignores the list, on the same board and in later steps)."""
+    out = []
+    try:
+        src = D2Source(lines).parse()
+    except RecursionError:
+        return out
+    keys = [p for p, _ in src.paths]
+    gridded = {p[:-1] for p in keys if p and p[-1] in ('grid-rows', 'grid-columns')}
+    for p, v, n in src.values:
+        if p[-1] != 'direction' or 'classes' in p or 'vars' in p:
+            continue
+        prefix, rel = board_relative(p)
+        owner = rel[:-1]
+        if not owner or (prefix + owner)[:-1] in gridded:
+            continue
+        where = '.'.join(owner)
+        out.append((n, 'warn', 'S-src-direction', f"`direction: {unquote(v)}` inside '{where}' is ignored: ELK honours "
+                    f"direction only at the root and in grid cells - move it to the root, or make '{where}' a cell of a "
+                    f"grid (reference/layout.md section 1)"))
+    specs = [unquote(sp) for sp, _, _ in src.imports]
+    if any('neutral-theme' in x for x in specs) and any('snowflake-brand' in x for x in specs):
+        n = min(ln for _, _, ln in src.imports)
+        out.append((n, 'error', 'S-src-class', 'the file imports both neutral-theme and snowflake-brand: import one '
+                    'theme (the brand for Snowflake diagrams, else the neutral one)'))
+    state = {}
+    for p, v, n in src.values:
+        if p[-1] != 'class' or 'classes' in p or 'vars' in p or any('*' in x for x in p):
+            continue
+        prefix, rel = board_relative(p)
+        owner = rel[:-1]
+        if not owner:
+            continue
+        sk = (prefix, owner) if 'layers' in prefix else owner      # layers start fresh; steps and scenarios inherit
+        raw = v.strip()
+        kind = 'null' if raw.lower() == 'null' else 'list' if raw.startswith('[') else 'single'
+        prev = state.get(sk)
+        if kind == 'list' and prev and prev[0] == 'single':
+            k = '.'.join(owner)
+            out.append((n, 'error', 'S-src-class', f"`{k}.class: {raw}` is ignored: '{k}' already has the single class "
+                        f"'{prev[1]}' (line {prev[2]}), and d2 drops a list assigned over it - write `{k}.class: null` "
+                        f"first", {'classes': []}))
+        state[sk] = (kind, unquote(raw), n) if kind != 'null' else None
+    return out
+
+
+def lint_source(d2file, typ, notes=None, request=''):
     """Slips that compile fine but change what the diagram says; plus two policy checks."""
     out = []
     lines = _code_lines(d2file)
@@ -1406,15 +1630,24 @@ def lint_source(d2file, typ, notes=None):
             fam = icon_family(ref, base)
             if fam:
                 icons[fam].append((n, ref))
-    if len(icons) > 1:
+    asked = bool(ICONS_ASKED.search(request or ''))
+    if set(icons) == {'k8s', 'lucide'} and asked:
+        # D6: a request that asks for icons beats one family: k8s resources, lucide (in the k8s blue) for the rest
+        pale = [(n, ref) for n, ref in icons['lucide'] if not tinted_k8s(ref, base)]
+        if pale:
+            out.append((pale[0][0], 'error', 'S-src-icon-family',
+                        f"lucide icons beside k8s ones take the k8s blue: fetch {', '.join(r for _, r in pale[:3])} again "
+                        f"with icon.sh get ... --color 326CE5 (workflows/icons.md)"))
+    elif len(icons) > 1:
         desc = '; '.join(f"{fam}: line {', '.join(str(n) for n, _ in refs[:3])}" for fam, refs in sorted(icons.items()))
         out.append((min(n for refs in icons.values() for n, _ in refs), 'error', 'S-src-icon-family',
-                    f'use one icon family: {desc} (lucide by default, k8s for Kubernetes, logos only for products)'))
+                    f'use one icon family: {desc} - lucide by default, k8s for Kubernetes (asked for icons: k8s + '
+                    f'lucide in 326CE5)'))
     if not sequence_root and typ != 'sequence' and not pins_engine(d2file):
         out.append((1, 'error', 'S-src-cli-engine',
                     'no layout engine pinned, so dagre draws curved edges: put `...@neutral-theme` on line 1 '
                     '(or set vars.d2-config.layout-engine: elk)'))
-    return out + class_findings(d2file, notes)
+    return out + source_structure(lines) + class_findings(d2file, notes)
 
 
 # ---------------------------------------------------------------------------
@@ -1479,10 +1712,150 @@ def edge_label_cands(c):
     return [c['label']] + c['texts'] + ([f"{c['label']} {ends}", f"{ends} {c['label']}"] if ends else [])
 
 
+def chrome_keys(nodes):
+    """the key container and its chips, and `title` nodes: they explain the diagram, they are not in it"""
+    out = {k for k, n in nodes.items() if set(n['classes']) & set(CHROME)}
+    keys = {k for k in out if 'key' in nodes[k]['classes']}
+    return out | {k for k in nodes if any(a in keys for a in ancestors(k))}
+
+
+def said(text):
+    """words as the request says them, for matching a focus quote: case, quote marks, punctuation and line
+    breaks do not count (`# 'Highlight the worker.'` quotes "Highlight the worker, please")"""
+    return ' '.join(re.findall(r'\w+', (text or '').lower()))
+
+
+def emphasis_rules(inv, g, comp_nodes, comp_end, inv_end, focus_keys, sf, rep):
+    """F1: emphasis is earned. focus: none is the default; a focus quotes the request words that ask for it
+    (Snowflake: `# brand` grounds one sf-primary); nothing the focus does not name is styled focal or main
+    path; a focal node never sits on the blue panel; peers are styled alike."""
+    brief_file = inv['path'].endswith('.brief')
+    named = inv['focus_nodes'] or inv['focus_edges']
+    # (b) grounding: the comment after focus: quotes the request
+    if inv['has_focus'] and named:
+        req = said(inv['meta'].get('request'))
+        cm = (inv.get('focus_comment') or '').strip()
+        quotes = re.findall(r'"([^"]+)"', cm) or ([cm] if cm else [])
+        where = f"{os.path.basename(inv['path'])}:{inv.get('focus_line') or '?'}"
+        raw_req = (inv['meta'].get('request') or '').strip().strip('"').strip()
+        placeholder = raw_req.startswith('<') and raw_req.endswith('>')      # a --dump skeleton
+        if sf and said(cm) == 'brand':
+            if len(inv['focus_nodes']) != 1 or inv['focus_edges']:
+                rep.add('error', 'S-emphasis', f"{where}: `# brand` grounds ONE sf-primary node, not a path or several "
+                        f"nodes: quote the request for the rest, or drop them")
+        elif req and not placeholder and not quotes:
+            rep.add('error', 'S-emphasis', f"{where}: focus: {short(inv['meta'].get('focus'), 30)} quotes no request "
+                    f"words: add them (focus: x  # \"Highlight x\"), or write focus: none")
+        elif req and not placeholder:
+            bad = [q for q in quotes if not said(q) or said(q) not in req]
+            if bad:
+                rep.add('error', 'S-emphasis', f"{where}: the focus comment quotes {ql(short(bad[0], 40))}, which the "
+                        f"request does not say: quote its exact words, or write focus: none")
+    # (a) invented emphasis: styled focal or main path, but the focus does not name it
+    if inv['has_focus'] or brief_file:
+        fnode = [f for f in FOCAL_NODE]
+        for k, n in comp_nodes.items():
+            if k in focus_keys or not set(n['classes']) & set(fnode) or overridden_by(n['classes'], FOCAL_NODE):
+                continue
+            base = next((c for c in n['classes'] if c not in FOCAL_NODE and c not in SHAPE_ONLY), 'service')
+            rep.add('error', 'S-emphasis', f"'{short(n['id'], 40)}' is styled "
+                    f"{'/'.join(c for c in n['classes'] if c in fnode)} but the brief's focus does not name it: give "
+                    f"it its base class ({base})", [n['id']], n['bbox'])
+        pairs = set()
+        for a, b in inv['focus_edges']:
+            key, _ = canon_edge(inv_end(a), '->', inv_end(b))
+            pairs |= {key, (key[1], key[0])}
+        for e in g['edges']:
+            if not set(e['classes']) & set(FOCAL_EDGE) or overridden_by(e['classes'], FOCAL_EDGE):
+                continue
+            key, _ = canon_edge(comp_end(e['src']), e['op'], comp_end(e['dst']))
+            if key not in pairs:
+                rep.add('error', 'S-emphasis', f"edge '{short(e['src'], 30)} {e['op']} {short(e['dst'], 30)}' is "
+                        f"the main path ({'sf-flow' if 'sf-flow' in e['classes'] else 'flow'}) but the focus names no "
+                        f"such path: use {'sf-edge' if sf else 'dep'}", [e['id']])
+    # (c) blue on blue
+    for k, n in comp_nodes.items():
+        if not set(n['classes']) & {'focal', 'focal-solid'} or overridden_by(n['classes'], ('focal', 'focal-solid')):
+            continue
+        for anc in ancestors(k):
+            a = comp_nodes.get(anc)
+            if a and 'zone-blue' in a['classes'] and not overridden_by(a['classes'], ('zone-blue',)):
+                rep.add('error', 'S-emphasis', f"focal '{short(n['id'], 40)}' sits inside the zone-blue "
+                        f"'{short(a['id'], 30)}': blue on blue - make the container a zone", [n['id'], a['id']], n['bbox'])
+                break
+    # peers styled unlike: one of two edges to (or from) same-parent, same-role nodes is the main path
+    # (not in process diagrams: a decision's exits and a state's transitions are alternatives, not peers)
+    if inv['type'] in ('flowchart', 'state', 'swimlane', 'sequence', 'steps', 'walkthrough', 'gitflow'):
+        return
+
+    def role(k):
+        n = comp_nodes.get(k)
+        return next((c for c in n['classes'] if c not in FOCAL_NODE and c not in SHAPE_ONLY), '') if n else None
+    groups = defaultdict(list)
+    for e in g['edges']:
+        a, b = norm_key(comp_end(e['src'])), norm_key(comp_end(e['dst']))
+        if e['op'] == '<-':
+            a, b = b, a
+        if a not in comp_nodes or b not in comp_nodes or a == b:
+            continue
+        fl = bool(set(e['classes']) & set(FOCAL_EDGE)) and not overridden_by(e['classes'], FOCAL_EDGE)
+        groups[('from', a, parent_of(b).lower(), role(b))].append((fl, e, b))
+        groups[('into', b, parent_of(a).lower(), role(a))].append((fl, e, a))
+    for (way, node, _, _), lst in sorted(groups.items(), key=lambda kv: str(kv[0])):
+        peers = {x for _, _, x in lst}
+        if len(peers) < 2 or all(f for f, _, _ in lst) or not any(f for f, _, _ in lst):
+            continue
+        n = comp_nodes.get(node)
+        if n and ('decision' in n['classes'] or n['style'].get('shape_tag') == 'polygon'):
+            continue
+        on = next(e for f, e, _ in lst if f)
+        off = next(e for f, e, _ in lst if not f)
+        rep.add('warn', 'S-emphasis', f"peers styled unlike: '{short(on['src'] + ' ' + on['op'] + ' ' + on['dst'], 44)}' "
+                f"is the main path, '{short(off['src'] + ' ' + off['op'] + ' ' + off['dst'], 44)}' is not: peers the "
+                f"request lists together share one class", [on['id'], off['id']])
+
+
+def key_rules(typ, g, comp_nodes, rep):
+    """S-key (F2): 2+ edge classes, an external or muted node, or a green/amber/violet zone need a key
+    (vars.d2-legend, or a `key` container of chips; depgraph and erd: a caption naming the notation), and
+    the key names each of them. ERD: the crow's-foot key or caption. C4: a `title` node."""
+    if typ in KEY_EXEMPT:
+        return
+    nodes = g['nodes']
+    used_e = sorted({c for e in g['edges'] for c in e['classes'] if c in KEY_EDGES})
+    used_n = sorted({c for n in comp_nodes.values() for c in n['classes'] if c in KEY_NODES})
+    used_z = sorted({c for n in comp_nodes.values() for c in n['classes'] if c in KEY_ZONES})
+    need = set(used_e if len(used_e) >= 2 else []) | set(used_n) | set(used_z)
+    legend = g.get('legend_classes')
+    if legend is not None:     # the SVG draws a legend: its classes come from the source when we have it
+        legend = g['legend_src'] if g.get('legend_src') is not None else set(need)
+    boxes = [k for k, n in nodes.items() if 'key' in n['classes']]
+    chips = {c for k in nodes if any(a in boxes for a in ancestors(k)) for c in nodes[k]['classes']}
+    caption = typ in ('depgraph', 'erd') and any(
+        'caption' in n['classes'] and any(('=' in t or 'crow' in t.lower()) for t in n['texts']) for n in nodes.values())
+    has_key = legend is not None or bool(boxes) or caption
+    what = ', '.join(sorted(need))
+    if need and not has_key:
+        rep.add('error', 'S-key', f"{short(what, 60)} carry meaning but there is no key: add vars.d2-legend, one line "
+                f"per encoding in its real class (statuses: a key row of chips)")
+    elif need and not caption:
+        missing = sorted(need - (legend or set()) - chips)
+        if missing:
+            rep.add('error', 'S-key', f"the key leaves out {short(', '.join(missing), 60)}: add one line for each, in "
+                    f"its real class")
+    if typ == 'erd' and legend is None and not caption:
+        rep.add('error', 'S-key', "an ERD explains its notation: add the crow's-foot key (vars.d2-legend, four lines) "
+                "or a caption line naming it (playbooks/erd.md)")
+    if typ in ('c4', 'context') and not any('title' in n['classes'] for n in nodes.values()):
+        rep.add('error', 'S-key', 'a C4 diagram names itself: add title: "Container diagram: <system>" {class: title}, '
+                'and a key (container, external system, database, relationship)')
+
+
 def diff(inv, g, rep):
     typ = inv['type']
-    inv_nodes = inv['nodes']
-    comp_nodes = dict(g['nodes'])
+    chrome = chrome_keys(g['nodes'])
+    inv_nodes = {k: v for k, v in inv['nodes'].items() if k not in chrome}
+    comp_nodes = {k: v for k, v in g['nodes'].items() if k not in chrome}
 
     # sequence diagrams: unlisted children of ACTORS are spans (activations) or notes
     span_map = {}
@@ -1564,11 +1937,11 @@ def diff(inv, g, rep):
         if k in comp_nodes and v['label'] is not None:
             ok, got = label_ok(v['label'], comp_nodes[k]['texts'])
             if not ok:
-                rep.add('error', 'S-node-label', f"'{v['key']}': the brief says {v['label']!r}, the diagram shows "
-                        f"{got!r}", [comp_nodes[k]['id']], box(k))
+                rep.add('error', 'S-node-label', f"'{v['key']}': the brief says {ql(v['label'])}, the diagram shows "
+                        f"{ql(got)}", [comp_nodes[k]['id']], box(k))
             elif got:
                 rep.add('warn', 'S-node-label-case', f"'{v['key']}': label case differs from the brief "
-                        f"({v['label']!r})", [comp_nodes[k]['id']], box(k))
+                        f"({ql(v['label'])})", [comp_nodes[k]['id']], box(k))
 
     # --- edges
     comp_edges = defaultdict(list)
@@ -1617,7 +1990,7 @@ def diff(inv, g, rep):
             if pool:
                 c = pool.pop(0)
                 rep.add('error', 'S-edge-label', f"'{w['src']} {w['op']} {w['dst']}': the brief says "
-                        f"{w['label']!r}, the diagram shows {(c['label'] or ' / '.join(t for t in c['texts'] if t))!r}",
+                        f"{ql(w['label'])}, the diagram shows {ql(c['label'] or ' / '.join(t for t in c['texts'] if t))}",
                         [c['id']])
                 w['_match'] = c
             else:
@@ -1753,7 +2126,7 @@ def diff(inv, g, rep):
             extra_edges.remove((k, kd, c))
         else:
             rep.add('error', 'S-missing-edge', f"'{m['desc']}' is in the brief but not drawn"
-                    + (f" (label {m['w']['label']!r})" if m['w']['label'] else ''), [])
+                    + (f" (label {ql(m['w']['label'])})" if m['w']['label'] else ''), [])
     for k, kd, c in extra_edges:
         lab = f" ({c['label'][:40]})" if c['label'] else ''
         rep.add('error', 'S-extra-edge', f"'{c['src']} {c['op']} {c['dst']}'{lab} is drawn{where(c)} but not in the "
@@ -1943,12 +2316,7 @@ def diff(inv, g, rep):
             c = next(c for c in have if set(c['classes']) & set(FOCAL_EDGE))
             rep.add('error', 'S-emphasis', f"main-path edge '{a} -> {b}': " + last_class_msg(c, FOCAL_EDGE, edge=True),
                     [c['id']])
-    if inv['has_focus']:
-        for k, n in comp_nodes.items():
-            if k not in focus_keys and set(n['classes']) & {'focal', 'focal-solid'} \
-                    and not overridden_by(n['classes'], ('focal', 'focal-solid')):
-                rep.add('warn', 'S-emphasis', f"'{n['id']}' is styled focal but is not the brief's focus: use "
-                        f"service (one focus per diagram)", [n['id']], n['bbox'])
+    emphasis_rules(inv, g, comp_nodes, comp_end, inv_end, focus_keys, sf, rep)
     emph = [k for k, v in inv_nodes.items() if v['attrs'].get('emphasis')]
     if emph:
         def sig(n):
@@ -1979,6 +2347,9 @@ def diff(inv, g, rep):
                 continue    # compare: the same part drawn once in each panel (before.web, after.web)
             rep.add('warn', 'S-duplicate-label', f"{len(ids)} different nodes read {t!r} ({', '.join(ids)}): merge "
                     f"them or make the labels distinct", ids)
+
+    # --- a colour, dash or shape that means something is explained by a key (FIXPLAN F2)
+    key_rules(typ, g, comp_nodes, rep)
 
     # --- inferred items must be disclosed in the report
     inferred = [v['key'] for v in inv_nodes.values() if v['attrs'].get('inferred')] + \
@@ -2078,11 +2449,21 @@ def dump(g, src=None):
     if len(g.get('boards', [])) > 1 and re.search(r'^\s*steps\s*:', text, re.M):
         typ = 'steps'
     dm = re.search(r'^direction\s*:\s*(\w+)', text, re.M)
-    focus = [n['id'] for n in g['nodes'].values() if set(n['classes']) & set(FOCAL_NODE)]
+    chrome0 = chrome_keys(g['nodes'])
+    focus = [n['id'] for k, n in g['nodes'].items() if k not in chrome0 and set(n['classes']) & set(FOCAL_NODE)
+             and not overridden_by(n['classes'], FOCAL_NODE)]
+    span0 = {k for k in g['nodes'] if '.' in k and k.split('.')[0] in g['lifelines_norm']} if seq else set()
+    for e in g['edges']:       # the main path as chains of the focus line
+        if set(e['classes']) & set(FOCAL_EDGE) and not overridden_by(e['classes'], FOCAL_EDGE):
+            a, b = (e['dst'], e['src']) if e['op'] == '<-' else (e['src'], e['dst'])
+            a = a.split('.')[0] if norm_key(a) in span0 else a
+            b = b.split('.')[0] if norm_key(b) in span0 else b
+            focus.append(f'{a} -> {b}')
+    ground = '  # "<the request words that ask for it>"' if focus else ''
     out = [f'# request: "<paste the user\'s request, plus the requested change>"',
            f'type: {typ}', 'reader: <who reads it, where>', 'width: 800',
-           f'direction: {dm.group(1) if dm else "down"}', f"focus: {', '.join(focus) or 'none'}", 'out: <left out>',
-           'nodes:']
+           f'direction: {dm.group(1) if dm else "down"}', f"focus: {', '.join(focus) or 'none'}{ground}",
+           'out: <left out>', 'nodes:']
     span = set()
     if seq:
         span = {k for k in g['nodes'] if '.' in k and k.split('.')[0] in g['lifelines_norm']}
@@ -2096,8 +2477,9 @@ def dump(g, src=None):
 
     def exits(k):
         return outs[k] or any(outs[a] for a in ancestors(k))
+    chrome = chrome_keys(g['nodes'])
     for k, n in sorted(g['nodes'].items(), key=lambda kv: kv[1]['order']):
-        if k in span:
+        if k in span or k in chrome:
             continue
         lab = '\\n'.join(n['lines'][0]) if n['lines'] and n['lines'][0] else ''
         lab = source_case(text, lab)
@@ -2231,7 +2613,19 @@ def main(argv):
     ap.add_argument('--hint', metavar='ERROR_TEXT', help="fix line(s) for a d2 compile error ('-' reads stdin)")
     ap.add_argument('--field', metavar='KEY', help='print one header value of BRIEF (type, width, ...)')
     ap.add_argument('--lint', metavar='IN.d2', help='source slips only (quoting, classes, icons, engine): no brief')
+    ap.add_argument('--render-hints', metavar='IN.d2', help="what d2check's ELK flags depend on: sql_table, bottom-title")
     a = ap.parse_args(argv)
+    say_err = print
+    if a.json:  # --json: an input error is one JSON object too (d2check reads it)
+        def say_err(msg, **_):
+            print(json.dumps({'tool': 'semcheck', 'exit': 2, 'error': msg.replace('semcheck: ', '', 1)}))
+
+    if a.render_hints:
+        if not os.path.isfile(a.render_hints):
+            print(f'semcheck: no such file: {a.render_hints}', file=sys.stderr)
+            return 2
+        print(' '.join(render_hints(a.render_hints)))
+        return 0
 
     def not_text(path):
         """A .d2 or brief that is not UTF-8 text (a binary, an AppleDouble ._ file) is named, not a traceback."""
@@ -2248,7 +2642,7 @@ def main(argv):
     if a.lint:
         # source slips only (quoting, classes, icons, engine): no brief, no render; --svg adds boxes
         if not os.path.isfile(a.lint):
-            print(f'semcheck: no such file: {a.lint}')
+            say_err(f'semcheck: no such file: {a.lint}')
             return 2
         if not_text(a.lint):
             return 2
@@ -2258,7 +2652,7 @@ def main(argv):
             if a.svg:
                 g, err = graph_for(a.svg, None, a.target, tmps)
                 if err:
-                    print(f'semcheck: {err}')
+                    say_err(f'semcheck: {err}')
                     return 2
             rep, notes = Report(), []
             add_lint(rep, lint_source(a.lint, 'other', notes), a.lint, g)
@@ -2301,7 +2695,7 @@ def main(argv):
     # a missing input is named as such, not as a compile error of a file d2 could not open
     for path in (a.compare, a.svg, a.diagram, a.brief):
         if path and not os.path.exists(path):
-            print(f'semcheck: no such file: {path}')
+            say_err(f'semcheck: no such file: {path}')
             return 2
         if path and os.path.isfile(path) and not path.endswith('.svg') and not_text(path):
             return 2
@@ -2341,23 +2735,24 @@ def main(argv):
         try:
             inv = parse_brief(a.brief)
         except BriefError as e:
-            print(f'semcheck: brief problem: {e}')
+            say_err(f'semcheck: brief problem: {e}')
             return 2
         lint, lint_notes = [], []
         if a.diagram.endswith('.d2'):
             if not os.path.isfile(a.diagram):
-                print(f'semcheck: no such file: {a.diagram}')
+                say_err(f'semcheck: no such file: {a.diagram}')
                 return 2
-            lint = lint_source(a.diagram, inv['type'], lint_notes)
+            lint = lint_source(a.diagram, inv['type'], lint_notes, inv['meta'].get('request', ''))
         g, err = graph_for(a.svg or a.diagram, a.layout, a.target, tmps)
         if err:
-            print(f'semcheck: {err}' if err == NO_D2 else
-                  f"semcheck: {a.diagram} does not compile (`d2 validate` can pass while this fails): {err}")
-            for h in hint_lines(err):
-                print('  ' + h)
+            msg = (f'semcheck: {err}' if err == NO_D2 else
+                   f"semcheck: {a.diagram} does not compile (`d2 validate` can pass while this fails): {err}")
+            say_err(msg + ''.join('\n  ' + h for h in hint_lines(err)))
             return 2
         rep = Report()
         add_lint(rep, lint, a.diagram, g)
+        if a.diagram.endswith('.d2'):
+            g['legend_src'] = legend_classes(a.diagram)
         diff(inv, g, rep)
         notes = list(inv['notes']) + lint_notes
         # these two travel as INFO findings so they reach the d2check summary, not only this listing
@@ -2365,8 +2760,11 @@ def main(argv):
         if miss:
             rep.add('info', 'S-missing-node', 'the request names ' + ', '.join(repr(t) for t in miss[:8]) +
                     ' but no brief label, key or out: entry mentions it - add it to the brief, or list it under out:')
+        if non_latin(inv['meta'].get('request')):
+            rep.add('info', 'S-missing-node', 'the request is not in English: only its Latin-script names are checked - '
+                    'check each other noun against the brief (English label, the original term as a # comment after it)')
         if a.brief.endswith('.brief') and not inv['has_focus']:
-            rep.add('info', 'S-emphasis', 'the brief has no focus: line, so the focus is not checked '
+            rep.add('info', 'S-emphasis', 'the brief has no focus: line, so it counts as focus: none '
                     '(workflows/brief.md section 3)')
         order = {'error': 0, 'warn': 1, 'info': 2}
         rep.items.sort(key=lambda i: order[i['severity']])

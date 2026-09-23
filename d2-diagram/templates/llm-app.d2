@@ -1,53 +1,66 @@
 # LLM app template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
 ...@neutral-theme
 
-# Top-down: the user, the app that orchestrates every call (the focus), then
-# everything the app calls, the vector index at the bottom where the online
-# query and the offline indexing job meet (playbooks/architecture.md).
+# The app that orchestrates every call is the hub. Above it the conversation
+# (the user, the model, the history), below it what it acts on (retrieval,
+# tools); the vector index is the floor where the question and the nightly
+# indexing meet (playbooks/architecture.md, LLM apps).
 direction: down
 
-# Geometry only: one width for the leaf row keeps it even and narrow.
+# Geometry only: one leaf width; one height per row (a two-line cylinder
+# needs 107, boxes beside it 96 so their sides end on its walls).
 classes: {
-  w: {width: 120}
+  leaf: {width: 120}
+  top: {height: 96}
 }
 
-user: "Support agent\nSlack" {class: actor}
+# Key: one entry per encoding, in the request's words.
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a <-> b: call and answer {class: dep}
+    a -> b: nightly batch {class: async}
+    x: external {class: [service; external]}
+  }
+}
 
-# The hub is as wide as the row it calls, so its four edges drop straight
-# (at its natural width they jogged: 3 labels on bends).
-app: "Assistant API\nFastAPI" {class: [service; focal]; width: 580}
+# Row 1 sits above the hub because each of its edges is written `callee <-> app`.
+user: "Support agent\nSlack" {class: [actor; tech; leaf; top]}
+llm: "LLM\nClaude API" {class: [service; tech; leaf; top; external]}
+memory: "Chat history\nRedis" {class: [datastore; tech; leaf]; height: 107}
 
-# Row order = edge order below. The model is external unless self-hosted.
-llm: "LLM\nClaude API" {class: [service; w; external]}
+# Focal because the request says "Highlight the Assistant API". It spans the
+# callees above and below it, so every edge drops straight.
+app: "Assistant API\nFastAPI" {class: [service; tech; focal]; width: 480}
+# The nightly job's source: an external document store. The indexing path
+# (source, job, index) forms its own column at the right.
+docs: "Help center\nZendesk" {class: [datastore; tech; leaf; external]; height: 107}
+
+retriever: "Retriever\nhybrid search" {class: [service; tech; leaf]}
+# The tools in one row, gaps 12 (a grid's gaps are also its padding); a
+# column of three made the diagram 120px taller and left a 192px hole.
 tools: Tools {
   class: zone
-  # One row per tool: 5 tools under grid-rows 3 folded into 2 columns (11.3px).
-  grid-rows: 3
-  vertical-gap: 10
+  grid-rows: 1
   horizontal-gap: 12
-  tickets: "Ticket lookup" {class: [service; w]}
-  orders: "Order status" {class: [service; w]}
-  refunds: "Issue refund" {class: [service; w]}
+  vertical-gap: 12
+  tickets: Ticket lookup {class: [service; compact; leaf]}
+  orders: Order status {class: [service; compact; leaf]}
+  refunds: Issue refund {class: [service; compact; leaf]}
 }
-memory: "Chat history\nRedis" {class: [datastore; w]}
-# The retriever sits next to the indexing job: the index below spans both.
-retriever: "Retriever\nhybrid search" {class: [service; w]}
-index: Nightly indexing {
-  class: zone
-  docs: "Help center\nZendesk" {class: [service; w; external]}
-  embed: "Embed job\nAirflow" {class: [service; w]}
-}
-vectors: "Vector index\npgvector" {class: datastore; width: 260}
+embed: "Embed job\nAirflow" {class: [service; tech; leaf]}
+# As wide as the retriever-to-job span: both writers drop straight in.
+vectors: "Vector index\npgvector" {class: [datastore; tech]; width: 680; height: 107}
 
-# Every online call is a request and its answer: ONE <-> edge, "prompt /
-# reply" (two opposite edges drew twice the lines and widened the canvas by
-# 28px). The offline job writes one way (->). Tools are called by the app,
-# never by the model. Main path flow, offline upsert async.
-user <-> app: "question / answer" {class: flow}
-app <-> llm: "prompt / reply" {class: flow}
+# Each online call is ONE <-> edge, "request / answer"; one class for all
+# (the request describes no single path). The app runs the tools, never the
+# model; one edge into the Tools zone. The nightly job writes one way, async.
+user <-> app: "question / answer" {class: dep}
+llm <-> app: "prompt / reply" {class: dep}
+memory <-> app: history {class: dep}
+app <-> retriever: "query / chunks" {class: dep}
 app <-> tools: "call / result" {class: dep}
-app <-> memory: history {class: dep}
-app <-> retriever: "query / chunks" {class: flow}
-retriever <-> vectors: "search / top-8" {class: flow}
-index.docs -> index.embed: articles {class: dep}
-index.embed -> vectors: upsert {class: async}
+retriever <-> vectors: "search / top 8" {class: dep}
+docs -> embed: articles {class: async}
+embed -> vectors: upsert {class: async}

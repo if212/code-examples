@@ -1,0 +1,18 @@
+# After: the lucide icons are fetched with --color 326CE5, the k8s blue: the one pair of
+# families semcheck accepts when the request asks for icons.
+# column: 800
+# allow: W-aspect
+...@neutral-theme
+direction: down
+classes: {card: {width: 150; height: 64; icon.near: top-center; label.near: bottom-center}}
+internet: "Internet\nusers" {class: [service; card]; icon: ./k8s-icons/globe.svg}
+lb: "Load balancer\ncloud" {class: [service; card]; icon: ./k8s-icons/split.svg}
+ingress: "web\nIngress" {class: [service; card]; icon: ./k8s-icons/k8s-ingress.svg}
+svc: "web\nService" {class: [service; card]; icon: ./k8s-icons/k8s-service.svg}
+deploy: "web\nDeployment" {class: [service; card]; icon: ./k8s-icons/k8s-deployment.svg}
+pg: "Postgres\nmanaged" {class: [service; card]; icon: ./k8s-icons/database.svg}
+internet -> lb: {class: dep}
+lb -> ingress: {class: dep}
+ingress -> svc: {class: dep}
+svc -> deploy: {class: dep}
+deploy -> pg: {class: dep}

@@ -4,12 +4,12 @@ direction: down
 
 receive: Receive order {class: service}
 validate: Validate {class: service}
+charge: Charge card {class: service}
 reserve: Reserve stock {class: service}
-charge: Charge card {class: [service; focal]}
 pick: Pick {class: service}
 pack: Pack {class: service}
 print: Print label {class: service}
 ship: Ship {class: service}
 notify: Notify buyer {class: service}
 
-receive -> validate -> reserve -> charge -> pick -> pack -> print -> ship -> notify: {class: flow}
+receive -> validate -> charge -> reserve -> pick -> pack -> print -> ship -> notify: {class: dep}

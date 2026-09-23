@@ -1,0 +1,13 @@
+# Before: solid slate calls and dashed violet events, and nothing says what the dash means.
+...@neutral-theme
+direction: right
+classes: {tier: {width: 180}}
+web: Web app {class: actor}
+api: Orders API {class: service}
+db: "Orders DB\nPostgres" {class: [datastore; tier]}
+events: "Order events\nKafka" {class: [queue; tier]}
+mailer: Mailer {class: service}
+web -> api: HTTPS {class: dep}
+api -> db: {class: dep}
+api -> events: {class: async}
+events -> mailer: {class: async}

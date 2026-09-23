@@ -1,37 +1,33 @@
 # Playbook: sequence diagrams
 
-Use for messages over time between 2-6 participants: an API call chain, a
-login or OAuth handshake, a checkout. Not for what connects to what
-(`playbooks/architecture.md`), lifecycles (`playbooks/state.md`) or branching
-logic (`playbooks/flowchart.md`).
-
-Template: `templates/sequence.d2` (4 participants, 9 numbered messages, one
-note, one `alt` with two operands). Syntax of spans, notes and groups:
-`reference/syntax.md` section 13.
-Variants: an agent's tool calls (a `loop` group: model -> app `tool_use`, app ->
-tool, app -> model `tool_result`; the app calls tools, never the model), a saga (an
-`alt` whose failure operand runs the compensations in reverse), a race (both workers).
+Messages over time between 2-6 participants: an API call chain, an OAuth handshake, a
+checkout. Not structure (`playbooks/architecture.md`), a lifecycle (`playbooks/state.md`)
+or branching (`playbooks/flowchart.md`). Template: `templates/sequence.d2` (4
+participants, 7 messages, activation bars, a two-outcome `alt`); syntax:
+`reference/syntax.md` section 13. Variants: a saga (rule 9), a protocol artifact (rule
+10), an agent's tool calls (a `loop`: model -> app `tool_use`, app -> tool, app -> model
+`tool_result`; the app calls tools, never the model).
 
 ## Skeleton
 
 | Part | How |
 |---|---|
-| Participants | declared first, in reading order; all `actor`; the subject `[actor; focal]`; third parties `[actor; external]` |
-| Messages | in time order, one line each, numbered `1.` `2.`; requests `dep`, the key path `flow` if it matters |
-| Returns | `{class: secondary; style.stroke-dash: 3}`; error returns `failure` |
-| Activation bar | send to or from `api.t` (any child key) to draw the bar on `api` |
-| Notes | `api.idem: One short line {class: note}`: a child with no edges |
-| Fragments | a `zone` group, label quoted; a guard adds `style: {text-transform: none; bold: false}`: `retry: "loop [n < 3]"`; `alt` operands are nested groups (rule 6) |
+| Participants | declared first, in reading order; all `actor` with one width class (`box: {width: 120}`); third parties too, named in the label |
+| Focus | the participant the request is told from or names: `[actor; box; focal]`; a protocol's artifact: `flow` on its messages (rule 10) |
+| Messages | time order, one line each, numbered `1.` `2.`; requests `dep` |
+| Returns | `{class: secondary; style.stroke-dash: 3}`; an error reply `failure` |
+| Activation bars | a message to a child key (`db.a`) draws a bar: on every participant that does work, one key per activation, or on none |
+| Notes | `api.x: One short line {class: [note; compact]}`: a child with no edges (rule 4) |
+| Fragments | a `zone` titled with its question (`"alt: charge result"`); outcomes are nested zones (rule 6) |
 
-## Budget at 800px (measured on the template)
+## Budget at 800px (measured)
 
-- Each message adds 88px of height, each note about 165px, each group title
-  30-60px. The template (9 messages, one note, a two-operand `alt`) is
-  1214px tall: that is the limit of the 1280px budget. Without notes and
-  groups, 12 messages fit.
-- A participant column is 150-200px; a label wider than the gap widens it.
-  Four or five participants with 40-character labels fill 800px.
-- Longer protocols: two diagrams, or `steps` boards (`playbooks/change.md`).
+- A message row is about 88px, a compact note about 110, a group title 30-45. The
+  template (4 participants, 7 messages, a two-operand `alt`) is 774 x 878.
+- At most 9 messages and one note, or 7 messages and one two-operand `alt`. Longer:
+  two diagrams, one per phase, or `steps` boards (`playbooks/change.md` section 3).
+- Gaps follow the longest label between neighbours: four participants with 25-character
+  labels fill 800px; a 120px participant box holds about 12 characters.
 
 ## Notation checklist
 
@@ -39,111 +35,116 @@ tool, app -> model `tool_result`; the app calls tools, never the model), a saga 
 - [ ] Messages in time order (`S-seq-order`); every return dashed (`S-seq-return`).
 - [ ] Fragments hold only declared participants (`S-seq-group-actor`).
 - [ ] Numbers run on; the operands of one `alt` restart at the same number.
-- [ ] One focus: `[actor; focal]` on the participant; `flow` on its key messages optional.
-- [ ] No `person` shape, no self-message loops, labels in plain ASCII.
+- [ ] Emphasis from the brief (`workflows/brief.md` section 3): no `focal`, no `flow`
+      unless its focus quotes the request.
 
 ## Rules
 
-### 1. Declare participants first, all in one box shape
+### 1. Participants first, one box shape, one width
 
-Column order is declaration order. `shape: person` is a 125px figure with the
-label under it: the header row no longer lines up. Mark the participant the
-diagram is about with `focal`: its box and lifeline turn blue.
-
-```d2
-# cwd: ../templates
-...@neutral-theme
-shape: sequence_diagram
-spa: Web app {class: actor}
-api: Orders API {class: [actor; focal]}
-stripe: Stripe {class: [actor; external]}
-spa -> api.t: "1. POST /orders" {class: dep}
-api.t -> stripe: "2. POST /charges" {class: dep}
-```
+Column order is declaration order; one width class gives an even header row. `shape:
+person` sizes itself by its label (about 100 x 146 for one word), label below: the header
+row no longer lines up. `actor` is light chrome and the lifelines take its outline, so the
+messages carry the weight; a focal participant's box and lifeline turn blue. A third party
+is a plain `actor` (`external`'s dark dashed outline would be the heaviest lifeline).
 
 ### 2. One message is one line of at most 40 characters
 
-Write the method, the path and the one parameter that matters: `3. POST
-/charges`. d2 centres a label on its arrow, so a 3-line label splits the
-arrow into stubs. Other parameters go in a note on the receiving participant.
+The method, the path, parameters in parentheses: `POST /token (code, code_verifier)`.
+A placeholder names the value (`302 code=AUTH_CODE`), never `...`. d2 centres a label on
+its arrow; a label that crosses a participant it does not touch slides into the widest
+gap on its way (d2check).
 
 ### 3. Returns are dashed and quieter; failed returns are red
 
-```d2
-# cwd: ../templates
-...@neutral-theme
-shape: sequence_diagram
-api: Orders API {class: actor}
-psp: Payment provider {class: [actor; external]}
-api -> psp: "3. POST /charges" {class: dep}
-psp -> api: "4. 201 charge_id" {class: secondary; style.stroke-dash: 3}
-```
+`secondary` + `style.stroke-dash: 3`; a solid return reads as a new request and fails
+`S-seq-return`. An error reply (`402 card_declined`) is `failure`.
 
-A solid return reads as a new request and fails `S-seq-return`. Use
-`failure` (red, dashed) for an error reply such as `402 card_declined`.
+### 4. Notes: one line, compact, off the bars
 
-### 4. Self-calls and parameter lists become notes
-
-A note is one row on its participant's lifeline. A self-message draws a loop
-whose label straddles the lifeline; write `api.check: Validates the cart
-{class: note}` instead. Keep a note to one short line.
+A note is a row on its participant: `[note; compact]` keeps it one line and 48px tall.
+Place it before a bar opens or after it closes (declare it between those messages): over
+an open bar it cuts the bar in two. A self-call becomes a note (`api.check: Validates
+the cart`); a parameter becomes part of its message.
 
 ### 5. Phases: number the messages; groups only for alt, loop and opt
 
-A group is exactly as wide as the lifelines its messages touch (`width` on a
-group is ignored; a note inside widens it by the note width). Tested on two
-OAuth flows: phase groups came out 150-185px ragged (`W-seq-group-ragged`);
-touching both outer participants with notes in every phase still left them
-33-76px ragged and added about 500px of height. So number the messages (`1.` to
-`n.`) and name the phases in the text around the diagram. Phase bands only
-work when every phase already has messages touching the leftmost and the
-rightmost participant.
+A group is as wide as the lifelines its messages touch (`width` is ignored): phase groups
+come out ragged. Number the messages; name phases around the diagram or split by phase.
 
 ### 6. alt: one nested zone per outcome, each touching the same participants
+
+The outer zone's title names the question (`"alt: charge result"`, `style:
+{text-transform: none}`); each outcome is a nested zone titled with its guard, `style:
+{text-transform: none; bold: false}` (`[approved]`). Every outcome touches the same
+participants, and a note in one gets its twin on the same participant in the other: the
+frames come out equally wide (`W-seq-group-ragged`). Quote group labels (an unquoted `[`
+fails to compile); d2check matches title chips to their frames and slides them off lifelines.
+
+### 7. Inside a group, use only declared participants
+
+An undeclared key inside a group becomes a new participant and the frame disappears
+(`S-seq-group-actor`).
+
+### 8. Prune rows before shrinking anything else
+
+Every row costs 88-110px. Prune replies the request does not state first, then notes that
+close no requested path; keep what the request names (an outcome, a retry, a lifetime).
+
+### 9. Saga: both outcomes end on the orchestrator, compensations marked
+
+Success is a `zone-green` operand, failure a `zone-amber` one, each ending in a note on the
+same participant after its reply (an operand with no message loses its frame); compensations
+`failure`, `compensate: ...`. Told from the orchestrator (`focus: order  # "the Order service
+creates an order"`), no bars: 677 x 952; a creation note on top makes it 1070 (`W-tall`):
 
 ```d2
 # cwd: ../templates
 ...@neutral-theme
 shape: sequence_diagram
-api: Orders API {class: actor}
-psp: Payment provider {class: [actor; external]}
-db: Orders DB {class: actor}
-api.t -> psp: "3. POST /charges" {class: dep}
-alt: "alt" {
+classes: {box: {width: 136}}
+order: Order service {class: [actor; box; focal]}
+payment: Payment service {class: [actor; box]}
+inventory: Inventory service {class: [actor; box]}
+order -> payment: "1. charge card" {class: dep}
+order -> inventory: "2. reserve stock" {class: dep}
+alt: "alt: stock reserved?" {
   class: zone
-  ok: "[approved]" {
-    class: zone
+  style: {text-transform: none}
+  ok: "[reservation succeeds]" {
+    class: zone-green
     style: {text-transform: none; bold: false}
-    psp -> api.t: "4. 201 charge_id" {class: secondary; style.stroke-dash: 3}
-    api.t -> db: "5. UPDATE order (paid)" {class: dep}
+    inventory -> order: "3. stock reserved" {class: secondary; style.stroke-dash: 3}
+    order.done: Order confirmed {class: [note; compact]}
   }
-  declined: "[declined]" {
-    class: zone
+  failed: "[reservation fails]" {
+    class: zone-amber
     style: {text-transform: none; bold: false}
-    psp -> api.t: "4. 402 card_declined" {class: failure}
-    api.t -> db: "5. UPDATE order (failed)" {class: dep}
+    inventory -> order: "3. reservation failed" {class: failure}
+    order -> payment: "4. compensate: refund charge" {class: failure}
+    order.cancel: Order cancelled {class: [note; compact]}
   }
 }
 ```
 
-Both operands touch `psp` and `db`, so they are equally wide. An operand that
-stops short looks unfinished. Every group is a `zone`: d2 draws group frames
-see-through, so the lifelines show; only the title's background, painted in
-the group's fill, hides them. A `boundary` has no fill: the leftmost lifeline
-strikes through its title. A title holding a guard gets
-`style: {text-transform: none; bold: false}`: the guard stays as written
-(`[retries < 3]`, not `[RETRIES < 3]`), and d2 sizes a group title for
-regular text, so a long bold one spills onto the frame. Quote group labels:
-an unquoted `[` fails to compile.
+### 10. A protocol that names its artifact: show where it is made, sent and checked
 
-### 7. Inside a group, use only declared participants
+When the request names the thing the protocol is about (PKCE's `code_verifier` /
+`code_challenge`, a signed webhook's signature), the focus is the messages that carry it:
+`flow` on them (`focus: spa -> auth  # "including the code_verifier/code_challenge"`).
+Add a compact note where it is created and one where it is checked:
 
-A key inside a group that is not a declared participant creates a new
-participant with its own lifeline, and the group frame disappears
-(`S-seq-group-actor`). Declare every participant at the top.
-
-### 8. Prune notes before shrinking anything else
-
-Every note costs a 165px row. Keep the ones that change how the reader
-understands the flow (idempotency, retries, token lifetime); move the rest
-to the text around the diagram.
+```d2
+# cwd: ../templates
+...@neutral-theme
+shape: sequence_diagram
+classes: {box: {width: 136}}
+spa: Browser SPA {class: [actor; box]}
+auth: Auth server {class: [actor; box]}
+spa.v: random code_verifier, kept in the SPA {class: [note; compact]}
+spa -> auth: "1. GET /authorize (code_challenge)" {class: flow}
+auth -> spa: "2. 302 code=AUTH_CODE" {class: secondary; style.stroke-dash: 3}
+spa -> auth: "3. POST /token (code, code_verifier)" {class: flow}
+auth.c: S256(code_verifier) = code_challenge? {class: [note; compact]}
+auth -> spa: "4. 200 access_token" {class: secondary; style.stroke-dash: 3}
+```

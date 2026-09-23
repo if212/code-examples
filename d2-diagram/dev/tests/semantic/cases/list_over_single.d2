@@ -1,0 +1,15 @@
+# a class list over a single class is dropped by d2 (on the same board and in later steps)
+...@mini-theme
+direction: right
+app: App {class: service}
+db: Primary DB {class: datastore}
+app -> db: {class: dep}
+steps: {
+  "1": {
+    db.class: [datastore; muted]
+  }
+  "2": {
+    app.class: null
+    app.class: [service; focal]
+  }
+}

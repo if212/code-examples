@@ -5,10 +5,10 @@ direction: down
 ns: Orders namespace {
   class: zone
   web: Web {class: service}
-  api: API {class: [service; focal]}
+  api: API {class: service}
   worker: Worker {class: service}
   jobs: Jobs {class: service}
-  web -> api: {class: flow}
+  web -> api: {class: dep}
   api -> worker: {class: dep}
   worker -> jobs: {class: dep}
 }

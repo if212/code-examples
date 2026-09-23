@@ -1,0 +1,18 @@
+# statuses explained by a key row of chips in the real classes; the chips are not inventory
+...@mini-theme
+grid-rows: 2
+grid-columns: 2
+before: Before {
+  class: zone
+  app: App {class: service}
+  sessions: Session store {class: [datastore; muted]}
+  app -> sessions: {class: dep}
+}
+after: After {
+  class: zone
+  app: App {class: service}
+}
+key: {
+  class: key
+  removed: Removed {class: [service; chip; muted]}
+}

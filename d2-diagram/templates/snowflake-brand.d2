@@ -1,23 +1,23 @@
 # snowflake-brand.d2 - Snowflake brand layer for d2-diagram (light only).
-# Copy it next to the diagram and make `...@snowflake-brand` the first line there.
+# Copy it next to the diagram; `...@snowflake-brand` is the first line of code there.
 # It sets ELK, pad 24 and theme 0; d2check embeds the bundled Lato fonts.
 # Tag every node, container and edge with a class, never a color:
 #   node      sf-node sf-primary sf-datastore sf-external sf-muted
 #   accent    sf-accent-orange sf-accent-star sf-accent-pink sf-accent-purple
 #   container sf-container
 #   edge      sf-edge sf-flow sf-failure
-# Snowflake Blue fills sf-primary only (at most 3 nodes); it is never text and
-# never a line color (2.37:1 on white). Main path = sf-flow, Mid-Blue 3px.
-# At most ONE sf-accent-* element per diagram.
+#   geometry  compact chip tech ghost (after the sf-* role); title key (alone)
+# Snowflake Blue fills sf-primary only: ONE node, grounded by `# brand` in the brief.
+# It is never text and never a line color (2.37:1 on white). sf-flow (Mid-Blue 3px)
+# only on a path the request describes. At most ONE sf-accent-* element per diagram.
 # Rules: ${CLAUDE_SKILL_DIR}/reference/brand-snowflake.md
 # After any edit: python3 ${CLAUDE_SKILL_DIR}/scripts/contrast.py --check snowflake-brand.d2
-
 vars: {
   sf-blue: "#29B5E8" # Snowflake Blue: signature fill (sf-primary), never text or line
   sf-mid-blue: "#11567F" # structure: outlines, edges, container titles, icon color
   sf-midnight: "#000000" # text on light backgrounds
   sf-gray: "#5B5B5B" # de-emphasis: muted nodes, edge labels, annotations
-  sf-tint: "#F4FAFD" # container and datastore fill
+  sf-tint: "#F4FAFD" # container fill (cylinders stay white so they never blend in)
   sf-rule: "#BCE3F7" # container outline (decorative)
   sf-star: "#71D3DC" # secondary accents: at most ONE per diagram
   sf-orange: "#FF9F36"
@@ -55,19 +55,19 @@ classes: {
   # ---- nodes: 1px Mid-Blue outline, radius 6, 16px midnight text ----
   sf-node: {style: {fill: "#FFFFFF"; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; font-size: 16; border-radius: 6}}
   # The focal element(s): signature blue fill, midnight text (white fails on #29B5E8).
-  sf-primary: {style: {fill: ${sf-blue}; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; font-size: 16; bold: true; border-radius: 6}}
-  sf-datastore: {shape: cylinder; style: {fill: ${sf-tint}; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; font-size: 16}}
+  sf-primary: {style: {fill: ${sf-blue}; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; bold: true; border-radius: 6}}
+  sf-datastore: {shape: cylinder; style: {fill: "#FFFFFF"; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; font-size: 16}}
   # Not ours (SaaS, partner APIs): dashed outline.
-  sf-external: {style: {fill: "#FFFFFF"; stroke: ${sf-mid-blue}; stroke-width: 1; stroke-dash: 4; font-color: ${sf-midnight}; font-size: 16; border-radius: 6}}
+  sf-external: {style: {fill: "#FFFFFF"; stroke: ${sf-mid-blue}; stroke-width: 1; stroke-dash: 4; font-color: ${sf-midnight}; border-radius: 6}}
   # Legacy / out of scope / inferred: gray, regular weight.
-  sf-muted: {style: {fill: "#FFFFFF"; stroke: ${sf-gray}; stroke-width: 1; font-color: ${sf-gray}; font-size: 16; bold: false; border-radius: 6}}
+  sf-muted: {style: {fill: "#FFFFFF"; stroke: ${sf-gray}; stroke-width: 1; font-color: ${sf-gray}; bold: false; border-radius: 6}}
 
   # ---- secondary accents: pick AT MOST ONE per diagram ----
-  sf-accent-orange: {style: {fill: ${sf-orange}; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; font-size: 16; bold: true; border-radius: 6}}
-  sf-accent-star: {style: {fill: ${sf-star}; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; font-size: 16; bold: true; border-radius: 6}}
-  sf-accent-pink: {style: {fill: ${sf-pink}; stroke: ${sf-pink}; stroke-width: 1; font-color: ${sf-midnight}; font-size: 16; bold: true; border-radius: 6}}
+  sf-accent-orange: {style: {fill: ${sf-orange}; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; bold: true; border-radius: 6}}
+  sf-accent-star: {style: {fill: ${sf-star}; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; bold: true; border-radius: 6}}
+  sf-accent-pink: {style: {fill: ${sf-pink}; stroke: ${sf-pink}; stroke-width: 1; font-color: ${sf-midnight}; bold: true; border-radius: 6}}
   # Purple is the one dark secondary: white text.
-  sf-accent-purple: {style: {fill: ${sf-purple}; stroke: ${sf-purple}; stroke-width: 1; font-color: "#FFFFFF"; font-size: 16; bold: true; border-radius: 6}}
+  sf-accent-purple: {style: {fill: ${sf-purple}; stroke: ${sf-purple}; stroke-width: 1; font-color: "#FFFFFF"; bold: true; border-radius: 6}}
 
   # ---- containers: light blue tint, 16px bold Mid-Blue title at top-left ----
   sf-container: {label.near: top-left; style: {fill: ${sf-tint}; stroke: ${sf-rule}; stroke-width: 1; font-color: ${sf-mid-blue}; font-size: 16; bold: true; border-radius: 10}}
@@ -78,4 +78,19 @@ classes: {
   sf-flow: {source-arrowhead.shape: arrow; target-arrowhead.shape: arrow; style: {stroke: ${sf-mid-blue}; stroke-width: 3; font-color: ${sf-mid-blue}; font-size: 14; italic: false}}
   # Error / retry path without spending the one accent: dashed Mid-Blue.
   sf-failure: {source-arrowhead.shape: arrow; target-arrowhead.shape: arrow; style: {stroke: ${sf-mid-blue}; stroke-width: 2; stroke-dash: 3; font-color: ${sf-mid-blue}; font-size: 14; italic: false}}
+
+  # ---- geometry: the six of neutral-theme, same sizes, brand colors ----
+  # (only sf-node and sf-datastore set a font size, so [sf-node; chip; sf-muted] stays 14px)
+  # compact: a one-line box 48 tall (default 66); chip: a key or status tag
+  compact: {height: 48}
+  chip: {width: 104; height: 32; style.font-size: 14}
+  # tech: marker only; d2check draws label lines 2+ at 14px gray ("Name\nTechnology")
+  tech: {style.opacity: 1}
+  # ghost: invisible spacer node AND edge; a ghost is as tall as its rank-mates
+  ghost: {width: 12; height: 48; style: {opacity: 0; font-size: 14; italic: false}}
+  # title: C4 only (the page caption titles the rest), centered above the diagram
+  title: {shape: text; near: top-center; style: {font-color: ${sf-midnight}; font-size: 18; bold: true}} # root level only: a nested title fails with constant near keys
+
+  # key: a row of chips in the real classes (statuses); line keys use vars.d2-legend
+  key: {label: ""; grid-rows: 1; horizontal-gap: 12; vertical-gap: 8; style: {fill: "#FFFFFF"; stroke: ${sf-rule}; stroke-width: 1; border-radius: 6}} # decorative: the chips carry the meaning
 }

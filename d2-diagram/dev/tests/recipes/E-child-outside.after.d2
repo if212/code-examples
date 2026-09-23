@@ -1,10 +1,12 @@
-# After: no fixed size on the container: the grid sizes itself to its cells.
+# After: no fixed size on the container: the grid sizes itself to its cells (one width class
+# for the cells).
 ...@neutral-theme
+classes: {cell: {width: 120}}
 tier: Services {
   class: zone
   grid-columns: 2
-  orders: Orders {class: [service; focal]}
-  billing: Billing {class: service}
-  search: Search {class: service}
-  accounts: Accounts {class: service}
+  orders: Orders {class: [service; cell]}
+  billing: Billing {class: [service; cell]}
+  search: Search {class: [service; cell]}
+  accounts: Accounts {class: [service; cell]}
 }

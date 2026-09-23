@@ -1,4 +1,6 @@
+# request: "The app writes to the Orders DB. Highlight the app."
 type: architecture
+focus: app  # "Highlight the app"
 nodes:
   app: App
   db: Orders DB

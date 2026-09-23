@@ -1,12 +1,14 @@
-# After: every node carries a role class (queue for the topic).
+# After: every node carries a role class (queue for the topic); the store and the topic share
+# one height.
 ...@neutral-theme
 direction: down
+classes: {row: {height: 110}}
 web: Web app {class: actor}
-api: Orders API {class: [service; focal]}
-db: "Orders DB\nPostgres" {class: datastore}
-kafka: "Order events\nKafka" {class: queue}
+api: Orders API {class: service}
+db: "Orders DB\nPostgres" {class: [datastore; row]}
+kafka: "Order events\nKafka" {class: [queue; row]}
 jobs: Fulfilment worker {class: service}
-web -> api: {class: flow}
+web -> api: {class: dep}
 api -> db: {class: dep}
 api -> kafka: {class: async}
 kafka -> jobs: {class: async}

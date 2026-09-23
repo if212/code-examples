@@ -1,0 +1,13 @@
+# request: "The web app calls the API, which reads the orders DB. Highlight the API."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: api
+nodes:
+  web: Web app
+  api: API
+  db: Orders DB
+edges:
+  web -> api: calls
+  api -> db: reads

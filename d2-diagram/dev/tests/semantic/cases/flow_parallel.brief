@@ -4,7 +4,7 @@ type: flowchart
 reader: test
 width: 800
 direction: down
-focus: gate
+focus: gate, placed -> checks -> gate -> fulfil -> shipped, fulfil.pick -> fulfil.ship  # "a go/no-go decision", "checks run in parallel, then a go/no-go decision; fulfilment picks and ships"
 out: -
 nodes:
   placed: Order placed {start}

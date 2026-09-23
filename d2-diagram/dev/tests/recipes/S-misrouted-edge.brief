@@ -3,7 +3,7 @@ type: pipeline
 reader: data team wiki
 width: 800
 direction: right
-focus: wh.raw
+focus: wh.raw  # "Highlight RAW"
 out: transformations
 nodes:
   src: Sources

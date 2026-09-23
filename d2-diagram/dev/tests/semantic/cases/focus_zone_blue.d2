@@ -1,0 +1,9 @@
+# a focal node on the blue panel: blue on blue (FIXPLAN F1 c)
+...@mini-theme
+direction: down
+ns: Orders namespace {
+  class: zone-blue
+  worker: Worker {class: [service; focal]}
+  queue: Jobs queue {class: datastore}
+}
+ns.worker -> ns.queue: pulls {class: dep}

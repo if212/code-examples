@@ -1,25 +1,19 @@
 # Compare template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
 ...@neutral-theme
 
-# Before | after: two grid cells, each laid out on its own (a cell keeps its
-# own `direction`). No edge crosses the panels (playbooks/change.md).
+# Before | after, key below: grid-rows first (then cells fill row by row).
+# Each panel is a grid cell laid out on its own (a cell keeps its own
+# direction). No edge crosses the panels (playbooks/change.md).
+grid-rows: 2
 grid-columns: 2
 horizontal-gap: 16
+vertical-gap: 16
 
-# Green means "added" here, not success: the legend is required.
-vars: {
-  d2-legend: {
-    added: Added {class: [service; success]}
-    removed: Removed {class: muted}
-    changed: Changed {class: [service; focal]}
-  }
-}
-
-# One width for every box: both panels come out the same size. 104 holds
-# lines of about 10 characters (13 touch the border): wrap or shorten.
-# A geometry class goes right after the base role; the modifier stays last.
+# One width for every box, one height for the bottom row (a cylinder and a
+# box side by side): both panels come out the same size.
 classes: {
-  box: {width: 104}
+  box: {width: 120}
+  low: {height: 108}
 }
 
 # Same keys, same order on both sides, so shared parts land in the same
@@ -29,10 +23,10 @@ classes: {
 before: "Before: server sessions" {
   class: zone
   direction: down
-  web: "Web app\nReact" {class: [actor; box]}
-  api: "Shop API\nRails" {class: [service; box]}
-  db: "Users DB\nPostgres" {class: [datastore; box]}
-  sessions: "Sessions\nMemcached" {class: [datastore; box; muted]}
+  web: "Web app\nReact" {class: [actor; tech; box]}
+  api: "Shop API\nRails" {class: [service; tech; box]}
+  db: "Users DB\nPostgres" {class: [datastore; tech; box; low]}
+  sessions: "Sessions\nMemcached" {class: [datastore; tech; box; low; muted]}
   web -> api: {class: dep}
   api -> db: {class: dep}
   api -> sessions: {class: dep}
@@ -40,17 +34,25 @@ before: "Before: server sessions" {
   web -> sessions: {class: dep; style.opacity: 0}
 }
 
-# The one change the reader must see is focal; other changed parts stay
-# plain and the title names them. Added parts are success.
+# Status is the class: added success, removed muted, changed focal. Both
+# panels are plain zones: a focal box on a blue panel would not stand out.
 after: "After: OIDC tokens" {
-  class: zone-blue
+  class: zone
   direction: down
-  web: "Web app\nReact" {class: [actor; box]}
-  api: "Shop API\nJWT auth" {class: [service; box; focal]}
-  db: "Users DB\nPostgres" {class: [datastore; box]}
-  idp: "Login\nAuth0" {class: [service; box; external; success]}
+  web: "Web app\nReact" {class: [actor; tech; box]}
+  api: "Shop API\nJWT auth" {class: [service; tech; box; focal]}
+  db: "Users DB\nPostgres" {class: [datastore; tech; box; low]}
+  idp: "Login\nAuth0" {class: [service; tech; box; low; success]}
   web -> api: {class: dep}
   api -> db: {class: dep}
   api -> idp: {class: dep}
   web -> idp: {class: dep}
+}
+
+# The key: chips in the status classes (a legend swatch cannot show text weight).
+key: {
+  class: key
+  added: Added {class: [service; chip; success]}
+  removed: Removed {class: [muted; chip]}
+  changed: Changed {class: [service; chip; focal]}
 }

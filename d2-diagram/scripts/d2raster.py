@@ -28,6 +28,7 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -41,7 +42,7 @@ FAITHFUL = ("playwright", "chrome")
 AUTO = ["playwright", "chrome", "rsvg"]
 READ_LIMIT = 2000  # px on the long edge that the Read tool shows without downscaling
 DOCTOR = "sh %s" % shlex.quote(os.path.join(HERE, "doctor.sh"))
-EPILOG = """exit codes (shared by every script of the skill):
+EPILOG = """exit codes (the skill's convention; semcheck.py differs):
   0   faithful: rendered by Chromium (playwright or a Chrome binary)
   1   hard failure: no usable output (no renderer worked, or the input is not a d2 SVG)
   3   degraded: only rsvg-convert worked - fonts are substitutes, do not ship the PNG
@@ -78,12 +79,20 @@ def display_width(path, column):
 
 
 def run(cmd, timeout=180, env=None):
+    """run a renderer in its own process group: on a timeout the whole group goes (a browser it started too)"""
     try:
-        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, env=env)
-        return p.returncode, (p.stdout + p.stderr).decode("utf-8", "replace")
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, start_new_session=True)
     except FileNotFoundError as e:
         return 127, str(e)
+    try:
+        out, err = p.communicate(timeout=timeout)
+        return p.returncode, (out + err).decode("utf-8", "replace")
     except subprocess.TimeoutExpired:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except (OSError, AttributeError):
+            p.kill()
+        p.communicate()
         return 124, "timeout after %ss" % timeout
 
 
@@ -135,8 +144,8 @@ def route_playwright(jobs):
     try:
         for attempt in (1, 2):  # a browser launch can fail transiently on a loaded machine: retry once
             code, log = run(["node", os.path.join(HERE, "raster.cjs"), "--jobs", jf, "--quiet"], env=env)
-            if code == 0 or code == 64 or "module not found" in log:
-                break
+            if code in (0, 64, 124) or "module not found" in log:
+                break  # a hang does not get better on a second try
     finally:
         os.remove(jf)
     last = log.strip().splitlines()[0] if log.strip() else "exit %d" % code
@@ -321,6 +330,8 @@ def main():
                     choices=["auto", "playwright", "chrome", "rsvg", "cairosvg"],
                     help="force one renderer (default $D2CHECK_ROUTE, else auto)")
     a = ap.parse_args()
+    if a.route != "auto" and a.route not in ROUTES:  # argparse checks choices on the command line, not a default
+        ap.error("D2CHECK_ROUTE=%r is not a route: auto, playwright, chrome, rsvg or cairosvg (unset it for auto)" % a.route)
     if not 0 < a.scale <= 8:
         ap.error("--scale wants a pixel ratio in (0, 8], e.g. 2")
     jobs = []
@@ -368,7 +379,16 @@ def main():
             file=sys.stderr)
         return 1
     for j in jobs:
-        os.makedirs(os.path.dirname(os.path.abspath(j["out"])), exist_ok=True)
+        d = os.path.dirname(os.path.abspath(j["out"]))
+        try:
+            os.makedirs(d, exist_ok=True)
+            if not os.access(d, os.W_OK):
+                raise PermissionError(13, "not writable", d)
+            probe = tempfile.NamedTemporaryFile(dir=d, prefix=".d2raster-", delete=True)
+            probe.close()
+        except OSError as e:
+            print("d2raster: cannot write %s (%s) - choose another --out" % (d, e.strerror or e), file=sys.stderr)
+            return 1
     pdf = any(j["out"].lower().endswith(".pdf") for j in jobs)
     if a.route == "auto":
         routes = ["playwright", "chrome"] if pdf else AUTO

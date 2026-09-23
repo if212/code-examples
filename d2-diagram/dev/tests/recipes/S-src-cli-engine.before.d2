@@ -2,11 +2,12 @@
 # nothing carries a role class.
 # brief: arch.brief
 # expect: W-curved-edge
-direction: down
+direction: right
+classes: {tier: {width: 180}}
 web: Web app
 api: Orders API
-db: "Orders DB\nPostgres" {shape: cylinder}
-events: "Order events\nKafka" {shape: queue}
+db: "Orders DB\nPostgres" {shape: cylinder; class: tier}
+events: "Order events\nKafka" {shape: queue; class: tier}
 mailer: Mailer
 web -> api: HTTPS
 api -> db

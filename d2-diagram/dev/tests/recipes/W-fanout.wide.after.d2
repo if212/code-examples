@@ -1,0 +1,21 @@
+# After: the source as wide as the row it feeds (5 x 110 + 4 x 20 = 630) and one width class for
+# the row: every edge drops straight into its service, and each keeps its own route.
+...@neutral-theme
+direction: down
+classes: {svc: {width: 110}}
+web: Web app {class: actor}
+gateway: API gateway {class: service; width: 630}
+services: Services {
+  class: zone
+  auth: Auth {class: [service; svc]}
+  catalog: Catalog {class: [service; svc]}
+  cart: Cart {class: [service; svc]}
+  orders: Orders {class: [service; svc; focal]}
+  payments: Payments {class: [service; svc]}
+}
+web -> gateway: {class: dep}
+gateway -> services.auth: {class: dep}
+gateway -> services.catalog: {class: dep}
+gateway -> services.cart: {class: dep}
+gateway -> services.orders: {class: dep}
+gateway -> services.payments: {class: dep}

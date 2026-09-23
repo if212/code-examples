@@ -1,0 +1,17 @@
+# expect-clean: E- W-label-on-lifeline
+# post: svgpost
+# bad_label_on_lifeline.d2 finished by svgpost, as d2check finishes it: each label slides along its
+# arrow into the free run between two lifelines, mask rect and all.
+...@neutral-theme
+shape: sequence_diagram
+
+user: User {class: actor}
+spa: Browser SPA {class: actor}
+auth: Authorization Server {class: actor}
+api: Resource API {class: actor}
+
+spa -> auth: "2. GET /authorize + code_challenge" {class: dep}
+auth -> user: "3. Login and consent page" {class: secondary}
+user -> auth: "4. Signs in and consents" {class: dep}
+spa -> api: "8. API request + Bearer access_token" {class: dep}
+api -> spa: "9. 200 protected data" {class: secondary}

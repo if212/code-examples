@@ -1,0 +1,18 @@
+# expect: W-label-on-lifeline
+# expect-text: sits on the lifeline of 'spa', which the message does not touch
+# expect-text: sits on the lifeline of 'auth', which the message does not touch
+# From the round-3 OAuth PKCE deliverable: d2 centres each message label on its arrow, so a
+# message that jumps a lifeline (user -> auth over spa, spa -> api over auth) has its label cut by it.
+...@neutral-theme
+shape: sequence_diagram
+
+user: User {class: actor}
+spa: Browser SPA {class: actor}
+auth: Authorization Server {class: actor}
+api: Resource API {class: actor}
+
+spa -> auth: "2. GET /authorize + code_challenge" {class: dep}
+auth -> user: "3. Login and consent page" {class: secondary}
+user -> auth: "4. Signs in and consents" {class: dep}
+spa -> api: "8. API request + Bearer access_token" {class: dep}
+api -> spa: "9. 200 protected data" {class: secondary}

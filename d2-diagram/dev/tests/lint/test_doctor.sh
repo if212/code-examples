@@ -182,7 +182,7 @@ for s in d2check.sh doctor.sh font-flags.sh icon.sh; do
   o=$(sh "$SKILL/scripts/$s" --help 2>&1); rc=$?
   [ "$rc" = 0 ] && has "$o" 'exit' && has "$o" '64' && has "$o" 'example' && ok "$s --help" || bad "$s --help (exit $rc)" "$o"
 done
-for s in d2lint.py d2raster.py pngstats.py contrast.py semcheck.py; do
+for s in d2lint.py d2raster.py pngstats.py contrast.py semcheck.py svgpost.py; do
   [ "$s" = semcheck.py ] && continue  # another package's script
   o=$(python3 "$SKILL/scripts/$s" --help 2>&1); rc=$?
   [ "$rc" = 0 ] && has "$o" 'exit' && has "$o" '64' && has "$o" 'example' && ok "$s --help" || bad "$s --help (exit $rc)" "$o"
@@ -192,10 +192,81 @@ o=$(node "$SKILL/scripts/raster.cjs" --help 2>&1); rc=$?
 for c in "sh $SKILL/scripts/d2check.sh --bogus x.d2" "sh $SKILL/scripts/font-flags.sh no-such-family" \
   "sh $SKILL/scripts/icon.sh bogus" "python3 $SKILL/scripts/d2lint.py --bogus x.svg" \
   "python3 $SKILL/scripts/d2raster.py --bogus" "python3 $SKILL/scripts/pngstats.py" \
-  "python3 $SKILL/scripts/contrast.py --check" "node $SKILL/scripts/raster.cjs"; do
+  "python3 $SKILL/scripts/contrast.py --check" "python3 $SKILL/scripts/svgpost.py" \
+  "python3 $SKILL/scripts/svgpost.py --brand bogus x.svg" "node $SKILL/scripts/raster.cjs"; do
   $c > /dev/null 2>&1; rc=$?
   [ "$rc" = 64 ] && ok "usage error exits 64: ${c#* "$SKILL"/scripts/}" || bad "usage error exit $rc: $c"
 done
+
+# 13. --install --json: stdout is the one JSON object, the installers' own output goes to stderr ---------
+b=$(mkbin jsoninst python3 node npm)
+cp "$T/bin-fallback/curl" "$b/curl"
+cat > "$b/go" << EOF
+#!/bin/sh
+case "\$1" in
+  env) echo "$T/gopath" ;;
+  install) echo 'go: downloading oss.terrastruct.com/d2 v0.7.1'
+    mkdir -p "$T/gopath/bin" && printf '#!/bin/sh\nexec %s "\$@"\n' "$(command -v d2)" > "$T/gopath/bin/d2" && chmod +x "$T/gopath/bin/d2" ;;
+esac
+EOF
+chmod +x "$b/go"
+o=$(PATH="$b" HOME="$T/home" sh "$DOC" --offline --install --json 2> "$T/inst.err"); rc=$?
+v=$(printf '%s' "$o" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["verdict"])' 2>&1)
+[ "$v" = ready ] && grep -q 'go: downloading' "$T/inst.err" && ! has "$o" 'go: downloading' &&
+  ok "--install --json: stdout parses as JSON, installer output on stderr" || bad "--install --json ($v, exit $rc)" "$o"
+rm -rf "$T/gopath"
+
+# 14. D2CHECK_ROUTE: the raster check still tries every route, the forced route gets its own WARN row ------
+o=$(D2CHECK_ROUTE=bogus sh "$DOC" --offline 2>&1); rc=$?
+[ "$rc" = 0 ] && has "$o" "WARN  route .*D2CHECK_ROUTE='bogus' is not a route" && has "$o" 'PASS  raster ' &&
+  ok "D2CHECK_ROUTE=bogus: WARN route names the variable, raster still PASS, READY" || bad "D2CHECK_ROUTE=bogus (exit $rc)" "$o"
+o=$(D2CHECK_ROUTE=rsvg sh "$DOC" --offline --quiet 2>&1); rc=$?
+[ "$rc" = 0 ] && has "$o" 'WARN  route .*D2CHECK_ROUTE=rsvg forces one rasterizer' && ! has "$o" 'WARN  raster' &&
+  ok "D2CHECK_ROUTE=rsvg: WARN route, no false 'only rsvg worked', READY" || bad "D2CHECK_ROUTE=rsvg (exit $rc)" "$o"
+
+# 15. fonts: every family is checked, and the row names the family and file that are missing -------------
+rm -rf "$T/fonts" && mkdir -p "$T/fonts/d2-diagram" && cp -R "$SKILL/scripts" "$SKILL/assets" "$T/fonts/d2-diagram/"
+rm "$T/fonts/d2-diagram/assets/fonts/lato/Lato-Bold.ttf"
+o=$(sh "$T/fonts/d2-diagram/scripts/doctor.sh" --offline 2>&1); rc=$?
+[ "$rc" = 0 ] && has "$o" 'WARN  fonts .*missing assets/fonts/lato/Lato-Bold.ttf (family brand-snowflake): Snowflake-brand diagrams' &&
+  has "$o" 'PASS  render .*bundled fonts' && ok "fonts: a missing Lato file names brand-snowflake only; the default render keeps its fonts" ||
+  bad "per-family fonts (exit $rc)" "$o"
+rm "$T/fonts/d2-diagram/assets/fonts/geist/Geist-Regular.ttf"
+o=$(sh "$T/fonts/d2-diagram/scripts/doctor.sh" --offline --quiet 2>&1)
+has "$o" 'WARN  fonts .*brand-snowflake, geist diagrams fall back' && ok "fonts: geist is checked too" || bad "geist family" "$o"
+
+# 16. icon.sh: 5xx and 403 are network trouble (exit 3, lucide falls back), only 404 means no such icon ----
+cat > "$T/stub.py" << 'EOF'
+import http.server, sys
+class H(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        code = int(self.path.split('/')[1])
+        body = b'<html>error</html>'
+        self.send_response(code); self.send_header('Content-Length', str(len(body))); self.end_headers()
+        self.wfile.write(body)
+    def log_message(self, *a): pass
+srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), H)
+print(srv.server_port, flush=True)
+srv.serve_forever()
+EOF
+python3 "$T/stub.py" > "$T/stub.port" 2> /dev/null &
+spid=$!
+i=0; while [ ! -s "$T/stub.port" ] && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+u="http://127.0.0.1:$(cat "$T/stub.port")"
+ic="$SKILL/scripts/icon.sh"
+o=$(NO_PROXY='*' ICONIFY_API="$u/503" LUCIDE_STATIC="$u/503" sh "$ic" verify lucide:lock k8s:pod 2>&1); rc=$?
+[ "$rc" = 3 ] && has "$o" '^503 k8s:pod (server error (503): retry later)' &&
+  ok "icon.sh verify: 503 is exit 3 'server error', not 'not found'" || bad "icon.sh verify 503 (exit $rc)" "$o"
+o=$(NO_PROXY='*' ICONIFY_API="$u/503" LUCIDE_STATIC="$u/403" sh "$ic" get lucide:lock "$T/icons/" 2>&1); rc=$?
+[ "$rc" = 0 ] && [ -s "$T/icons/lock.svg" ] && has "$o" 'copied from the bundled pack' &&
+  ok "icon.sh get: 503 then 403 on unpkg: the bundled pack still delivers lucide:lock" || bad "icon.sh get 503 (exit $rc)" "$o"
+o=$(NO_PROXY='*' ICONIFY_API="$u/403" sh "$ic" search cart 2>&1); rc=$?
+[ "$rc" = 3 ] && has "$o" 'blocked request (403)' && ok "icon.sh search: 403 is exit 3 'blocked request'" ||
+  bad "icon.sh search 403 (exit $rc)" "$o"
+o=$(NO_PROXY='*' ICONIFY_API="$u/404" LUCIDE_STATIC="$u/404" sh "$ic" get lucide:nosuch "$T/icons/" 2>&1); rc=$?
+[ "$rc" = 1 ] && has "$o" '^404 lucide:nosuch: no such icon' && ok "icon.sh get: 404 is exit 1 'no such icon'" ||
+  bad "icon.sh get 404 (exit $rc)" "$o"
+kill "$spid" 2> /dev/null
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" = 0 ]

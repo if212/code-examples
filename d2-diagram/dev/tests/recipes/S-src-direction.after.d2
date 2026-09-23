@@ -1,0 +1,12 @@
+# After: one direction, at the root; the container follows it.
+...@neutral-theme
+direction: down
+api: Orders API {class: service}
+jobs: "Nightly\njobs" {
+  class: zone
+  extract: Extract {class: service}
+  load: Load {class: service}
+  report: Report {class: service}
+  extract -> load -> report: {class: dep}
+}
+api -> jobs.extract: triggers {class: dep}

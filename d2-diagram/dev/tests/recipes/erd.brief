@@ -5,7 +5,7 @@ type: erd
 reader: backend engineers reading the README
 width: 800
 direction: right
-focus: tasks
+focus: tasks  # "Focus on tasks"
 out: comments, labels
 nodes:
   users: users {cols: id email}

@@ -10,18 +10,15 @@ ok2: Smoke tests OK? {shape: diamond}
 approve: Manual approval
 prod: Deploy to production
 done: Released {shape: oval}
-rollback: Roll back staging
-notify: Notify author
-fail: Pipeline failed {shape: oval}
+failed: Build failed {shape: oval}
+rollback: Staging rolled back {shape: oval}
 
 start -> build
 build -> ok1
 ok1 -> stage: yes
+ok1 -> failed: no
 stage -> ok2
 ok2 -> approve: yes
+ok2 -> rollback: no
 approve -> prod
 prod -> done
-ok1 -> notify: no
-ok2 -> rollback: no
-rollback -> notify
-notify -> fail

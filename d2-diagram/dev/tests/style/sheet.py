@@ -13,7 +13,9 @@ def main(argv):
     out, cols, cellw = argv[0], int(argv[1]), int(argv[2])
     items = []
     for arg in argv[3:]:
-        path, _, label = arg.partition(':')
+        path, _, label = arg.rpartition(':')  # the label is after the LAST colon: paths may hold one
+        if not path:
+            path, label = label, ''
         im = Image.open(path).convert('RGB')
         if im.width > cellw:
             im = im.resize((cellw, round(im.height * cellw / im.width)), Image.LANCZOS)

@@ -9,16 +9,22 @@ steps): syntax.md. Sizing for docs and slides: layout.md.
 `<target>` is the deliverable path without its extension (`docs/checkout-flow`).
 `<flags>` is everything between `d2` and the input file on the `re-render:`
 line d2check printed: fonts, `--scale 1` and the ELK spacing flags. That line
-reproduces the layout only: d2check also adds `text-rendering:
-geometricPrecision` to the SVG and sets mode 644, so a deliverable SVG always
-comes from d2check itself. Never add `-l`, `-t` or `--pad`, because they
-override d2-config. The environment
-variables `D2_LAYOUT`, `D2_THEME`, `D2_DARK_THEME`, `D2_PAD`, `D2_SKETCH` and
-`D2_CENTER` override it too, `SCALE` changes the output size, and
-`D2_WATCH=true` turns every `d2` call into a server that never exits. If
-`env | grep -E '^(D2_(LAYOUT|THEME|DARK_THEME|PAD|SKETCH|CENTER|WATCH)|SCALE)='`
-prints anything, clear them in the same command as each `d2` call:
-`unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE; d2 ...`.
+(the render, then d2check's post step `svgpost.py`) reproduces the SVG, but a
+raw `d2` writes mode 600 and, for boards, deletes `<target>/` first (section
+5): a deliverable SVG always comes from d2check itself. Never add `-l`, `-t`
+or `--pad`, because they override d2-config. d2 also reads the environment,
+which d2check clears but a raw `d2` call does not: `D2_LAYOUT`, `D2_THEME`,
+`D2_DARK_THEME`, `D2_PAD`, `D2_SKETCH` and `D2_CENTER` override d2-config,
+`SCALE` changes the output size, `D2_BUNDLE=false` leaves remote icons as
+URLs, `D2_ANIMATE_INTERVAL` turns a board render into one animated file,
+`D2_FONT_*` swap the fonts, and `D2_WATCH=true` turns every `d2` call into a
+server that never exits. If `env | grep -E '^(D2_[A-Z_]+|SCALE)='` prints
+more than `D2_WORK` or `D2_FONT_FAMILY` (the skill's own), clear d2's in the
+same command as each `d2` call:
+
+```sh
+unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE D2_BUNDLE D2_FORCE_APPENDIX D2_ANIMATE_INTERVAL D2_CHECK D2_NO_XML_TAG D2_TIMEOUT D2_ASCII_MODE D2_FONT_REGULAR D2_FONT_ITALIC D2_FONT_BOLD D2_FONT_SEMIBOLD D2_FONT_MONO D2_FONT_MONO_BOLD D2_FONT_MONO_ITALIC D2_FONT_MONO_SEMIBOLD; d2 ...
+```
 
 Raw `d2` writes each output as a temporary file that it renames over the
 path you give. The old file's mode is lost (the new file is 600), a symlink
@@ -194,7 +200,10 @@ no fixed `width` or `height`.
 ## 9. Watch mode (a live preview for the user)
 
 `d2 -w` never returns, so never run it in the foreground. Start it in the
-background with no browser, in one command that also saves its pid:
+background with no browser, in one command that also saves its pid. Write
+`D2W` as the absolute work dir that step 1 of SKILL.md printed, in all three
+places: the preview, its log and its pid file then stay out of the user's
+folders (a relative `watch.pid` lands in whatever folder the shell is in):
 
 ```sh
 nohup d2 -w --browser 0 <flags> <target>.d2 D2W/watch.svg > D2W/watch.log 2>&1 & echo $! > D2W/watch.pid
@@ -205,7 +214,9 @@ nohup d2 -w --browser 0 <flags> <target>.d2 D2W/watch.svg > D2W/watch.log 2>&1 &
   `-p 8080` fixes the port.
 - It re-renders whenever the `.d2` file or a file it imports is saved.
 - It is only a preview. The deliverable still comes from d2check.
-- To stop it: `kill "$(cat D2W/watch.pid)"`.
+- Stop it once the preview is no longer needed, and before your final reply
+  unless the user asked to keep it: `kill "$(cat D2W/watch.pid)"`. Say in
+  the reply whether it still runs, with its URL.
 
 ## 10. Deliver
 

@@ -7,23 +7,23 @@ type: c4
 reader: architecture doc
 width: 800
 direction: down
-focus: shop.api
-out: context and component levels, deployment details, mobile app
+focus: shop.api  # "Focus on the API"
+out: context and component levels, deployment details, element descriptions (not given)
 nodes:
-  customer: Customer\n[Person]\nBuys products online {shape: c4-person}
-  staff: Staff\n[Person]\nManages the catalog {shape: c4-person}
+  customer: Customer\n[Person] {shape: c4-person}
+  staff: Staff\n[Person] {shape: c4-person}
+  stripe: Stripe\n[Software System] {external}
   shop: Online shop [Software System]
-  shop.web: Web app\n[Container: React]\nStorefront in the browser
-  shop.admin: Admin app\n[Container: React]\nCatalog and orders
-  shop.api: API\n[Container: Go]\nCart, checkout, orders
-  shop.worker: Worker\n[Container: Go]\nPayments, receipts
-  shop.db: Database\n[Container: Postgres]\nProducts, orders {shape: cylinder}
-  stripe: Stripe\n[Software System]\nCard payments {external}
+  shop.web: Web app\n[Container: React]
+  shop.admin: Admin app\n[Container: React]
+  shop.worker: Worker\n[Container: Go]
+  shop.api: API\n[Container: Go]
+  shop.db: Database\n[Container: Postgres] {shape: cylinder}
 edges:
-  customer -> shop.web: Uses\n[HTTPS]
-  staff -> shop.admin: Uses\n[HTTPS]
-  shop.web -> shop.api: Calls\n[JSON/HTTPS]
-  shop.admin -> shop.api: Calls\n[JSON/HTTPS]
-  shop.api -> shop.worker: Queues jobs\n[AMQP] {dashed}
-  shop.api -> shop.db: Reads, writes\n[SQL]
-  shop.worker -> stripe: Charges cards\n[HTTPS]
+  customer -> shop.web: Uses [HTTPS]
+  staff -> shop.admin: Uses [HTTPS]
+  shop.web -> shop.api: Calls [JSON/HTTPS]
+  shop.admin -> shop.api: Calls [JSON/HTTPS]
+  shop.api -> shop.worker: Queues jobs [AMQP]
+  shop.worker -> stripe: Charges cards [HTTPS]
+  shop.api -> shop.db: Reads, writes [SQL]

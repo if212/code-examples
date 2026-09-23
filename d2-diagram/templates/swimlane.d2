@@ -20,9 +20,9 @@ classes: {
 
 # Staircase: inside a lane the next step takes the next column; a handoff
 # goes straight up or down in the same column. Empty cells are hidden.
-# Never skip a lane: route the handoff through the lane between. A step hands
-# work only to the lane above or below it; a process that needs more: a
-# flowchart, the role first in each label (playbooks/flowchart.md rule 8).
+# Never skip a lane: route the handoff through the lane between. A lane that
+# trades work with 3+ lanes keeps its swimlane: the return handoff runs up
+# another column through hidden cells (playbooks/flowchart.md rule 8).
 # The start and the outcomes are terminal pills, as in a flowchart.
 cust: {
   class: [zone; lane]
@@ -49,8 +49,8 @@ fin: {
   receipt: "Send\nreceipt" {class: [service; cell]}
 }
 
-# Main path flow, rejection failure, the last hop ok. Only decision exits
-# carry labels: a 24px gap has no room for more.
+# The path the request describes is flow, the rejection failure, the last
+# hop ok. Only decision exits carry labels: a 24px gap has no room for more.
 cust.request -> support.review: {class: flow}
 support.review -> support.check: {class: flow}
 support.check -> fin.approve: yes {class: flow}
@@ -59,3 +59,14 @@ fin.approve -> fin.issue: {class: flow}
 fin.issue -> fin.receipt: {class: flow}
 fin.receipt -> support.close: {class: flow}
 support.close -> cust.received: {class: ok}
+
+# The key: one line per edge class drawn, in the real classes.
+vars: {
+  d2-legend: {
+    a: {class: ghost}
+    b: {class: ghost}
+    a -> b: main path {class: flow}
+    a -> b: refund received {class: ok}
+    a -> b: declined {class: failure}
+  }
+}

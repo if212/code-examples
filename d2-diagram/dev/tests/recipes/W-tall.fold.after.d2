@@ -1,0 +1,48 @@
+# After: folded into a 2x2 grid: the build zone and the release boundary side by side (grid
+# cells keep their own direction), the rollback under the boundary, a hidden hole under build.
+# vertical-gap 80: the two-line failure label needs the room, or it covers its whole edge.
+# d2: --elk-padding [top=44,left=24,bottom=20,right=24]
+...@neutral-theme
+grid-rows: 2
+grid-columns: 2
+horizontal-gap: 48
+vertical-gap: 80
+classes: {
+  step: {width: 184; height: 48}
+  chk: {width: 112; height: 40}
+  hole: {label: ""; style.opacity: 0; width: 10; height: 10}
+}
+build: Build {
+  class: zone
+  direction: down
+  pr: Pull request opened {class: [terminal; step]}
+  checks: In parallel {
+    class: zone
+    grid-rows: 1
+    horizontal-gap: 10
+    vertical-gap: 10
+    lint: Lint {class: [service; chk]}
+    unit: Unit tests {class: [service; chk]}
+    image: Build {class: [service; chk]}
+  }
+  scan: Security scan {class: [service; step]}
+  staging: Deploy to staging {class: [service; step]}
+  pr -> checks: {class: flow}
+  checks -> scan: all pass {class: flow}
+  scan -> staging: {class: flow}
+}
+release: Release {
+  class: boundary
+  direction: down
+  e2e: Run e2e tests {class: [service; step]}
+  approval: Approve? {class: decision}
+  canary: Canary 10% {class: [service; step]}
+  rollout: Full rollout {class: [success; terminal; step]}
+  e2e -> approval: {class: flow}
+  approval -> canary: approved {class: flow}
+  canary -> rollout: {class: ok}
+}
+empty: {class: hole}
+rollback: Roll back {class: [danger; terminal; step]}
+build -> release: {class: flow}
+release -> rollback: "any failure,\nor rejected" {class: failure}

@@ -1,0 +1,19 @@
+# two peer Services, one drawn as the main path: peers styled unlike (warn)
+...@mini-theme
+vars: {
+  d2-legend: {
+    h1: {style.opacity: 0}
+    h2: {style.opacity: 0}
+    h1 -> h2: api route {class: flow}
+    h1 -> h2: route {class: dep}
+  }
+}
+direction: down
+ingress: Ingress {class: service}
+ns: Namespace {
+  class: zone
+  api: api Service {class: service}
+  web: web Service {class: service}
+}
+ingress -> ns.api: routes {class: flow}
+ingress -> ns.web: routes {class: dep}

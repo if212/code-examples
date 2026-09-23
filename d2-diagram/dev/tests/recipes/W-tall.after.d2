@@ -12,7 +12,7 @@ build: Build {
   deps: Install deps {class: [service; step]}
   lint: Lint {class: [service; step]}
   unit: Unit tests {class: [service; step]}
-  checkout -> deps -> lint -> unit: {class: flow}
+  checkout -> deps -> lint -> unit: {class: dep}
 }
 ship: Package {
   class: zone
@@ -21,7 +21,7 @@ ship: Package {
   scan: Scan image {class: [service; step]}
   push: Push image {class: [service; step]}
   staging: Deploy staging {class: [service; step]}
-  build -> scan -> push -> staging: {class: flow}
+  build -> scan -> push -> staging: {class: dep}
 }
 release: Release {
   class: zone
@@ -30,7 +30,7 @@ release: Release {
   approve: Approve {class: [service; step]}
   prod: Deploy prod {class: [service; step; focal]}
   verify: Verify {class: [service; step]}
-  smoke -> approve -> prod -> verify: {class: flow}
+  smoke -> approve -> prod -> verify: {class: dep}
 }
-build.unit -> ship.build: {class: flow}
-ship.staging -> release.smoke: {class: flow}
+build.unit -> ship.build: {class: dep}
+ship.staging -> release.smoke: {class: dep}

@@ -3,28 +3,30 @@
 
 # Org chart: the top two levels are an ELK tree; each group's members are a
 # one-column grid INSIDE its zone, so width grows with groups, not leaves:
-# 4 groups of 4 fit (846x405px, 14.1px text). Every team as its own tree node:
-# 8 teams under 3 leads made 1150px (11px text, W-aspect). Module trees and
-# mind maps grow right (playbooks/hierarchy.md).
+# 4 groups of 4 fit (798x384px at 148px cards, 15px text). Every team as its
+# own tree node: 8 teams under 3 leads made 1150px (11px text, W-aspect).
+# Module trees and mind maps grow right (playbooks/hierarchy.md).
 direction: down
 
 # Geometry only, no font styles: one size per level keeps the rows even.
 # horizontal-gap is also the grid's side padding (12 here; the default
 # left a 60px margin and a 1230px canvas). grid-rows = the lead plus the
 # members: give a bigger group its own (`grid-rows: 5`), or its 5 cards
-# fold into 2 columns (11.7px text).
+# fold into 2 columns (11.7px text). 148px cards keep 4 groups at scale 1.00
+# (160: 846px wide, scale 0.95).
 classes: {
   group: {grid-rows: 4; vertical-gap: 8; horizontal-gap: 12}
-  lead: {width: 160; height: 56}
-  member: {width: 160; height: 40}
+  lead: {width: 148; height: 56}
+  member: {width: 148; height: 40}
 }
 
-# One root, a little wider than the two inner groups together (388px; 420
-# to 520 all work): their lines drop straight, the outer two turn once at one
-# height, all four land on their group's centre (at 200: 4 ports, 2 heights).
+# The root is structure, not a focus (the request highlights no one): a lead
+# card a little wider than the two inner groups together (364px; 420 to 520
+# work): their lines drop straight, the outer two turn once at one height,
+# all four land on their group's centre (at 200: 4 ports, 2 heights).
 # Each group: its lead first (a service card), then the members, muted
 # (regular weight), so every group reads lead first.
-head: "M. Garcia\nHead of Data" {class: [service; focal-solid]; width: 440}
+head: "M. Garcia\nHead of Data" {class: [service; lead]; width: 440}
 eng: Data engineering {
   class: [zone; group]
   lead: "A. Kim\nEng manager" {class: [service; lead]}

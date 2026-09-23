@@ -1,22 +1,23 @@
-# After: direction down puts the three services side by side, and \n wraps each label near 22 characters.
-# The focal service is declared between its siblings only so the tier stays centred (no I-sparse);
-# the Fix itself is direction down plus the wraps.
+# After: direction down puts the three services side by side, and \n wraps each label near 22
+# characters. One width class per tier, and a gateway as wide as the tier it feeds (no dead
+# corners beside it).
 ...@neutral-theme
 direction: down
+classes: {tier: {width: 190}}
 
 web: Web storefront {class: actor}
-gateway: API gateway {class: service}
-billing: "Billing and\ninvoicing service" {class: service}
-orders: "Order management\nservice" {class: [service; focal]}
-search: "Product search\nservice" {class: service}
-ledger: "Ledger database\nPostgres" {class: datastore}
-db: "Orders database\nPostgres" {class: datastore}
-index: "Search index\nOpenSearch" {class: datastore}
+gateway: API gateway {class: service; width: 610}
+billing: "Billing and\ninvoicing service" {class: [service; tier]}
+orders: "Order management\nservice" {class: [service; tier]}
+search: "Product search\nservice" {class: [service; tier]}
+ledger: "Ledger database\nPostgres" {class: [datastore; tier]}
+db: "Orders database\nPostgres" {class: [datastore; tier]}
+index: "Search index\nOpenSearch" {class: [datastore; tier]}
 
-web -> gateway: HTTPS {class: flow}
+web -> gateway: HTTPS {class: dep}
 gateway -> billing: REST {class: dep}
-gateway -> orders: REST {class: flow}
+gateway -> orders: REST {class: dep}
 gateway -> search: REST {class: dep}
 billing -> ledger: posts entries {class: dep}
-orders -> db: writes orders {class: flow}
+orders -> db: writes orders {class: dep}
 search -> index: queries {class: dep}

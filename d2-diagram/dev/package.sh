@@ -114,13 +114,14 @@ with zipfile.ZipFile(out) as z:
             errs.append('entry outside %s: %s' % (ROOT, n))
         if re.search(r'(^|/)(dev|__MACOSX|__pycache__)(/|$)|\.pyc$|(^|/)\.DS_Store$', n[len(ROOT):]):
             errs.append('junk or dev entry: ' + n)
-    sh = [i for i in infos if re.match(r'^d2-diagram/scripts/[^/]+\.sh$', i.filename)]
+    sh = [i for i in infos if re.match(r'^d2-diagram/scripts/[^/]+\.(sh|py)$', i.filename)]
     if not sh:
         errs.append('no scripts/*.sh in the zip')
     for i in sh:
         if (i.external_attr >> 16) & 0o777 != 0o755:
             errs.append('%s is not -rwxr-xr-x' % i.filename)
-    for need in ('SKILL.md', 'README.md', 'scripts/d2check.sh', 'templates/neutral-theme.d2'):
+    for need in ('SKILL.md', 'README.md', 'scripts/d2check.sh', 'scripts/svgpost.py', 'scripts/d2lint.py',
+                 'scripts/semcheck.py', 'templates/neutral-theme.d2', 'templates/snowflake-brand.d2'):
         if ROOT + need not in names:
             errs.append('missing ' + need)
     bad = z.testzip()
@@ -140,7 +141,7 @@ if errs:
 digest = hashlib.sha256(open(out, 'rb').read()).hexdigest()
 print('zip:      %s' % out)
 print('contents: %d files in %s (%d KB unpacked, %d KB zipped)' % (len(files), ROOT, raw // 1024, size // 1024))
-print('checked:  root %s, no dev/ or junk, %d scripts/*.sh at -rwxr-xr-x' % (ROOT, len(sh)))
+print('checked:  root %s, no dev/ or junk, %d scripts/*.sh and *.py at -rwxr-xr-x' % (ROOT, len(sh)))
 print('sha256:   %s' % digest)
 print('install:  rm -rf ~/.claude/skills/d2-diagram && unzip %s -d ~/.claude/skills/' % shlex.quote(out))
 PY

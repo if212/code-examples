@@ -3,7 +3,7 @@ type: state
 reader: test
 width: 800
 direction: down
-focus: none
+focus: start -> pending -> paid -> shipped  # "Order lifecycle"
 nodes:
   start: "" {start}
   pending: Pending

@@ -1,19 +1,21 @@
-# request: "Step-by-step walkthrough for the onboarding guide, one board per
-#  hop: the browser sends GET /orders to the API gateway, the gateway forwards
-#  it once the token is valid, and the Orders API selects the open orders from
-#  the Orders DB. Keep every board in the same layout. Highlight the Orders API."
+# request: "Postgres failover for the ops runbook, one board per step, same layout on
+#  every board: 1) the orders service queries through PgBouncer, which sends writes
+#  to the primary and reads to the replica; 2) the primary fails; 3) the replica is
+#  promoted and PgBouncer sends writes and reads to it. Highlight what changes."
 type: steps
-reader: new engineers reading the onboarding guide (one image per step)
+reader: on-call engineers reading the ops runbook (one image per step)
 width: 800
 direction: down
-focus: api
-out: response path, caching, retries
+focus: none
+# what changes is marked on its own board by outcome (danger and failure, then success and ok)
+out: the promotion mechanism (Patroni), replication lag, DNS
 nodes:
-  browser: Browser
-  gateway: API gateway
-  api: Orders API
-  db: Orders DB {shape: cylinder}
+  app: Orders service
+  proxy: Pooler\nPgBouncer
+  primary: Primary\nPostgres {shape: cylinder}
+  replica: * {shape: cylinder}
+  status: * {note}
 edges:
-  browser -> gateway: 1. GET /orders
-  gateway -> api: "2. forward, token valid"
-  api -> db: 3. SELECT open orders
+  app -> proxy: queries
+  proxy -> primary: writes
+  proxy -> replica: *

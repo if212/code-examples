@@ -1,0 +1,12 @@
+# request: "The worker in the orders namespace pulls jobs from the queue. Highlight the worker."
+type: deployment
+reader: test
+width: 800
+direction: down
+focus: ns.worker  # "Highlight the worker"
+nodes:
+  ns: Orders namespace
+  ns.worker: Worker
+  ns.queue: Jobs queue
+edges:
+  ns.worker -> ns.queue: pulls

@@ -1,13 +1,23 @@
-# After: the focus moves to the node that matters most inside the group (sf-primary).
+# After: the focus moves to the node that matters most inside the group: sf-primary last,
+# after its base class, so MARTS stays a cylinder like RAW and STAGING.
+# allow: W-aspect
 ...@snowflake-brand
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: load or query {class: sf-edge}
+    k_sf_external: external system {class: [sf-node; sf-external]}
+  }
+}
 direction: right
 fivetran: Fivetran {class: sf-external}
 sf: Snowflake {
   class: sf-container
   raw: RAW {class: sf-datastore}
   staging: STAGING {class: sf-datastore}
-  marts: MARTS {class: sf-primary}
-  raw -> staging: dbt {class: sf-flow}
-  staging -> marts: dbt {class: sf-flow}
+  marts: MARTS {class: [sf-datastore; sf-primary]}
+  raw -> staging: dbt {class: sf-edge}
+  staging -> marts: dbt {class: sf-edge}
 }
 fivetran -> sf.raw: {class: sf-edge}

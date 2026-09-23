@@ -1,0 +1,14 @@
+# request: "The ingress routes to the api Service and the web Service. Show the api route."
+type: deployment
+reader: test
+width: 800
+direction: down
+focus: ingress -> ns.api  # "Show the api route"
+nodes:
+  ingress: Ingress
+  ns: Namespace
+  ns.api: api Service
+  ns.web: web Service
+edges:
+  ingress -> ns.api: routes
+  ingress -> ns.web: routes

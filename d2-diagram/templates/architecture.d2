@@ -1,54 +1,70 @@
 # Architecture template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
 ...@neutral-theme
 
-# Doc column: top-down tiers (playbooks/architecture.md).
+# Doc column: top-down tiers, one row each (playbooks/architecture.md).
 direction: down
 
-# Row 1: clients, main-path client first. Row 2: the entry point, as wide
-# as the tier it routes to: ELK centres it on Orders, and a 142px box left
-# the top leaning left. If the canvas grows past the column, lower `width`;
-# with `direction: right` (slides), drop it.
-web: "Web app\nReact" {class: actor}
-mobile: "Mobile app\niOS, Android" {class: actor}
-gateway: "API gateway\nKong" {class: service; width: 560}
+# Geometry only. One width for the callers and the tier below them, so each
+# lower node sits straight under its caller (no doglegs). A box beside a
+# cylinder is 11px shorter: its sides end where the cylinder's walls do.
+classes: {
+  tier: {width: 140}
+  lower: {height: 96}
+}
 
-# One zone per tier, one row each. Children keep declaration order:
-# put each service above the store or external it calls.
-# One width for the whole tier keeps the row even. 140 fits label lines
-# of ~13 characters; a 15-character line touched both borders: widen or wrap.
+# Key: one entry per encoding the diagram uses, in the request's words.
+# d2check restyles and places it (here: under the diagram).
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: call {class: dep}
+    a -> b: event {class: async}
+    ext: third party {class: [service; external]}
+  }
+}
+
+web: Web client {class: [actor; compact; tier]}
+mobile: Mobile client {class: [actor; compact; tier]}
+# The fan-out node spans the three services it routes to: straight edges.
+gateway: "API gateway\nKong" {class: [service; tech]; width: 400}
+# The broker sits in the top row, over its producer and its consumer.
+events: "Order events\nKafka" {class: [queue; tech]; width: 180}
+
+# Services in the order of the tier below them, the consumer last. The
+# request names no languages, so no tech lines (never guess one).
 services: Services {
   class: zone
-  catalog: "Catalog\nGo" {class: service; width: 140}
-  orders: "Orders\nJava" {class: [service; focal]; width: 140}
-  notify: "Notifications\nPython" {class: service; width: 140}
-  payments: "Payments\nNode.js" {class: service; width: 140}
-}
-data: Data {
-  class: zone
-  db: "Shop DB\nPostgres" {class: datastore}
-  events: "Events\nKafka" {class: queue}
-}
-# Externals: one plain zone of `external` nodes.
-# height = the Data zone's height, so both zones end on one line.
-saas: Third party {
-  class: zone
-  height: 234
-  sendgrid: SendGrid {class: [service; external]}
-  stripe: Stripe {class: [service; external]}
+  payments: Payments {class: [service; compact; tier]}
+  catalog: Catalog {class: [service; compact; tier]}
+  orders: Orders {class: [service; compact; tier; focal]}
+  notify: Notifications {class: [service; compact; tier]}
 }
 
-# Edges last, main path first. Label every edge of a kind or none. A label
-# sits at its edge's midpoint, which a short jog can put on the bend: the
-# store and third-party edges stay bare (their labels hit bends in Geist).
-web -> gateway: {class: flow}
+# ONE lower zone in the callers' order, third parties at the ends; a store
+# two services use spans both (2 x 140 + the 20px gap: each node then sits
+# centred under its caller). Title at the bottom: every edge enters from
+# above. width = the Services zone's (720), so the zones share both edges.
+data: Data and third parties {
+  class: zone
+  label.near: bottom-left
+  width: 720
+  stripe: "Stripe\ncard payments" {class: [service; tech; tier; lower; external]}
+  db: "Shop DB\nPostgres" {class: [datastore; tech]; width: 300; height: 107}
+  sendgrid: "SendGrid\nemail" {class: [service; tech; tier; lower; external]}
+}
+
+# Every edge of a kind carries the request's verb; the key names the plain
+# arrow. "Highlight Orders" names a node, not a path: no flow edges. The
+# broker is written first on both of its edges, so ELK ranks it above them.
+web -> gateway: {class: dep}
 mobile -> gateway: {class: dep}
-gateway -> services.orders: REST {class: flow}
-gateway -> services.catalog: REST {class: dep}
 gateway -> services.payments: REST {class: dep}
-services.orders -> data.db: {class: dep}
-services.catalog -> data.db: {class: dep}
-services.orders -> data.events: {class: async}
-# Async consumer above its broker: `<-` keeps the edge short.
-services.notify <- data.events: {class: async}
-services.notify -> saas.sendgrid: {class: dep}
-services.payments -> saas.stripe: {class: dep}
+gateway -> services.catalog: REST {class: dep}
+gateway -> services.orders: REST {class: dep}
+events <- services.orders: publishes {class: async}
+events -> services.notify: consumes {class: async}
+services.payments -> data.stripe: charges {class: dep}
+services.catalog -> data.db: uses {class: dep}
+services.orders -> data.db: uses {class: dep}
+services.notify -> data.sendgrid: sends email {class: dep}

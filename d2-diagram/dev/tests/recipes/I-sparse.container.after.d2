@@ -1,0 +1,24 @@
+# After: the lone node joins the row of its partner: two full rows, no half-empty panel.
+...@neutral-theme
+grid-columns: 1
+vertical-gap: 48
+classes: {step: {width: 150; height: 92}}
+index: Indexing {
+  class: zone
+  direction: right
+  docs: Documents {class: [service; step]}
+  chunk: Chunk {class: [service; step]}
+  embed: Embed {class: [service; step]}
+  vectors: Vector index {class: [datastore; step]}
+  docs -> chunk -> embed -> vectors: {class: dep}
+}
+answer: Answering {
+  class: zone
+  direction: left
+  retrieve: Retrieve {class: [service; step]}
+  rerank: Rerank {class: [service; step]}
+  llm: LLM answer {class: [service; step]}
+  log: Feedback log {class: [datastore; step]}
+  retrieve -> rerank -> llm -> log: {class: dep}
+}
+index.vectors -> answer.retrieve: {class: dep}

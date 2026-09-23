@@ -1,25 +1,27 @@
-# request: "State machine of a deployment for the platform docs. A new
-#  deployment is Queued; it starts building once a runner is free. Building
-#  moves to Deploying when the build passes, and Deploying goes Live when the
-#  health checks pass. Any failure while building or deploying ends in Failed.
-#  Highlight Deploying."
+# request: "State machine of an order for the orders README: pending -> paid ->
+#  shipped -> delivered. A pending order can be cancelled, a paid order can be
+#  refunded, and a shipped order can be returned. Delivered, cancelled, refunded
+#  and returned are final. Mark the start and the final states."
 type: state
-reader: platform engineers reading the internal docs
+reader: engineers reading the orders README
 width: 800
 direction: down
-focus: active.deploying
-out: rollback, manual approval, cancellation
+focus: start -> pending -> paid -> shipped -> delivered  # "pending -> paid -> shipped -> delivered"
+out: payment failure, partial refunds, the refund after a return
 nodes:
   start: "" {start}
-  queued: Queued
-  active: In progress
-  active.building: Building
-  active.deploying: Deploying
-  live: Live {end}
-  failed: Failed {end}
+  pending: Pending
+  paid: Paid
+  shipped: Shipped
+  delivered: Delivered {end}
+  cancelled: Cancelled {end}
+  refunded: Refunded {end}
+  returned: Returned {end}
 transitions:
-  start -> queued
-  queued -> active.building: "start [runner free]"
-  active.building -> active.deploying: build passes
-  active.deploying -> live: checks pass
-  active -> failed: any step fails
+  start -> pending
+  pending -> paid: pay
+  paid -> shipped: ship
+  shipped -> delivered: deliver
+  pending -> cancelled: cancel
+  paid -> refunded: refund
+  shipped -> returned: return

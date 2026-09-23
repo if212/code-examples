@@ -24,6 +24,12 @@ usage: python3 dev/tests/structure/check.py [--skill DIR] [-v]     (wrapper: sh 
   (l) templates are `d2 fmt` clean; workflows/route.md routes to every template (a cell in a
       `Template` column of its tables, or the file name), and every Template / Playbook cell
       names a file that exists
+  (m) the post step is wired: scripts/svgpost.py exists, SKILL.md names it, d2check.sh calls it,
+      and `python3 ${CLAUDE_SKILL_DIR}/scripts/svgpost.py` matches an allowed-tools pattern
+  (n) no escape hatch: workflows/, reference/ and playbooks/ never call a finding "the honest
+      shape" or say a layout change cannot fix it (a warning ships only when its recipe failed)
+  (o) the recipe lookup reads whole recipes: the `-A N` grep context that SKILL.md and
+      workflows/review-and-fix.md give is the same and covers the longest `### ` section
 exit: 0 all checks pass (warnings allowed) | 1 a check failed | 2 usage error
 """
 import argparse
@@ -649,6 +655,77 @@ def check_k(skill, rep, front):
               '%d Bash patterns; reference/ and playbooks/ gaps are warnings' % len(pats))
 
 
+def check_m(skill, rep, front):
+    errs = []
+    post = os.path.join(skill, 'scripts', 'svgpost.py')
+    if not os.path.isfile(post):
+        errs.append('scripts/svgpost.py is missing (d2check\'s post step)')
+    else:
+        if not read(post).startswith('#!'):
+            errs.append('scripts/svgpost.py has no shebang line')
+        if 'svgpost.py' not in read(os.path.join(skill, 'SKILL.md')):
+            errs.append('SKILL.md does not name svgpost.py (Where things live)')
+        chk = os.path.join(skill, 'scripts', 'd2check.sh')
+        if os.path.isfile(chk) and 'svgpost.py' not in read(chk):
+            errs.append('scripts/d2check.sh never calls svgpost.py')
+        call = 'python3 ${CLAUDE_SKILL_DIR}/scripts/svgpost.py --help'
+        if not any(fnmatch.fnmatchcase(call, p) for p in allowed_patterns(front)):
+            errs.append('allowed-tools has no pattern for: ' + call)
+    rep.check('m', 'the post step (svgpost.py) is shipped, named, called and pre-approved', errs)
+
+
+HATCH_RE = re.compile(r'honest\s+shape|no\s+layout\s+change\s+(fixes|removes|clears)|list\s+it\s+under\s+Open', re.I)
+
+
+def check_n(skill, rep):
+    errs = []
+    for d in ('workflows', 'reference', 'playbooks'):
+        for p in sorted(glob.glob(os.path.join(skill, d, '*.md'))):
+            rel = os.path.relpath(p, skill)
+            # read by paragraph, so a phrase that wraps a line is still seen
+            text = re.sub(r'\s+', ' ', read(p))
+            lines = read(p).splitlines()
+            for m in HATCH_RE.finditer(text):
+                words = m.group(0).split()[0]
+                n = next((i for i, l in enumerate(lines, 1) if words.lower() in l.lower()), 0)
+                errs.append('%s:%d: escape hatch "%s": a warning ships only when its recipe was tried and failed'
+                            % (rel, n, m.group(0)))
+    rep.check('n', 'no escape-hatch wording in the recipes and playbooks', errs)
+
+
+def check_o(skill, rep):
+    errs, found = [], {}
+    rf = os.path.join(skill, 'workflows', 'review-and-fix.md')
+    for rel, pat in (('SKILL.md', r'`\^### <CODE>` with `-A (\d+)`'), ('workflows/review-and-fix.md', r'`-A (\d+)`')):
+        path = os.path.join(skill, rel)
+        m = re.search(pat, read(path)) if os.path.isfile(path) else None
+        if m:
+            found[rel] = int(m.group(1))
+        else:
+            errs.append('%s gives no `-A N` context for the recipe lookup' % rel)
+    if len(set(found.values())) > 1:
+        errs.append('the grep context differs: %s' % ', '.join('%s -A %d' % kv for kv in sorted(found.items())))
+    longest, name = 0, ''
+    if os.path.isfile(rf):
+        cur, body = None, []
+        for n, line, code, _ in strip_fences(read(rf)) + [(0, '## end', False, None)]:
+            if not code and re.match(r'^#{2,3} ', line):
+                if cur is not None:
+                    while body and not body[-1].strip():
+                        body.pop()
+                    if len(body) > longest:
+                        longest, name = len(body), cur
+                cur = line[4:].strip() if line.startswith('### ') else None
+                body = []
+            elif cur is not None:
+                body.append(line)
+    if found and longest > min(found.values()):
+        errs.append('`-A %d` cuts the longest recipe, `### %s` (%d lines): raise N in SKILL.md and '
+                    'review-and-fix.md, or shorten the recipe' % (min(found.values()), name, longest))
+    rep.check('o', 'the recipe grep context covers every recipe - -A %s, longest `### %s` %d lines'
+              % ('/'.join(str(v) for v in sorted(set(found.values()))) or '?', name, longest), errs)
+
+
 def check_l(skill, rep):
     errs, warns = [], []
     tpls = sorted(p for p in glob.glob(os.path.join(skill, 'templates', '*.d2')))
@@ -733,7 +810,10 @@ def main():
     check_j(skill, rep)
     check_k(skill, rep, front)
     check_l(skill, rep)
-    n = 12
+    check_m(skill, rep, front)
+    check_n(skill, rep)
+    check_o(skill, rep)
+    n = 15
     print('structure: %d/%d checks pass%s%s' % (
         n - len(rep.failed), n, (', failed: ' + ' '.join(rep.failed)) if rep.failed else '',
         (', warnings: ' + ' '.join(rep.warned)) if rep.warned else ''))

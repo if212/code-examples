@@ -1,0 +1,12 @@
+# request: "C4 container view of the Shop: a customer uses the web app."
+type: c4
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  customer: Customer
+  shop: Shop
+  shop.web: Web App
+edges:
+  customer -> shop.web: Uses

@@ -1,0 +1,20 @@
+# direction inside a plain container is ignored by ELK; inside a grid cell it is honoured
+...@mini-theme
+direction: down
+jobs: Nightly jobs {
+  class: zone
+  direction: right
+  a: Extract {class: service}
+  b: Load {class: service}
+  a -> b: {class: dep}
+}
+rows: {
+  grid-rows: 1
+  row1: Stage {
+    class: zone
+    direction: right
+    c: Clean {class: service}
+    d: Publish {class: service}
+    c -> d: {class: dep}
+  }
+}

@@ -7,7 +7,7 @@ type: deployment
 reader: on-call runbook
 width: 800
 direction: down
-focus: aws.eks.shop.api
+focus: aws.eks.shop.api  # "Highlight orders-api"
 out: CI/CD, monitoring, DNS, HPA and ConfigMaps
 nodes:
   users: Shoppers
@@ -18,15 +18,14 @@ nodes:
   aws.eks.shop.web: storefront\n3 pods
   aws.eks.shop.api: orders-api\n3 pods
   aws.eks.shop.search: search-api\n2 pods
-  aws.data: Data
-  aws.data.redis: Sessions\nElastiCache {shape: cylinder}
-  aws.data.rds: Orders DB\nRDS Postgres {shape: cylinder}
-  aws.data.os: Search index\nOpenSearch {shape: cylinder}
+  aws.redis: Sessions\nElastiCache {shape: cylinder}
+  aws.rds: Orders DB\nRDS Postgres {shape: cylinder}
+  aws.os: Search index\nOpenSearch {shape: cylinder}
 edges:
   users -> aws.alb: "HTTPS :443"
-  aws.alb -> aws.eks.shop.api
   aws.alb -> aws.eks.shop.web
+  aws.alb -> aws.eks.shop.api
   aws.alb -> aws.eks.shop.search
-  aws.eks.shop.api -> aws.data.rds: ":5432"
-  aws.eks.shop.web -> aws.data.redis: ":6379"
-  aws.eks.shop.search -> aws.data.os: ":443"
+  aws.eks.shop.web -> aws.redis: ":6379"
+  aws.eks.shop.api -> aws.rds: ":5432"
+  aws.eks.shop.search -> aws.os: ":443"

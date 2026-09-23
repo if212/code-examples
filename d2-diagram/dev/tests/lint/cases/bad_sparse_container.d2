@@ -1,0 +1,27 @@
+# expect: I-sparse
+# expect-text: container 'feedback' is
+# From the round-3 RAG deliverable: in a serpentine grid every row is as wide as the widest, so the
+# two-node Feedback row is half empty on the right (fix: fewer, wider rows, or move the nodes up).
+...@neutral-theme
+grid-columns: 1
+vertical-gap: 60
+classes: {box: {width: 160; height: 80}}
+query: Query time {
+  class: zone
+  direction: left
+  retrieve: "Retrieve\ntop-k chunks" {class: [service; box]}
+  rerank: Rerank {class: [service; box]}
+  llm: "LLM answer\nwith citations" {class: [service; box]}
+  user: User {class: [actor; box]}
+}
+feedback: Feedback {
+  class: zone
+  direction: right
+  log: Feedback log {class: datastore; width: 160; height: 91}
+  eval: "Offline\nevaluation" {class: [service; box]}
+}
+query.retrieve -> query.rerank: {class: flow}
+query.rerank -> query.llm: {class: flow}
+query.llm -> query.user: {class: flow}
+query.user -> feedback.log: {class: async}
+feedback.log -> feedback.eval: {class: dep}

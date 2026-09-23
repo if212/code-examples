@@ -1,0 +1,10 @@
+# flow, async, dep and an external node, and no key (FIXPLAN F2)
+...@mini-theme
+direction: down
+web: Web app {class: actor}
+orders: Orders {class: service}
+notify: Notifier {class: service}
+stripe: Stripe {class: [service; external]}
+web -> orders: places {class: flow}
+orders -> notify: publishes {class: async}
+orders -> stripe: charges {class: dep}

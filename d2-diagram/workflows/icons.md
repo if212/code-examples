@@ -7,7 +7,8 @@ families, verified names and placement: `${CLAUDE_SKILL_DIR}/reference/icons.md`
 
 1. Decide (reference/icons.md sections 1-2): which nodes get an icon, if
    any, and which ONE family (lucide by default; k8s for Kubernetes; logos
-   only when every icon node is a named product).
+   only when every icon node is a named product). A Kubernetes request that
+   asks for icons: k8s for its resources, lucide at `326CE5` for the rest.
 2. Name each concept from the tables (reference/icons.md sections 6-8).
    Table names are verified; go to step 5.
 3. Not in a table: search, one keyword per concept.
@@ -33,7 +34,8 @@ families, verified names and placement: `${CLAUDE_SKILL_DIR}/reference/icons.md`
 
 5. Fetch local copies into an `icons/` folder next to the .d2, in one call.
    The color defaults to `475569` (neutral theme); pass `--color 11567F`
-   for the Snowflake theme. logos and k8s icons keep their colors. Files are
+   for the Snowflake theme, `--color 326CE5` for lucide icons beside k8s
+   icons. logos and k8s icons keep their colors. Files are
    named `<name>.svg` for lucide, `<prefix>-<name>.svg` otherwise
    (`k8s-pod.svg`) and `terrastruct-<name>.svg` for a URL from `search ... tt`,
    which lets semcheck see the family. A failed ref is reported and skipped.
@@ -74,6 +76,7 @@ files render offline, and rsvg shows them.
 | `verify` note `deprecated` | search again for the current name |
 | exit 3, `host unreachable` | offline: for lucide, `get` falls back to unpkg, then to the 40 pack names (reference/icons.md section 9); other families: no icon |
 | exit 3, `rate limited (429)` | a logos or k8s ref (lucide falls back to unpkg): wait a minute and rerun |
+| exit 3, a server error (5xx) or a blocked request (403) | the icon host is down or a proxy blocks it, not a wrong name: lucide falls back to unpkg, then the pack; others: rerun later |
 | `get` note `has fixed colors` | a logo or k8s icon: expected, colors are kept |
 | render error `failed to bundle ./icons/x.svg: ... no such file` | the path is relative to the .d2 file: fix it or re-run step 5 |
 | render error `failed to bundle https://...: expected status 200 but got 404` (or 429) | unverified or rate-limited remote URL: steps 4-5 |

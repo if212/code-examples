@@ -1,0 +1,36 @@
+# After: compact states in one width class (the theme's `compact` plus `s`), the theme's `ghost`
+# as tall as its rank-mates, exits in one side column, neutral finals at full weight: 395x599,
+# plus the key the request's markers need (d2check puts it at the right: 630x598).
+...@neutral-theme
+direction: down
+classes: {s: {width: 140}}
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: happy path {class: flow}
+    a -> b: other transition {class: dep}
+    i: start {class: dot}
+    f: final state (double border) {class: [state; compact; terminal]; style.double-border: true}
+  }
+}
+start: "" {class: dot}
+pending: Pending {class: [state; compact; s]}
+paid: Paid {class: [state; compact; s]}
+shipped: Shipped {class: [state; compact; s]}
+delivered: Delivered {class: [success; compact; s; terminal]; style.double-border: true}
+cancelled: Cancelled {class: [compact; s; terminal]; style.double-border: true}
+refunded: Refunded {class: [compact; s; terminal]; style.double-border: true}
+g1: "" {class: ghost}
+g2: "" {class: ghost}
+g3: "" {class: ghost}
+start -> pending: {class: flow}
+pending -> g1: pay {class: ghost}
+pending -> paid: pay {class: flow}
+pending -> cancelled: cancel {class: dep}
+paid -> g2: ship {class: ghost}
+paid -> shipped: ship {class: flow}
+paid -> refunded: refund {class: dep}
+shipped -> g3: deliver {class: ghost}
+shipped -> delivered: deliver {class: flow}
+shipped -> refunded: return {class: dep}

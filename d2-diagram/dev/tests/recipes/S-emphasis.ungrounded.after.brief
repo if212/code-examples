@@ -1,0 +1,19 @@
+# request: "The web app calls the Orders API, which writes orders to Postgres and
+#  publishes order events to Kafka; the mailer consumes them. Highlight the Orders API."
+type: architecture
+reader: team wiki
+width: 800
+direction: right
+focus: api            # "Highlight the Orders API"
+out: auth, monitoring
+nodes:
+  web: Web app
+  api: Orders API
+  db: Orders DB\nPostgres {shape: cylinder}
+  events: Order events\nKafka
+  mailer: Mailer
+edges:
+  web -> api: HTTPS
+  api -> db
+  api -> events {dashed}
+  events -> mailer {dashed}

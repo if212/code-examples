@@ -1,0 +1,23 @@
+# request: "Before and after for the design review: today the shop calls Stripe from the
+#  monolith; after the change a new Payments service calls Stripe and the old checkout
+#  module is removed."
+type: compare
+reader: design review
+width: 800
+direction: down
+focus: none
+out: data stores
+nodes:
+  before: Before
+  before.shop: Shop monolith
+  before.checkout: Checkout module
+  before.stripe: Stripe {external}
+  after: After
+  after.shop: Shop monolith
+  after.payments: Payments service
+  after.stripe: Stripe {external}
+edges:
+  before.shop -> before.checkout
+  before.checkout -> before.stripe
+  after.shop -> after.payments
+  after.payments -> after.stripe

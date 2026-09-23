@@ -1,4 +1,11 @@
-vars: {d2-config: {layout-engine: elk}}
+vars: {
+  d2-config: {layout-engine: elk}
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a <-> b: one to many {source-arrowhead.shape: cf-one-required; target-arrowhead.shape: cf-many}
+  }
+}
 users: {
   shape: sql_table
   id: int {constraint: primary_key}

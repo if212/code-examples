@@ -130,7 +130,8 @@ cloud.vpc.api.label: API server
   (`cloud.vpc.api`) from anywhere. Keys resolve inside their container:
   `aws: {api -> db}` makes a NEW `aws.db` beside a root `db`; reach out with
   `_` (parent: `_.db`, `_._.x`). An edge to a container ends at its border.
-- `direction: up|down|left|right` goes at the root; nested: layout.md.
+- `direction: up|down|left|right` goes at the root; inside a container ELK
+  ignores it (S-src-direction), a grid cell's works: layout.md.
 
 ## 5. Style keys and ranges
 
@@ -186,7 +187,7 @@ start -> zone.api -> zone.worker
 |---|---|---|
 | container label, icon | label `top-left`, icon `top-right` (layout.md section 5) | `outside-*` titles; icon and label in one corner |
 | leaf with icon | default (label top) or `label.near: bottom-center` | `icon.near: top-left`: hits the label |
-| 16 px dot | `label.near: outside-top-center` | default or `outside-right-center`: the edge leaves from the label |
+| 16 px dot | `label.near: outside-top-center` (`direction: down`; in `right` put the name on the outgoing edge or leave the dot unlabelled) | default or `outside-right-center`: the edge leaves from the label |
 
 - `near` places a ROOT-level object: `top-left` `top-center` `top-right`
   `center-left` `center-right` `bottom-left` `bottom-center` `bottom-right`
@@ -194,8 +195,11 @@ start -> zone.api -> zone.worker
   locked positions `top`/`left` are TALA-only (errors on dagre and ELK).
   Edges to a `near` object are unrouted diagonals: never connect them.
 - `width`, `height`: integers. A leaf too narrow for its label keeps the width
-  and pushes the label below the box. Containers: ELK honors them, dagre
-  refuses to compile. Grid cells stretch children (layout.md).
+  and pushes the label below the box. Containers: ELK treats them as a
+  minimum (`width: 60; height: 60` around two nodes came out 153 x 302); a
+  grid container keeps them exactly, so its cells stick out
+  (E-child-outside); dagre refuses to compile. Grid cells stretch children
+  (layout.md).
 
 ## 7. Classes
 
@@ -220,8 +224,10 @@ api -> db: writes {class: async}
   But a class `label` beats the shorthand label (`x: Text {class: c}` shows
   the class label): keep labels out of classes.
 - Assigning again (a later line, a steps board): one class REPLACES the classes
-  (a cylinder set by the old class becomes a box); a list on an object that
-  already has a class is IGNORED: `db.class: null; db.class: [datastore; focal]`.
+  (a cylinder set by the old class becomes a box); a list replaces an earlier
+  list, but a list on an object whose class is a single name is IGNORED, and
+  nothing warns. Reset first in either case: `db.class: null` then
+  `db.class: [datastore; danger]` (semcheck: S-src-class).
 - Never name a class `link`: importing a file that defines one crashes d2.
 
 ## 8. Vars
@@ -271,16 +277,18 @@ map: `&shape: X`, `!&shape: X`, `&leaf: true` (no children), `&leaf: false`
 - At the root write `***`, not `**`: a root `**` also walks into `vars` and
   `classes`. With any d2-config (own or imported: every file here) it fails
   the render (`"style" needs a value`) unless filtered to leaves, and setting
-  `class` through it crashes d2. `***`, `x.**` and edge globs are safe.
+  `class` through it fails (`"class" is not a valid config`) or, filtered to
+  leaves, crashes d2. `***`, `x.**` and edge globs are safe.
 - A glob beats every class (section 7); between a glob and an object's own
   map the later line wins. Globs in an imported file do not reach this file
-  (only `***` does), and a glob above `...@file` can miss what it imports:
-  put globs after the imports.
+  (only `***` does). House style: globs after the imports.
 - Globs also hit objects declared later, but a filter tests the object as
   first declared: a filtered glob ABOVE `db: {shape: cylinder}` still matches
   `&shape: rectangle`, and `&leaf: true` matches a container whose children
-  come later. Put filtered globs LAST. A shape set by a class matches both
-  `&shape: rectangle` and its real shape: filter those on `&class`.
+  come later. Put filtered globs LAST. A shape set by a class is seen as
+  `rectangle` by every shape filter: `&shape: rectangle` matches it,
+  `!&shape: rectangle` skips it, and `&shape: cylinder` never matches a
+  `datastore`. Filter those on `&class`.
 - Shape-restricted keys in a broad glob fail the render
   (`***.style.3d: true` with any cylinder present).
 
@@ -305,7 +313,8 @@ api -> db
   `font`, `scale` fail the render): `layout-engine` (`dagre` or `elk`; `tala`
   is not bundled), `theme-id`, `dark-theme-id` (unknown ids fail), `pad`,
   `center`, `sketch`, `theme-overrides`, `dark-theme-overrides` (maps of
-  theme codes: design-system.md).
+  theme codes: design-system.md), `data` (a free-form map for plugins; this
+  skill does not use it).
 - CLI `-l`, `-t` and `--pad` override d2-config: keep settings in the file and
   render without those flags.
 
@@ -325,9 +334,12 @@ api -> pg: async event {style.stroke-dash: 3}
 pg: Postgres {shape: cylinder}
 ```
 
-Draws a "Legend" card right of the diagram: one row per object (shape and
+d2 draws a shadowed "Legend" card right of the diagram (`near` and
+`position` inside `d2-legend` are ignored): one row per object (shape and
 style swatch), one line sample per edge. Edge endpoints are rows too: hide
-them with `style.opacity: 0`. When to add one, with the theme's classes:
+them with `style.opacity: 0`. d2check's post step restyles the card as the
+design system's KEY and moves it under the diagram when the two do not fit
+the column side by side. When to add one, with the theme's classes:
 design-system.md section 8.
 
 ## 12. sql_table and class
@@ -394,8 +406,10 @@ refresh: "alt: token expired" {
 - Group: a map of messages whose label is the fragment title, so prefix it
   (`alt:`, `loop:`, `opt:`). Keys inside refer to the top-level actors.
 - Note: a child of an actor with no edges (`app."text"`), drawn on the
-  lifeline. Attach it to the actor; on a span (`app.t1."..."`) it covers the
-  activation bar. There is no `shape: note`.
+  lifeline. Attach it to the actor, and declare it before the span opens or
+  after it closes: one declared between two messages of an open span
+  (`app.t1`) is drawn over the activation bar and cuts it, and on the span
+  itself (`app.t1."..."`) it covers the bar too. There is no `shape: note`.
 - A self-message `app -> app: x` draws a loop whose label straddles its right
   side and can spill past a group: keep it to 1-2 words or use a note.
 
@@ -446,7 +460,9 @@ target-arrowhead`, plus every style key (`fill stroke opacity shadow 3d ...`).
 
 | Keyword as a key, column or endpoint | Result |
 |---|---|
-| `a -> left`, `a -> link`, `Shape -> b` | render error (prohibited in edges) |
+| `a -> left`, `a -> link` | render error: `reserved keywords are prohibited in edges` |
+| `a -> fill`, `a -> opacity`, `a -> classes` | render error: `cannot connect to reserved keyword` |
+| `Shape -> b` (a capitalized keyword as an endpoint) | render error: `reserved field "Shape" must have a value` |
 | `left: Panel`, `width: X`, `shadow: X`, `Shape: {...}` | render error |
 | `label: X`, `link: X`, `icon: X`, `near: X`, `class: X` | compiles as a property: NO node |
 | capitalized at the root: `Shape: Circle`, `Label: X`, `Left: Panel` | compiles: NO node, no error |

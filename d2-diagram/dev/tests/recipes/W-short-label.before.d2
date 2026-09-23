@@ -5,4 +5,4 @@ ingress: Ingress {class: service}
 web: Web service {class: service}
 api: API service {class: [service; focal]}
 ingress -> web: "/" {class: dep}
-ingress -> api: "/api" {class: flow}
+ingress -> api: "/api" {class: dep}

@@ -1,0 +1,24 @@
+# post: svgpost
+# expect-clean: E- W- I-
+# A key taller than the diagram beside it: at the right it would leave a dead band under a one-row
+# strip, so svgpost re-flows it into rows under the diagram even though the canvas fits the column
+# (test_svgpost.sh).
+...@neutral-theme
+direction: right
+a: Web {class: service}
+b: API {class: focal}
+c: Stripe {class: external}
+a -> b: calls {class: flow}
+b -> c: charges {class: dep}
+vars: {
+  d2-legend: {
+    x: our service {class: service}
+    y: focus {class: focal}
+    z: third party {class: external}
+    q: {class: ghost}
+    r: {class: ghost}
+    q -> r: main path {class: flow}
+    q -> r: call {class: dep}
+    q -> r: event {class: async}
+  }
+}

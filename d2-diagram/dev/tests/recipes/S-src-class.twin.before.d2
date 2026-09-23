@@ -4,5 +4,5 @@ direction: down
 app: Streamlit app {class: sf-node}
 wh: Warehouse {class: focal}
 db: ANALYTICS {class: sf-datastore}
-app -> wh: SQL {class: sf-flow}
+app -> wh: SQL {class: sf-edge}
 wh -> db: reads {class: sf-edge}

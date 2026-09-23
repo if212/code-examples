@@ -2,26 +2,27 @@
 vars: {d2-config: {layout-engine: elk; pad: 24}}
 classes: {
   stage: {label.near: top-left; style.font-size: 16}
+  cell: {width: 130}
 }
 direction: down
 src: Sources {
   class: stage
   grid-columns: 3
-  kafka: Kafka
-  s3: S3 landing
-  api: Partner API
+  kafka: Kafka {class: cell}
+  s3: S3 landing {class: cell}
+  api: Partner API {class: cell}
 }
 proc: Processing {
   class: stage
   grid-columns: 2
-  spark: Spark jobs
-  dq: Data quality
+  spark: Spark jobs {class: cell}
+  dq: Data quality {class: cell}
 }
 wh: Warehouse {
   class: stage
   grid-columns: 2
-  raw: Raw
-  mart: Marts
+  raw: Raw {class: cell}
+  mart: Marts {class: cell}
 }
 src -> proc: ingest
 proc -> wh: load

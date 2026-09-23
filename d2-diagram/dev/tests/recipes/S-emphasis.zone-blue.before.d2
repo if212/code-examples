@@ -1,0 +1,14 @@
+# Before: the focal node sits in a blue group: blue on blue, the group competes with the one
+# node the request singled out.
+...@neutral-theme
+direction: right
+gateway: API gateway {class: service}
+orders: Orders {class: service}
+pay: Payments {
+  class: zone-blue
+  api: Payments API {class: [service; focal]}
+  ledger: "Ledger\nPostgres" {class: datastore}
+  api -> ledger: {class: dep}
+}
+gateway -> orders: {class: dep}
+gateway -> pay.api: {class: dep}

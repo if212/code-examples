@@ -1,0 +1,30 @@
+# post: svgpost
+# expect-clean: E- W-label-on-lifeline
+# From the round-3 checkout saga: d2 draws the activation bar with a 2px outline, gives the top-level
+# ALT title a chip darker than its blended frame, sets the operand guards on the bar and centres the
+# labels of messages that jump a lifeline on that lifeline. svgpost: bars 1px ink-400, the chip in the
+# frame's colour, guards slid right past the bar, labels in the widest free gap (test_svgpost.sh).
+...@neutral-theme
+shape: sequence_diagram
+
+order: Order service {class: actor}
+payment: Payment service {class: actor}
+inventory: Inventory service {class: actor}
+
+order.t -> payment: "1. Charge card" {class: dep}
+payment -> order.t: "2. card charged" {class: secondary}
+order.t -> inventory: "3. Reserve stock" {class: dep}
+alt: "alt" {
+  class: zone
+  ok: "[stock reserved]" {
+    class: zone
+    style: {text-transform: none; bold: false}
+    inventory -> order.t: "4. stock reserved" {class: secondary}
+  }
+  failed: "[reservation fails]" {
+    class: zone
+    style: {text-transform: none; bold: false}
+    inventory -> order.t: "4. reservation failed" {class: failure}
+    order.t -> payment: "5. Refund charge" {class: dep}
+  }
+}

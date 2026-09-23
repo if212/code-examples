@@ -1,0 +1,6 @@
+...@mini-theme
+shape: sequence_diagram
+spa: SPA {class: actor}
+auth: Authorization Server {class: actor}
+spa -> auth: "GET /authorize + code_challenge" {class: dep}
+spa -> auth: "POST /token + code_verifier" {class: dep}

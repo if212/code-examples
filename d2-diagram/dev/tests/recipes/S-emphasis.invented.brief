@@ -1,0 +1,24 @@
+# request: "Architecture of the shop for the README: the web and mobile clients call
+#  the API gateway, which routes to the Orders and Catalog services; each has its own
+#  Postgres database."
+type: architecture
+reader: GitHub README
+width: 800
+direction: down
+focus: none           # nothing is singled out
+out: auth, caches
+nodes:
+  web: Web client
+  mobile: Mobile client
+  gateway: API gateway
+  orders: Orders
+  catalog: Catalog
+  orders_db: Orders DB\nPostgres {shape: cylinder}
+  catalog_db: Catalog DB\nPostgres {shape: cylinder}
+edges:
+  web -> gateway
+  mobile -> gateway
+  gateway -> orders
+  gateway -> catalog
+  orders -> orders_db
+  catalog -> catalog_db

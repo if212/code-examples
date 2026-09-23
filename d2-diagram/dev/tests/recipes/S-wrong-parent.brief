@@ -4,7 +4,7 @@ type: architecture
 reader: team wiki
 width: 800
 direction: down
-focus: vpc.api
+focus: vpc.api  # "Highlight the Orders API"
 out: networking details
 nodes:
   vpc: AWS VPC

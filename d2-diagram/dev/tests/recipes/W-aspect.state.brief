@@ -1,0 +1,25 @@
+# request: "Order lifecycle for the docs: pending -> paid -> shipped -> delivered. A
+#  pending order can be cancelled, a paid one refunded, and a shipped one returned for
+#  a refund. Mark the start and the final states."
+type: state
+reader: engineers reading the docs
+width: 800
+direction: down
+focus: start -> pending -> paid -> shipped -> delivered  # "pending -> paid -> shipped -> delivered"
+out: payment retries, partial refunds
+nodes:
+  start: "" {start}
+  pending: Pending
+  paid: Paid
+  shipped: Shipped
+  delivered: Delivered {end}
+  cancelled: Cancelled {end}
+  refunded: Refunded {end}
+transitions:
+  start -> pending
+  pending -> paid: pay
+  pending -> cancelled: cancel
+  paid -> shipped: ship
+  paid -> refunded: refund
+  shipped -> delivered: deliver
+  shipped -> refunded: return

@@ -1,0 +1,6 @@
+# expect-clean: E- W-aspect W-tall
+# a 5-step chain is narrow (aspect 0.1) but short: under 0.75x the column (600px) a tall-and-narrow
+# figure reads fine beside the text, so the W-aspect guard keeps quiet
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+c1s1 -> c1s2 -> c1s3 -> c1s4 -> c1s5

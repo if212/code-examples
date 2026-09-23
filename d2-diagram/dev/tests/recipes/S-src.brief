@@ -4,7 +4,7 @@ type: architecture
 reader: SDK docs
 width: 800
 direction: down
-focus: api
+focus: api  # "Highlight the API"
 out: auth
 nodes:
   sdk: "C# SDK"

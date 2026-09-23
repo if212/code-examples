@@ -6,6 +6,8 @@ direction: down
 grid-columns: 1
 grid-gap: 24
 
+title: "Style guide: neutral-theme" {class: title}
+
 base: Base roles {
   class: zone
   service: service {class: service}
@@ -26,8 +28,8 @@ shaped: Shaped roles {
 
 mods: Modifiers {
   class: zone
-  focal: focal {class: focal}
-  solid: focal-solid {class: focal-solid}
+  focal: focal {class: [service; focal]}
+  solid: focal-solid {class: [service; focal-solid]}
   muted: muted {class: muted}
   external: external {class: external}
 }
@@ -73,4 +75,26 @@ zones: Containers {
   z4: zone-amber {class: zone-amber; n: service {class: service}}
   z5: zone-violet {class: zone-violet; n: service {class: service}}
   z6: boundary {class: boundary; n: service {class: service}}
+}
+
+geometry: Geometry classes {
+  class: zone
+  compact: compact {class: [service; compact]}
+  tech: "tech\nline 2 is 14px slate" {class: [service; tech]}
+  key: {
+    class: key
+    done: done {class: [service; chip; success]}
+    planned: planned {class: [service; chip; muted]}
+  }
+}
+
+ghosts: "ghost: an invisible third child keeps the main path straight" {
+  class: zone
+  fork: fork {class: [service; compact]}
+  g: "" {class: ghost}
+  main: main {class: [service; compact]}
+  exit: exit {class: [service; compact]}
+  fork -> g: exit {class: ghost}
+  fork -> main: next {class: dep}
+  fork -> exit: exit {class: dep}
 }

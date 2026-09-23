@@ -1,0 +1,35 @@
+# Before: a straight but long CI/CD spine, 10 ranks in one column: a tower in a doc column.
+# expect: W-aspect
+...@neutral-theme
+direction: down
+classes: {chk: {width: 120}}
+
+pr: Pull request opened {class: terminal}
+checks: Checks run in parallel {
+  class: zone
+  lint: Lint {class: [service; chk]}
+  unit: Unit tests {class: [service; chk]}
+  build: Build {class: [service; chk]}
+}
+scan: Security scan {class: service}
+staging: Deploy to staging {class: service}
+release: "After staging: any failure rolls back" {
+  class: boundary
+  e2e: Run e2e tests {class: service}
+  approval: "Manual approval?" {class: [decision; focal]}
+  canary: "Production canary at 10%" {class: service}
+  rollout: Full rollout {class: [success; terminal]}
+}
+rollback: Roll back release {class: [danger; terminal]}
+
+# Happy path first, as flow. Only decision branches carry labels.
+pr -> checks: {class: flow}
+checks -> scan: {class: flow}
+scan -> staging: {class: flow}
+staging -> release: {class: flow}
+release.e2e -> release.approval: {class: flow}
+release.approval -> release.canary: approved {class: flow}
+release.canary -> release.rollout: {class: ok}
+
+# One side lane: every failure after staging ends in the rollback.
+release -> rollback: any failure or rejected {class: failure}

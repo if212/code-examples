@@ -1,18 +1,19 @@
 # After: the same edge written consumer <- broker keeps ELK's rank order: a short hop up.
 ...@neutral-theme
 direction: down
+classes: {svc: {width: 150}; row: {height: 110}}
 web: Web app {class: actor}
 services: Services {
   class: zone
-  orders: Orders {class: [service; focal]}
-  notify: Notifications {class: service}
+  orders: Orders {class: [service; svc]}
+  notify: Notifications {class: [service; svc]}
 }
 data: Data {
   class: zone
-  db: "Orders DB\nPostgres" {class: datastore}
-  events: "Order events\nKafka" {class: queue}
+  db: "Orders DB\nPostgres" {class: [datastore; row]}
+  events: "Order events\nKafka" {class: [queue; row]}
 }
-web -> services.orders: {class: flow}
+web -> services.orders: {class: dep}
 services.orders -> data.db: {class: dep}
 services.orders -> data.events: {class: async}
 services.notify <- data.events: {class: async}

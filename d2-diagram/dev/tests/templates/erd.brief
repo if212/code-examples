@@ -7,7 +7,7 @@ type: erd
 reader: backend engineers reading the repo README
 width: 800
 direction: right
-focus: events
+focus: none
 out: payments, venues, seating
 nodes:
   events: events {cols: id name starts_at}

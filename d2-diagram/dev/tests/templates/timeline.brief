@@ -8,7 +8,7 @@ type: timeline
 reader: engineers reading the postmortem
 width: 800
 direction: down   # one row per event, time runs down
-focus: e6
+focus: e6  # "Highlight the rollback"
 out: the date and time zone (3 March, UTC: in the page caption), follow-up actions, customer comms
 nodes:
   t1.x: 14:02

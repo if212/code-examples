@@ -1,0 +1,11 @@
+# post: svgpost
+# expect-clean: E-
+# F17: a node with class `tech` sets its label lines 2 and later at 14px slate in the same face, so
+# the name leads and the technology reads as its tag; a node without `tech` keeps one size (test_svgpost.sh).
+...@neutral-theme
+direction: right
+api: "Orders API\nGo, gRPC" {class: [service; tech]}
+db: "Orders DB\nPostgres 16" {class: [datastore; tech]}
+plain: "Billing\nworker" {class: service}
+api -> db: writes {class: dep}
+api -> plain: bills {class: dep}

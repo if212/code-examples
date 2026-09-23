@@ -3,7 +3,7 @@ type: architecture
 reader: team wiki
 width: 800
 direction: down
-focus: pay
+focus: pay  # "highlight the payments group"
 out: data stores
 nodes:
   gateway: API gateway

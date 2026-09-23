@@ -1,0 +1,16 @@
+# grounded focus, and a key for the two edge classes it uses
+...@mini-theme
+vars: {
+  d2-legend: {
+    h1: {style.opacity: 0}
+    h2: {style.opacity: 0}
+    h1 -> h2: request path {class: flow}
+    h1 -> h2: call {class: dep}
+  }
+}
+direction: down
+web: Web app {class: actor}
+api: API {class: [service; focal]}
+db: Orders DB {class: datastore}
+web -> api: calls {class: flow}
+api -> db: reads {class: dep}

@@ -3,34 +3,47 @@
 # Down, with parents and wholes on top: `Parent <- Child` keeps the parent above.
 direction: down
 
-# Class shapes take no node class (stroke paints the body): the globs at the end
-# style them. Quote any member holding ":" or "#": "+pay(m: Method)": Receipt.
+# One width per row. ELK centres a class on its edges, so a class spans the
+# classes under it exactly only when they share one width: Order is as wide
+# as the two under it (300 + 20 + 300) and no hole opens beside it.
+classes: {
+  row2: {width: 300}
+  row3: {width: 240}
+}
+
+# Class shapes take no role class (stroke paints the body): the globs at the
+# end style them. Quote any member holding ":" or "#": "+pay(m: Method)": Receipt.
+# The class the request focuses on: focal-solid, body reset to white.
 Order: {
   shape: class
   class: focal-solid
   style.stroke: ${paper}
+  width: 620
   +id: UUID
   +total(): Money
-  "+checkout(m: PaymentMethod)": Receipt
+  +checkout(): Receipt
 }
 LineItem: {
   shape: class
+  class: row2
   +sku: string
   +qty: int
 }
 PaymentMethod: "<<interface>>\nPaymentMethod" {
   shape: class
-  "+charge(amount: Money)": Receipt
+  class: row2
+  +charge(amount): Receipt
 }
+# An implementation lists its own members; the realization says it has charge().
 CardPayment: {
   shape: class
+  class: row3
   -token: string
-  "+charge(amount: Money)": Receipt
 }
 Wallet: {
   shape: class
+  class: row3
   -balance: Money
-  "+charge(amount: Money)": Receipt
 }
 
 # Composition: filled diamond on the whole. Multiplicity: arrowhead label, on
@@ -56,5 +69,6 @@ PaymentMethod <- Wallet: {
   source-arrowhead: {shape: triangle; style.filled: false}
 }
 
+# 16px members, 1px outline, square corners, slate headers except the focus.
 *: {&shape: class; style: {font-size: 16; stroke-width: 1; border-radius: 0}}
-*: {&shape: class; !&class: focal-solid; style.fill: ${ink-600}}
+*: {&shape: class; !&class: focal-solid; style.fill: ${ink-500}}

@@ -1,0 +1,22 @@
+# Before: the managed database hangs off one edge from deep inside the cluster; ELK ranks it
+# under everything and the SQL edge bends around the attachment row.
+...@neutral-theme
+direction: down
+internet: Internet {class: actor}
+cluster: Cluster {
+  class: zone
+  ingress: Ingress controller {class: service}
+  web: "web\nDeployment" {class: service}
+  api: "api\nDeployment" {class: service}
+  config: "api-config\nConfigMap" {class: service}
+  secret: "api-secret\nSecret" {class: service}
+  pvc: "api-data\nPVC" {class: service}
+  ingress -> web: {class: dep}
+  ingress -> api: {class: dep}
+  api -> config: reads {class: dep}
+  api -> secret: reads {class: dep}
+  api -> pvc: mounts {class: dep}
+}
+pg: Postgres {class: datastore}
+internet -> cluster.ingress: HTTPS {class: dep}
+cluster.api -> pg: SQL {class: dep}

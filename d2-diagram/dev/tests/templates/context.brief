@@ -7,20 +7,20 @@ type: context
 reader: new engineers reading the onboarding doc
 width: 800
 direction: down
-focus: shop
+focus: shop  # "Highlight the shop"
 out: containers and internals (c4 view), admin tooling, monitoring
 nodes:
-  customer: Customer\n[Person]\nBuys products online {shape: c4-person}
-  staff: Staff\n[Person]\nManages the catalog {shape: c4-person}
-  shop: Online shop\n[Software System]\nCatalog, cart, checkout
-  stripe: Stripe\n[Software System]\nCard payments {external}
-  sendgrid: SendGrid\n[Software System]\nOrder emails {external}
-  easypost: EasyPost\n[Software System]\nShipping labels {external}
-  erp: ERP\n[Software System]\nInvoices and stock {external}
+  customer: Customer\n[Person] {shape: c4-person}
+  staff: Staff\n[Person] {shape: c4-person}
+  shop: Online shop\n[Software System]
+  stripe: Stripe\n[Software System] {external}
+  sendgrid: SendGrid\n[Software System] {external}
+  easypost: EasyPost\n[Software System] {external}
+  erp: ERP\n[Software System] {external}
 edges:
-  customer -> shop: Places orders\n[HTTPS]
-  staff -> shop: Manages catalog\n[HTTPS]
-  shop -> stripe: Charges cards\n[HTTPS]
-  shop -> sendgrid: Sends receipts\n[HTTPS]
-  shop -> easypost: Buys labels\n[HTTPS]
-  shop -> erp: Exports orders\n[SFTP, nightly] {dashed}
+  customer -> shop: Places orders [HTTPS]
+  staff -> shop: Manages the catalog [HTTPS]
+  shop -> stripe: Charges cards [HTTPS]
+  shop -> sendgrid: Sends receipts [HTTPS]
+  shop -> easypost: Buys labels [HTTPS]
+  shop -> erp: Exports orders nightly [SFTP] {dashed}

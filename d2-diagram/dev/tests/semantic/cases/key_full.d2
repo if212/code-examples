@@ -1,0 +1,20 @@
+# every encoding named in the key
+...@mini-theme
+vars: {
+  d2-legend: {
+    x: Third party {class: [service; external]}
+    h1: {style.opacity: 0}
+    h2: {style.opacity: 0}
+    h1 -> h2: order path {class: flow}
+    h1 -> h2: event {class: async}
+    h1 -> h2: call {class: dep}
+  }
+}
+direction: down
+web: Web app {class: actor}
+orders: Orders {class: service}
+notify: Notifier {class: service}
+stripe: Stripe {class: [service; external]}
+web -> orders: places {class: flow}
+orders -> notify: publishes {class: async}
+orders -> stripe: charges {class: dep}

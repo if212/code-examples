@@ -1,0 +1,8 @@
+# unescape
+# Before: labels in the user's script (the request was written in Chinese): the tripwire stops
+# the delivery, and the bundled fonts have no glyphs for them.
+...@neutral-theme
+direction: right
+app: "\u8ba2\u5355\u670d\u52a1" {class: service}
+logs: "\u7528\u6237\u884c\u4e3a\u65e5\u5fd7" {class: datastore}
+app -> logs: writes {class: dep}

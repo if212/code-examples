@@ -1,0 +1,25 @@
+# After: `bank.db <- bank.api` ranks the database beside the apps (the arrow still points at it)
+# and the external systems move up a rank: 680x834, was 610x1034. The apps and the database
+# share one height; the API spans the row it serves; the database, which no edge enters from
+# above, sits under the boundary's title.
+# allow: I-sparse (the corner beside the one person above a wide boundary)
+...@neutral-theme
+direction: down
+classes: {app: {width: 180; height: 110}}
+customer: "Customer\n[Person]" {shape: c4-person; class: actor}
+bank: "Internet banking\n[Software System]" {
+  class: boundary
+  db: "Database\n[Container]" {class: [datastore; app]; width: 100}
+  web: "Web app\n[Container]" {class: [service; app]}
+  mobile: "Mobile app\n[Container]" {class: [service; app]}
+  api: "API\n[Container]" {class: service; width: 480}
+}
+mainframe: "Mainframe\n[Software System]" {class: [service; external]}
+email: "Email system\n[Software System]" {class: [service; external]}
+customer -> bank.web: Uses {class: dep}
+customer -> bank.mobile: Uses {class: dep}
+bank.web -> bank.api: Calls {class: dep}
+bank.mobile -> bank.api: Calls {class: dep}
+bank.db <- bank.api: "Reads, writes" {class: dep}
+bank.api -> mainframe: Uses {class: dep}
+bank.api -> email: Sends email {class: dep}

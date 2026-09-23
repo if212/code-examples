@@ -1,0 +1,18 @@
+# request: "The gateway routes to the orders service and to the payments team's API,
+#  which writes to the ledger. Highlight the payments API."
+type: architecture
+reader: team wiki
+width: 800
+direction: right
+focus: pay.api        # "Highlight the payments API"
+out: auth
+nodes:
+  gateway: API gateway
+  orders: Orders
+  pay: Payments
+  pay.api: Payments API
+  pay.ledger: Ledger\nPostgres {shape: cylinder}
+edges:
+  gateway -> orders
+  gateway -> pay.api
+  pay.api -> pay.ledger

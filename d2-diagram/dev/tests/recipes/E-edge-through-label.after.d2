@@ -6,6 +6,6 @@ shop: Shop {
   class: zone
   web: Storefront {class: service}
   api: Orders API {class: [service; focal]}
-  web -> api: REST {class: flow}
+  web -> api: REST {class: dep}
 }
-users -> shop.web: HTTPS {class: flow}
+users -> shop.web: HTTPS {class: dep}

@@ -1,31 +1,47 @@
 # Steps template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
-# The output is a FOLDER: d2check writes <target>/index.svg + <target>/1.svg..3.svg.
 ...@neutral-theme
+# The output is a FOLDER: d2check writes <target>/index.svg (step 1) + 2.svg, 3.svg.
 direction: down
 
-# Base board: every node AND every edge, edges hidden (opacity 0). Every board
-# then has the same graph, so the same layout: nothing jumps between steps.
-browser: Browser {class: actor}
-gateway: API gateway {class: service}
-api: Orders API {class: focal}
-db: Orders DB {class: datastore}
+# One width for every box. A node with two hops out spans both targets
+# (176 + 20 + 176), so both hops drop straight.
+classes: {box: {width: 176}}
 
-browser -> gateway: 1. GET /orders {class: dep; style.opacity: 0}
-gateway -> api: 2. forward, token valid {class: dep; style.opacity: 0}
-api -> db: 3. SELECT open orders {class: dep; style.opacity: 0}
+# The base board is step 1 and holds every node AND every edge: each step
+# changes classes, labels and opacity only, so every board has the same
+# graph and the same layout. Nodes take list classes (see step 2).
+app: "Orders service" {class: [service; compact; box]}
+proxy: "Pooler\nPgBouncer" {class: [service; compact; tech]; width: 372}
+primary: "Primary\nPostgres" {class: [datastore; tech; box]}
+replica: "Replica\nPostgres" {class: [datastore; tech; box]}
+# What this step shows, in one line under the diagram (its text changes).
+status: "1. Normal: writes go to the primary,\nreads to the replica" {class: [note; compact]; near: bottom-center}
 
-# Each step inherits all earlier ones: show its hop as flow, grey the last one.
+# Step 1 is the normal state: nothing is marked. A later step marks what it
+# changes by outcome: danger and failure for what breaks, success and ok for
+# what takes over.
+app -> proxy: queries {class: dep}
+proxy -> primary: writes {class: dep}
+proxy -> replica: reads {class: dep}
+
+# Each step inherits the one before and changes only what changed.
 
 steps: {
-  "1": {
-    (browser -> gateway)[0]: {class: flow; style.opacity: 1}
-  }
   "2": {
-    (browser -> gateway)[0].class: dep
-    (gateway -> api)[0]: {class: flow; style.opacity: 1}
+    status: "2. The primary fails: its writes fail,\nreads still reach the replica"
+    # A node changes state: reset its class, then assign the new list
+    # (a list over a list applies; a list over a single class is ignored).
+    primary.class: null
+    primary.class: [datastore; tech; box; danger]
+    (proxy -> primary)[0].class: failure
   }
   "3": {
-    (gateway -> api)[0].class: dep
-    (api -> db)[0]: {class: flow; style.opacity: 1}
+    status: "3. The replica is promoted: the pooler\nsends writes and reads to it"
+    replica: "New primary\nPostgres"
+    replica.class: null
+    replica.class: [datastore; tech; box; success]
+    # An edge that moves: hide the old one, relabel and restyle the new one.
+    (proxy -> primary)[0].style.opacity: 0
+    (proxy -> replica)[0]: writes and reads {class: ok}
   }
 }

@@ -1,0 +1,11 @@
+# request: "The app charges cards through Stripe."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  app: App
+  stripe: Stripe {external} {inferred}
+edges:
+  app -> stripe: charges

@@ -1,0 +1,38 @@
+# post: svgpost
+# expect-clean: E-
+# F2: a diagram that is too wide for its key at the right in an 800px column: svgpost re-flows the key
+# into one row under the diagram, left-aligned with the content, 16px below it; the canvas grows in
+# height only (test_svgpost.sh).
+...@neutral-theme
+direction: down
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    x: Kafka topic {class: queue}
+    y: Third party {class: [service; external]}
+    a -> b: main path {class: flow}
+    a -> b: event {class: async}
+    a -> b: call {class: dep}
+  }
+}
+classes: {w: {width: 170}}
+web: Web app {class: [actor; w]}
+gw: API gateway {class: [service; w]}
+svc: Services {
+  class: zone
+  orders: Order service {class: [service; focal; w]}
+  pay: Payment service {class: [service; w]}
+}
+data: Data {
+  class: zone
+  db: "Orders DB\nPostgres" {class: [datastore; tech; w]}
+  bus: "Order events\nKafka" {class: [queue; tech; w]}
+}
+psp: "Stripe\npayments" {class: [service; external; tech; w]}
+web -> gw: HTTPS {class: flow}
+gw -> svc.orders: REST {class: flow}
+svc.orders -> data.db: writes {class: dep}
+svc.orders -> data.bus: publishes {class: async}
+svc.pay <- data.bus: consumes {class: async}
+svc.pay -> psp: charges {class: dep}

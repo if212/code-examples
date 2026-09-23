@@ -1,0 +1,9 @@
+# a C4 view with no title node
+...@mini-theme
+direction: down
+customer: Customer {class: actor}
+shop: Shop {
+  class: boundary
+  web: Web App {class: service}
+}
+customer -> shop.web: Uses {class: dep}

@@ -3,7 +3,7 @@ type: architecture
 reader: test
 width: 800
 direction: down
-focus: after.api
+focus: after.api  # "the new API"
 nodes:
   before: Before
   before.web: Web app

@@ -7,7 +7,7 @@ type: state
 reader: platform engineers reading the internal docs
 width: 800
 direction: down
-focus: active.deploying
+focus: active.deploying, start -> queued -> active.building -> active.deploying -> live  # "Highlight Deploying", "Building moves to Deploying when the build passes, and Deploying goes Live"
 out: rollback, manual approval, cancellation
 nodes:
   start: "" {start}

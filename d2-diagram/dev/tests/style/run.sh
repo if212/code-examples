@@ -3,12 +3,15 @@
 # usage: sh dev/tests/style/run.sh [OUTDIR]     (default ${TMPDIR:-/tmp}/d2-style-test)
 #  1. contrast.py --check and d2 fmt --check pass on both theme files, and
 #     contrast.py still fails the pre-rewrite theme in fixtures/
-#  2. d2check renders every dev/tests/style/*.d2 with 0 E-/S- findings
-#  3. no sample SVG carries a prefers-color-scheme: dark block (light only)
-#  4. style-guide.d2 uses every neutral-theme class and snowflake-guide.sf.d2
+#  2. theme_rules.py: no node fill equals a panel tint, AA2 is slate, the six
+#     geometry classes match across the themes, carry the interface values and
+#     (the plain ones) set no color, and no modifier sets a size
+#  3. d2check renders every dev/tests/style/*.d2 with 0 E-/S- findings
+#  4. no sample SVG carries a prefers-color-scheme: dark block (light only)
+#  5. style-guide.d2 uses every neutral-theme class and snowflake-guide.sf.d2
 #     every snowflake-brand class; the Snowflake sample has a 3px #11567F
-#     sf-flow, 16px Mid-Blue titles and (with fonts) Lato
-#  5. OUTDIR/style-sheet.png: theme 0 plain (before/*.plain.d2) vs the theme,
+#     sf-flow, 16px Mid-Blue titles, white cylinders and (with fonts) Lato
+#  6. OUTDIR/style-sheet.png: theme 0 plain (before/*.plain.d2) vs the theme,
 #     column view, for arch, flow and state - look at it
 # exit 0 = all pass, 1 = a check failed
 set -u
@@ -30,6 +33,10 @@ for t in neutral-theme snowflake-brand; do
   printf 'theme %-16s %s\n' "$t" "$(tail -1 "$OUT/contrast-$t.txt")"
 done
 
+python3 "$HERE/theme_rules.py" "$SKILL/templates/neutral-theme.d2" "$SKILL/templates/snowflake-brand.d2" \
+  > "$OUT/theme-rules.txt" 2>&1 || bad "theme rules (see $OUT/theme-rules.txt)"
+tail -1 "$OUT/theme-rules.txt"
+
 # the audit itself must catch the two failures of the pre-rewrite Snowflake theme
 fx="$HERE/fixtures/snowflake-brand.orig.d2"
 if python3 "$SKILL/scripts/contrast.py" --check "$fx" > "$OUT/contrast-fixture.txt" 2>&1; then
@@ -40,8 +47,12 @@ else
   done
 fi
 
-col_of() {  # the column PNG listed on d2check's READ: line
-  sed -n 's/^READ: //p' "$1" | tr ' ' '\n' | grep '\.col\.png$' | head -1
+col_of() {  # the column PNG listed on d2check's READ: line (shell-quoted paths: spaces survive)
+  python3 - "$1" << 'PY'
+import shlex, sys
+line = next((x for x in open(sys.argv[1], encoding='utf-8', errors='replace') if x.startswith('READ: ')), '')
+print(next((p for p in shlex.split(line[6:]) if p.endswith('.col.png')), ''))
+PY
 }
 for f in "$HERE"/*.d2 "$HERE"/before/*.d2; do
   n=$(basename "$f" .d2)
@@ -82,22 +93,25 @@ sf="$OUT/snowflake.sf.svg"
 grep -q 'stroke="#11567F"[^>]*stroke-width:3;' "$sf" || bad "sf-flow is not #11567F at 3px"
 grep -q 'fill="#11567F" class="text-bold" style="text-anchor:middle;font-size:16px"' "$sf" ||
   bad "no 16px Mid-Blue container title"
+# sf-datastore: white cylinders on the #F4FAFD container tint (never a hollow outline)
+grep -q '<path d="M [^"]*C[^"]*" stroke="#11567F" fill="#FFFFFF"' "$sf" ||
+  bad "no white sf-datastore cylinder in the Snowflake sample"
 if grep -q '^fonts: brand-snowflake' "$OUT/snowflake.sf.log"; then
-  python3 "$HERE/fontnames.py" "$sf" | grep -q ' Lato ' || bad "Snowflake sample does not embed Lato"
+  faces=$(python3 "$HERE/fontnames.py" "$sf" 2>&1)  # read it all: grep -q would close the pipe early
+  case $faces in *' Lato '*) ;; *) bad "Snowflake sample does not embed Lato" ;; esac
 else
   echo "SKIP Lato check: d2check did not apply the brand-snowflake fonts ($(grep '^fonts:' "$OUT/snowflake.sf.log"))"
 fi
 
-args=""
+set --
 for d in arch flow state; do
   b=$(col_of "$OUT/$d.plain.log") a=$(col_of "$OUT/$d.ds.log")
   if [ -n "$b" ] && [ -n "$a" ]; then
-    args="$args $b:$d-theme-0-plain $a:$d-neutral-theme"
+    set -- "$@" "$b:$d-theme-0-plain" "$a:$d-neutral-theme"
   else
     bad "no column PNG for $d (rasterizer unavailable?)"
   fi
 done
-# shellcheck disable=SC2086
-[ -n "$args" ] && python3 "$HERE/sheet.py" "$OUT/style-sheet.png" 2 820 $args
+[ $# -gt 0 ] && python3 "$HERE/sheet.py" "$OUT/style-sheet.png" 2 820 "$@"
 [ $fail -eq 0 ] && echo "style: PASS" || echo "style: FAIL"
 exit $fail

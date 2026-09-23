@@ -7,7 +7,7 @@ type: swimlane
 reader: support and finance staff reading the process wiki
 width: 800
 direction: right   # time runs right, lanes stack down
-focus: fin.issue
+focus: fin.issue, cust.request -> support.review -> support.check -> fin.approve -> fin.issue -> fin.receipt -> support.close  # "Highlight the step where the money moves"; "The customer requests it; support reviews the request"
 out: partial refunds, chargebacks, refunds over the approval limit
 nodes:
   cust.h.t: Customer {note}

@@ -4,7 +4,7 @@ type: architecture
 reader: team wiki
 width: 800
 direction: down
-focus: services.orders
+focus: services.orders  # "Highlight orders"
 out: data stores
 nodes:
   web: Web app

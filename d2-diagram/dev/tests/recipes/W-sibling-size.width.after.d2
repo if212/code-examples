@@ -1,0 +1,16 @@
+# After: one width class for the row (the widest label plus margin): the peers read as peers;
+# the caller above and the hub below span both, so every edge drops straight.
+...@neutral-theme
+direction: down
+classes: {app: {width: 210}}
+customer: Customer {class: actor; width: 440}
+bank: Internet banking {
+  class: boundary
+  web: "Single-page web app\n[Container]" {class: [service; app]}
+  mobile: "Mobile app\n[Container]" {class: [service; app]}
+  api: "API\n[Container]" {class: service; width: 440}
+  web -> api: Calls {class: dep}
+  mobile -> api: Calls {class: dep}
+}
+customer -> bank.web: Uses {class: dep}
+customer -> bank.mobile: Uses {class: dep}

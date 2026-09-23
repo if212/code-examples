@@ -17,7 +17,6 @@ classes: {
   q2: {width: 348; height: 48}
   # An empty period: a hidden spacer one period wide.
   gap: {label: ""; width: 168; height: 48; style.opacity: 0}
-  chip: {width: 120; height: 32}
 }
 
 head: {
@@ -28,8 +27,8 @@ head: {
   d: "Q2 2027" {class: [caption; tick]}
 }
 # Status is the class: done success, in progress service, planned muted,
-# at risk danger. The one item the plan hinges on is focal; a milestone
-# date goes inside its bar.
+# at risk danger. Focal only on the item the request highlights; a
+# milestone date goes inside its bar.
 platform: Platform {
   class: [zone; row]
   pg: "Postgres 18 upgrade" {class: [service; q2]}
@@ -55,7 +54,7 @@ mobile: Mobile {
 # The key: chips in the status classes, narrower than a period so they do
 # not read as a stream. (A d2-legend swatch cannot tell service from muted.)
 status: {
-  class: bare
+  class: key
   done: Done {class: [success; chip]}
   doing: In progress {class: [service; chip]}
   planned: Planned {class: [muted; chip]}

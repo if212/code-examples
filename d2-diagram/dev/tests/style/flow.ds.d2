@@ -1,27 +1,46 @@
-# CI/CD flowchart sample for the neutral theme. Focus: the manual approval gate.
+# CI/CD flowchart sample for the neutral theme. Request it stands for: "CI/CD:
+# commit, build and unit tests, deploy to staging, smoke tests, manual
+# approval, production. Failed tests stop the build; failed smoke tests roll
+# staging back. Highlight the manual approval gate."
+# The written chain is the flow; the gate is the focus; a ghost opposite each
+# failure exit keeps the spine on one axis; the key names the three lines.
 ...@../../../templates/neutral-theme
 direction: down
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: pipeline {class: flow}
+    a -> b: on failure {class: failure}
+    a -> b: released {class: ok}
+  }
+}
+classes: {
+  step: {width: 200}
+  q: {height: 64}
+}
 
-start: Commit pushed {class: terminal}
-build: Build and unit tests {class: service}
-ok1: Tests pass? {class: decision}
-stage: Deploy to staging {class: service}
-ok2: Smoke tests OK? {class: decision}
-approve: Manual approval {class: focal}
-prod: Deploy to production {class: service}
-done: Released {class: [success; terminal]}
-rollback: Roll back staging {class: [service; danger]}
-notify: Notify author {class: service}
-fail: Pipeline failed {class: [danger; terminal]}
+start: Commit pushed {class: [terminal; compact; step]}
+build: Build and unit tests {class: [service; compact; step]}
+ok1: Tests pass? {class: [decision; q]}
+stage: Deploy to staging {class: [service; compact; step]}
+ok2: Smoke tests OK? {class: [decision; q]}
+approve: Manual approval {class: [service; compact; step; focal]}
+prod: Deploy to production {class: [service; compact; step]}
+done: Released {class: [success; terminal; compact; step]}
+failed: Build failed {class: [danger; terminal; compact; step]}
+rollback: Staging rolled back {class: [danger; terminal; compact; step]}
+g1: "" {class: ghost}
+g2: "" {class: ghost}
 
 start -> build: {class: flow}
 build -> ok1: {class: flow}
+ok1 -> g1: no {class: ghost}
 ok1 -> stage: yes {class: flow}
+ok1 -> failed: no {class: failure}
 stage -> ok2: {class: flow}
+ok2 -> g2: no {class: ghost}
 ok2 -> approve: yes {class: flow}
+ok2 -> rollback: no {class: failure}
 approve -> prod: {class: flow}
 prod -> done: {class: ok}
-ok1 -> notify: no {class: failure}
-ok2 -> rollback: no {class: failure}
-rollback -> notify: {class: failure}
-notify -> fail: {class: failure}

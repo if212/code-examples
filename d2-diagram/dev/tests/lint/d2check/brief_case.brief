@@ -3,7 +3,7 @@ type: architecture
 reader: test fixture
 width: 800
 direction: down
-focus: api
+focus: api  # "The API"
 out: nothing
 nodes:
   api: API

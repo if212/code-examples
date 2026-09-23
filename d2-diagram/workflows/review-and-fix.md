@@ -1,13 +1,17 @@
 # Review and fix: the rubric, one recipe per finding code, compile errors
 
-d2check lists each finding as `<CODE> xN -> workflows/review-and-fix.md#<code>`,
+d2check lists each code with its severity and count, `-> workflows/review-and-fix.md#<code>`,
 then one line per instance; `[n]` is its numbered box on `<name>.ann.png`
 (lint and node-level S- findings; a finding about the whole diagram or an
 edge's meaning has no box). Look a code up with Grep: pattern `^### W-fanout`,
-`-A 10`. E- (geometry) and S- (meaning) are errors: fix them all, independent
-ones in one cycle. W- are warnings: fix them in polish cycles, in rubric order.
-I- is information. Every `Fix:` below was proven on d2 v0.7.1 by a
-before/after pair: the code fires on the first file and is gone after the fix.
+`-A 28`. E- (geometry) and S- errors (meaning) come first: fix them all,
+independent ones in one cycle. Then W- warnings and I-sparse, in rubric
+order: a warning ships only when its recipe was tried in a render cycle and
+failed. Before any of this, d2check's post step (`svgpost.py`) has moved
+edge labels off bends, borders and foreign lifelines wherever a straight run
+holds them: what is listed is what it could not fix. Every `Fix:` below was
+proven on d2 v0.7.1 by a before/after pair: the code fires on the first file
+and is gone after the fix.
 
 ## Rubric: judge `<name>.col.png`, in this order
 
@@ -15,14 +19,16 @@ before/after pair: the code fires on the first file and is gone after the fix.
 |---|---|---|
 | 1 | Legible at its width | any E-/W-small-text; text you have to squint at in col.png; W-tall, W-aspect |
 | 2 | Accurate | any S- error; an edge on the wrong node, reversed, or in the wrong group; a label that differs from the brief |
-| 3 | Clean routing | an edge through a node, label or title; crossings; diagonal or curved edges; labels on bends or borders |
-| 4 | One reading direction | the flow doubles back against `direction`; the main path zig-zags (W-long-edge, W-edge-jog) |
-| 5 | Focus findable | you cannot point at the brief's focus within a second; a second blue thing competes (S-emphasis) |
-| 6 | No clutter | labels repeat group names or restate the obvious; decorative colour; dead space (I-sparse) |
+| 3 | Clean routing | an edge through a node, label or title; crossings; diagonal or curved edges; a label on a bend, a border or a lifeline; a branch label far from its decision |
+| 4 | One reading direction | the flow doubles back against `direction`; the main path zig-zags or drifts sideways, a lower tier out of line with its callers (W-dogleg, W-long-edge, W-edge-jog) |
+| 5 | Focus earned and findable | you cannot point at the brief's focus within a second; a second blue thing competes; blue on a part the request never singled out, or on one of two peers (S-emphasis) |
+| 6 | Every encoding explained, no clutter | a colour, dash, border or weight that means something has no key (S-key); labels repeat group names or restate the obvious; decorative colour; dead space (I-sparse) |
 | 7 | Consistent | mixed icon families; uneven tiers (W-sibling-size); un-classed nodes; one-off styles |
 
-Stop when d2check exits 0 and all 7 pass. Anything left goes to the report's
-`Open:` line with the reason.
+Stop when d2check exits 0, no W- or I-sparse is left, and all 7 pass. A
+finding stays only when its recipe was tried in a render cycle and failed:
+the report's `Open:` names the code, the recipe and why it failed. A finding
+the 2x crop proves false: report it with that proof; never loop on it.
 
 ## Legibility
 
@@ -32,7 +38,9 @@ column and shrinks (`display:` shows scale < 1).
 Fix: make the canvas narrower, not the font bigger: `direction: down` (tiers
 side by side instead of ranks in a row), wrap labels near 22 characters with
 `\n` (`"Order management\nservice"`). Past about 15 nodes, split into `steps`
-boards (playbooks/change.md section 3). Sequence: playbooks/sequence.md rule 8.
+boards (playbooks/change.md section 3). Sequence: every participant adds a
+column; messages of one line, at most 40 characters (playbooks/sequence.md
+rule 2).
 
 ### W-small-text
 Seen: text displays at 10-12px. At scale < 1 it is the E-small-text case,
@@ -41,18 +49,45 @@ Fix: at scale < 1 apply the E-small-text levers; at scale 1.00 delete the
 font-size override (the theme sets 14-16px).
 
 ### W-tall
-Seen: the displayed height passes 1.6x the column (1280px at 800): a long
-single column of steps.
-Fix: fold the chain into a serpentine grid: `grid-columns: 1` at the root, one
-zone per stage with its own `direction: right` / `left`, equal step counts
-and one width per step (class `{width: 130}`), turn edges node to node
-(reference/layout.md section 7). Or split into `steps` boards.
+Seen: at a doc column (under 1200px) the displayed height passes 1.25x the
+column (1000px at 800; aim for 900); on a slide column, 0.55x (880px at
+1600). A long column of steps, messages or states.
+Fix: by type (reference/layout.md section 9 has the numbers):
+- Flowchart past 7 ranks: fold it into a 2x2 grid. Row 1: the build zone and
+  the release boundary side by side (each a grid cell with `direction:
+  down`), one flow edge between them; row 2: an invisible hole under the
+  build zone and the failure end under the boundary, `vertical-gap: 80` so
+  the failure edge shows past its label. One `step` width class
+  (`{width: 184; height: 48}`), the passthrough `-- --elk-padding
+  "[top=44,left=24,bottom=20,right=24]"`: a 10-rank CI/CD tower of 550x1263
+  became 754x657 (the file: playbooks/flowchart.md rule 7).
+- Sequence: at most 9 messages and one one-line note (`[note; compact]`,
+  never while an activation bar is open: it is drawn over the bar), or 7
+  messages and one two-operand `alt`. Prune inferred replies first, then
+  notes that close no requested path; a longer protocol becomes two diagrams
+  by phase.
+- A store that takes a rank of its own under its only caller: write the edge
+  from its end, `bank.db <- bank.api` (the arrow still points at the
+  store): it moves up beside the callers' callers (a C4 view: 610x1034 ->
+  680x834).
+- One-line boxes on any spine: the theme's `compact` class (48px, not 66)
+  and one width class: 18px less per rank.
+- Chains of equal steps: a serpentine grid, `grid-columns: 1` at the root,
+  one zone per row, each row a stage the request names (else `steps`
+  boards), with its own `direction: right` / `left`, equal step counts, one
+  width class, turn edges node to node (reference/layout.md section 7).
 
 ### W-aspect
-Seen: wide content shrinks in the column (ratio over 2.5), or a narrow tower
-taller than the column is wide (ratio under 0.4).
-Fix: wide: the E-small-text levers. Tall and narrow: the W-tall serpentine,
-three rows of three instead of one column of nine.
+Seen: the content's width/height ratio leaves the band while it fills
+much of the column: under 0.6 (a tower) with the height at 0.75x the column
+or more, over 2.5 (a strip) with the width at 0.75x or more; on a slide,
+under 1.2 or over 3.2.
+Fix: a strip: the E-small-text levers. A tower: the W-tall levers; a state
+machine: the happy path down a spine of `compact` states in one width class
+(`{width: 140; height: 48}`), every exit into one side column, and a hidden
+`ghost` (the theme class) on the far side of each 2-way fork, its edge
+labelled like its sibling: an order lifecycle went from 356x779 (aspect 0.46)
+to 395x599, 630x598 with the key its markers need at the right.
 
 ### E-contrast
 Seen: a label below 3:1 against its fill: a raw `style.fill` or
@@ -68,10 +103,12 @@ as a light card on any page) and turn raw fills into role classes. Opt-in
 dark mode: reference/design-system.md section 9.
 
 ### W-non-ascii
-Seen: a label holds a non-ASCII character (arrow, accent, dash, emoji); the
-tripwire also names the `.d2` line.
+Seen: a label holds a non-ASCII character (arrow, accent, dash, emoji, CJK);
+the tripwire also names the `.d2` line (comments count too).
 Fix: plain ASCII equivalents (`->`, `e`, `-`); markers come from icons or a
-class, never emoji.
+class, never emoji. Text in another script has no ASCII equivalent:
+translate it into short English, in the brief and the .d2 together (SKILL.md,
+Hard rules); the user's term goes in a brief comment.
 
 ## Collisions
 
@@ -95,7 +132,8 @@ class (`classes: {cell: {height: 165}}`, `class: [service; cell]`).
 
 ### E-label-overflow
 Seen: the label spills out of its box, or is pushed outside a fixed box:
-`width`/`height` smaller than the text (d2 never grows a fixed box).
+`width`/`height` smaller than the text (d2 never grows a fixed box). A
+`style.multiple` card is measured on its front copy.
 Fix: delete the fixed size and wrap the label with `\n`.
 
 ### E-node-overlap
@@ -106,15 +144,15 @@ Fix: one object per `near` position: merge the two notes into one
 `bottom-center` add height instead of an empty side column.
 
 ### E-child-outside
-Seen: a node sticks out of its container: a fixed `width`/`height` on the
-container (often a grid) smaller than its children.
+Seen: a node sticks out of its container: a fixed `width`/`height` on a grid
+container smaller than its children (ELK grows any other container to fit).
 Fix: delete the container's fixed size; the grid sizes itself.
 
 ### E-off-canvas
 Seen: a node or label crosses the SVG edge and is clipped. d2 0.7.1 sizes the
-canvas to fit everything it draws, so this points at an SVG edited or
-post-processed after the render. No source change is known to cause it:
-re-render through d2check and never hand-edit the SVG.
+canvas to fit everything it draws, so this points at an SVG edited after the
+render, or an `outside-*` icon at `pad: 0` (keep the theme's pad 24).
+Re-render through d2check and never hand-edit the SVG.
 
 ## Routing
 
@@ -134,7 +172,7 @@ Fix: give the container its zone class (title top-left); wrap a long title
 so each line stays under about 75px: `"Shop\nplatform\nservices"`. A line that
 cannot wrap (a CIDR): widen the first child, since its edge enters 50px plus
 half its width from the zone's left edge (136px cleared `10.40.11.0/24`;
-subnets: playbooks/infrastructure.md rule 2).
+subnet titles: playbooks/infrastructure.md section 3).
 
 ### W-edge-through-container
 Seen: an edge cuts through a container that holds neither of its ends: a grid
@@ -152,10 +190,12 @@ Seen: two edges run on top of each other: bypass edges in a one-row grid.
 Fix: no grid: `direction: right` and ELK routes each bypass on its own track.
 
 ### W-edge-label-on-border
-Seen: an edge label straddles a container border: a labelled edge that crosses
-nested borders puts its midpoint label on one of them.
-Fix: move the fact into a node label (`"orders-api :8080\n3 pods"`) and leave
-edges that cross borders bare.
+Seen: an edge label straddles a container border. d2check's post step slides
+such a label to a free straight run before the lint looks, and none stayed in
+the layouts tested (labelled edges crossing two nested borders, three crowded
+ones into a nested zone), so no recipe here is proven. When one stays, the fact
+can live in the target's label (`"orders-api :8080\n3 pods"`), with every edge
+of that kind left bare (label every edge of a kind, or none).
 
 ### W-diagonal-edge
 Seen: an edge runs diagonally or visibly leans: in a grid, a node-to-node
@@ -171,23 +211,43 @@ Fix: `...@neutral-theme` on line 1 (it pins ELK); never pass `-l` or `-t`.
 An edited file that keeps its own look: `vars: {d2-config: {layout-engine:
 elk}}` instead of the import.
 
+### W-dogleg
+Seen: the main path (the `flow` edges) drifts sideways step by step instead
+of running down one axis (`the main path drifts 228px sideways`), or 3+
+edges between the same two containers bend into a Z whose sideways run is
+40px and a quarter of the edge (`the lower tier does not line up with its
+callers`).
+Fix: main path: a decision inside a failure scope gets no reject edge of its
+own; the scope's one failure edge carries both (`"any failure or
+rejected"`); the spine's steps share one width class, and a 2-way fork is
+balanced by a `ghost` on the far side (reference/layout.md section 3).
+Tiers: the lower tier in its callers' order (third parties last), one width
+class for both tiers, a caller with two partners as wide as both (2 x 130 +
+the 20px gap = 280), callers with no lower partner at the row's end; stores
+and third parties share one lower zone unless the request names two.
+
 ### W-long-edge
 Seen: one edge runs far longer than the rest. Two cases, named in the message:
 `back-edge detour` (an edge against the reading direction loops around the
 diagram) or `hangs off this one edge` (a node placed far from its only
-partner).
+partner, the edge bending twice or more to reach it).
 Fix: back-edge: write it `consumer <- broker` (`services.notify <-
 data.events`); ELK keeps the rank order and draws a short hop. Hanging node:
-declare it in the same zone as the node it connects to, when it belongs there
-(brief key `zone.node`). If the brief puts it outside, keep it there: the
-long edge is the honest shape; list it under Open.
+write the edge from its end, `pg <- cluster.api: SQL`: the node moves up
+beside the upper tiers and the edge runs straight (a managed database under
+a cluster: 647x941 -> 557x721). Or declare it in the zone of its partner
+when it belongs there (brief key `zone.node`). Grid edges are straight by
+construction: see W-edge-through-container.
 
 ### W-fanout
-Seen: one node sends 4+ edges into children of one container; ELK draws a
-stair-stepped comb (or fan-in).
-Fix: one edge to the container, labelled with what the edges share
-(`gateway -> services: routes /auth /cart /orders`). Keep one edge per child in
-the brief: semcheck accepts a container edge that covers every child.
+Seen: one node sends 4+ edges into children of one container and 2+ of them
+bend: ELK draws a stair-stepped comb (or fan-in).
+Fix: draw the source as wide as the row it feeds, with one width class for
+the row (five services of 110 and four 20px gaps: `width: 630` on the
+gateway): every edge drops straight and keeps its own label. Or one edge to
+the container, labelled with what the edges share (`gateway -> services:
+routes /auth /cart /orders`); keep one edge per child in the brief: semcheck
+accepts a container edge that covers every child.
 
 ### W-edge-jog
 Seen: a small kink (under 16px between two bends): siblings of different
@@ -196,16 +256,20 @@ Fix: one width for the tier through a class (`classes: {tier: {width: 170}}`,
 `class: [state; tier]`); a back-edge becomes `upper <- lower`.
 
 ### W-label-on-bend
-Seen: an edge label sits on an elbow: ELK centres a node between its two
-targets, so both edges step sideways and the midpoint label lands on a bend.
-Fix: shorten the label to the event (`checks pass`, not `health checks
-pass`); it then fits the straight run between the bends. Or add an invisible
-third target and declare the three edges so the main one comes second: the
-main target is then the middle one, straight below the source
-(reference/layout.md section 3): `classes: {ghost: {style.opacity: 0}}`,
-`ghost: "" {class: ghost; width: 120}`, `pending -> ghost: {class: ghost}`.
-It costs a column and other edges can still pull the layout: keep it only if
-col.png reads better.
+Seen: an edge label still sits on an elbow after the post step: no straight
+run of its edge (a decision's exit: the first run from the decision) is
+long enough for the label plus 16px.
+Fix: shorten the label to the event (`cancel`, not `customer cancels before
+paying`; the details go into the text): the post step then moves it onto
+the first straight run.
+
+### W-label-on-lifeline
+Seen: a sequence message label (or a group title) covers the lifeline or
+activation bar of a participant the message does not touch, and no lifeline
+gap the message spans is wide enough for the post step to move it into.
+Fix: shorten the label to what the reader needs (`POST /token (code,
+code_verifier)`; details go into the text), or declare the two participants
+next to each other so the message spans one gap.
 
 ### W-short-label
 Seen: an edge label of 1-2 characters (`/`, `x`) that says nothing at reading
@@ -228,17 +292,23 @@ Fix: add its role class (`queue` for a topic). Tables and UML classes take
 none: they are styled by the template's globs (playbooks/erd.md rule 4).
 
 ### W-sibling-size
-Seen: siblings in one row have different heights (`66/82`): one label wraps
-to two lines.
-Fix: give the row the larger height through one class
-(`classes: {tier: {height: 82}}`, `class: [service; tier]`).
+Seen: siblings in one row differ in height (`66/82`, a wrapped label; a
+cylinder beside a box) or in width (`204/129`), stacked siblings do not share
+a centre, or side-by-side containers end at different heights.
+Fix: one class for the row carries the larger size
+(`classes: {tier: {width: 180; height: 82}}`, `class: [service; tier]`);
+side-by-side zones: equal node heights, never a container `height`. A
+caller as wide as the partners it spans (W-dogleg: 2 x 130 + the 20px gap =
+280) is not flagged: lint accepts a whole span of the row's width.
 
 ### W-seq-group-ragged
-Seen: sequence groups start and end at different x: each group is as wide as
-the lifelines its messages touch.
-Fix: drop phase groups; number the messages (`"1. open app"`) and name the
-phases in the text around the diagram; keep groups for `alt`, `loop`, `opt`
-(playbooks/sequence.md rule 5).
+Seen: sequence groups, or the operands of one `alt`/`par`, start and end at
+different x: each is as wide as the lifelines its messages and notes touch.
+Fix: end both operands the same way: each with its outcome as a note on the
+same participant (`order.confirm: Confirms order` in the success operand,
+`order.cancel: Cancels order` in the failure one). Phase groups: drop them,
+number the messages (`"1. open app"`) and name the phases in the text; keep
+groups for `alt`, `loop`, `opt` (playbooks/sequence.md rule 5).
 
 ### W-remote-image
 Seen: an icon stayed a URL (rendered with `--bundle=false`): it does not load
@@ -247,20 +317,27 @@ Fix: a local icon file (workflows/icons.md) and no `--bundle=false`: d2
 embeds it.
 
 ### I-sparse
-Seen: a large empty square in the column view (information): a narrow box
-centred over a wide tier leaves a corner empty.
-Fix: draw the entry point as wide as the tier it feeds (`width: 560` on the
-gateway, playbooks/architecture.md rule 7). Keep the info when the gap is the
-honest shape of the graph.
+Seen: dead space in the column view: an empty square as wide as a quarter of
+the displayed width (160px or more), or a zone or grid row whose children
+fill under half of it (`container 'feedback' is 52% empty (right)`).
+Fix: an empty square: draw the entry point as wide as the tier it feeds
+(`width: 620` on a gateway over four services), or pull the node that
+leaves it next to its partner (a sink: `pg <- api`, W-long-edge). A
+half-empty container (a grid row with one node): move that node into the
+row of its partner, so the rows fill evenly. The column over and under a
+key that d2check keeps at the right of the drawing is its margin and never
+counts.
 
 ## Meaning: the diagram against the brief (semcheck)
 
 ### S-missing-node
 Seen: a node of the brief is not drawn (error), or (INFO) the request names a
-term that no brief label, key or `out:` entry covers.
+term that no brief label, key or `out:` entry covers; a request in another
+script is not searchable (INFO).
 Fix: draw it with the brief's key (and its edges); a node hidden with
 `style.opacity: 0` is not drawn. A hidden grid slot is fine: list the node in it (`t1.x`).
-INFO: add the term to the brief, or to `out:` when it is left out on purpose.
+INFO: add the term to the brief, or to `out:` when it is left out on purpose;
+for a request in another script, check each of its nouns by hand.
 
 ### S-extra-node
 Seen: a node that is not in the brief: often a typo in an edge end
@@ -303,7 +380,9 @@ Fix: write each edge once.
 ### S-node-label
 Seen: a node's text differs from the brief (drifted wording, or a label cut
 by an unquoted `#`).
-Fix: use the brief's label, in the user's words; quote labels holding `#`.
+Fix: use the brief's label: the user's words, in English (a brief label in
+another script: translate it in the brief and the .d2 together); quote
+labels holding `#`.
 
 ### S-node-label-case
 Seen: the label differs from the brief only in case.
@@ -393,13 +472,38 @@ Fix: finish the path with an explicit outcome (a `terminal`, `{end}` in the
 brief), or draw the missing edge.
 
 ### S-emphasis
-Seen: the focus does not stand out: the focus node lacks `focal` (or
-`sf-primary`), a class after `focal` repaints it, a focused group is not
-`zone-blue`, main-path edges lack `flow`, or a second node is focal. INFO: the
-brief has no `focus:` line.
-Fix: end the focus node's class list with the modifier (`[service; focal]`,
-see Last class wins); a focused group takes `zone-blue` (Snowflake: see
-Snowflake has no focus group); main-path edges `flow`; one focal per diagram.
+Seen: emphasis the request did not ask for, or a focus that does not stand
+out. Errors: a `focal`/`focal-solid`/`sf-primary` node or a `flow`/`sf-flow`
+edge outside the brief's focus; a focus whose comment quotes no words of the
+`# request:` (Snowflake may write `# brand`); a focal node inside `zone-blue`;
+the focus node without `focal` (or `sf-primary`), or with a class after it
+that repaints it; a focused group that is not `zone-blue`; focus-path edges
+without `flow`. Warning: two peers (same parent and base role) styled
+unlike. INFO: the brief has no `focus:` line.
+Fix: emphasis nobody asked for goes: the node back to its base role
+(`service`), the edge to `dep`, and `focus: none` (workflows/brief.md section
+3). A focus the request does ask for quotes it: `focus: api  # "Focus on the
+API"`. In `zone-blue`, the group is the focus: make the node plain, or make
+the group a `zone`. Peers take one class. The class order: see Last class
+wins; a focused group: `zone-blue` (Snowflake: see Snowflake has no focus
+group).
+
+### S-key
+Seen: a colour, dash or border means something and the diagram has no key:
+2+ edge classes among `flow dep secondary async failure ok` (or the `sf-`
+ones), an `external` or `muted` node, or a `zone-green`/`-amber`/`-violet`
+container. Also a key that leaves out one of those encodings, an ERD without
+its crow's-foot key or caption, a C4 view without its `title` node.
+Fix: lines, dashes and shapes: a `vars.d2-legend`, one entry per encoding,
+in the real classes (`a -> b: event, async {class: async}`, endpoints hidden
+with `style.opacity: 0`); d2check restyles it and puts it right of the
+diagram when that fits the column, else under it: never style it by hand.
+Statuses shown by text style (added, removed, planned): a `key` container of
+`chip` nodes in the real classes, a grid cell when it is no wider than a
+panel, else `near: bottom-center` (a wider key cell widens its panel's
+column, so the panels differ). C4: a `title` node plus the key. ERD: the
+crow's-foot key, or a `caption` line naming the notation. Where to put it
+and what goes in: reference/design-system.md section 8.
 
 ### S-inferred
 Seen: information: brief items marked `{inferred}`, not stated by the user.
@@ -423,7 +527,18 @@ Fix: quote the label: `api -> db: "read, write"`.
 Seen: icons from more than one family (lucide line icons next to a logos
 brand icon).
 Fix: one family per diagram (lucide by default, workflows/icons.md); the
-product name stays in the label.
+product name stays in the label. One exception: a Kubernetes diagram whose
+request asks for icons takes k8s icons for its resources and lucide for the
+rest, every lucide file fetched with `--color 326CE5` (reference/icons.md
+section 2).
+
+### S-src-direction
+Seen: `direction` set inside a container that is not a grid cell: ELK
+ignores it and lays the children out in the root's direction.
+Fix: delete it and set the direction once, at the root. Children that must
+run across: make their container a cell of a grid (`grid-columns: 1` on the
+parent), whose own `direction` works (reference/layout.md section 7), or
+give the container `grid-rows: 1` when its children are not connected.
 
 ### S-src-cli-engine
 Seen: the file pins no layout engine (no theme import, no `layout-engine`), so
@@ -443,7 +558,10 @@ theme next to the file. `one name, not a list`: `class: [service; focal]`.
 `the row vanishes`: a table column named `class`; quote it, `"class": varchar`.
 `no snowflake-brand twin`: keep an `sf-*` class and set the shape it names on
 the object (`shape: diamond`), or drop a colour-only class
-(reference/brand-snowflake.md section 3).
+(reference/brand-snowflake.md section 3). Two themes imported: keep one
+import. A list assigned over a single class (a step that changes a node's
+state) is ignored: reset first, `db.class: null` then `db.class: [datastore;
+danger]`.
 
 ## Class traps
 
@@ -458,8 +576,10 @@ only shapes, so it goes last: `[success; terminal]` is a green pill,
 ### Snowflake has no focus group
 The Snowflake theme has no blue group class: `sf-primary` on a container
 floods the whole group with signature blue. When the brief's focus is a
-group, move `focus:` to the node inside it that matters most and give that
-node `sf-primary` (at most 3 per diagram, reference/brand-snowflake.md).
+group, move `focus:` to the node inside it that matters most and add
+`sf-primary` last to its classes (`[sf-datastore; sf-primary]` keeps the
+cylinder): one per diagram unless the request names more
+(reference/brand-snowflake.md section 4).
 
 ## Compile and command errors
 
@@ -469,7 +589,8 @@ reproduced with d2 0.7.1.
 
 | d2 says | Cause | Fix |
 |---|---|---|
-| `reserved keywords are prohibited in edges` | a keyword (`left` `right` `top` `label` `shape` `style` `icon` `near` `class` `link` ...) as an edge end | rename the key, keep the word in the label: `left_panel: Left panel` |
+| `reserved keywords are prohibited in edges` | a keyword (`left` `top` `label` `shape` `style` `icon` `near` `class` `link` `width` ...) as an edge end; `right`, `bottom` and `center` are safe | rename the key, keep the word in the label: `left_panel: Left panel` |
+| `cannot connect to reserved keyword` | a style key (`fill`, `opacity`) or `classes` as an edge end | rename the key, keep the word in the label |
 | `non-integer top` / `non-integer left` | `top`/`left` as a root key: they are position keywords | rename the key: `top_bar: Top bar` |
 | `non-integer width` / `non-integer height` | a unit on a size (`160px`) | bare integer: `width: 160` |
 | `substitutions must begin on {` | `$` in a label, even in double quotes | single quotes: `'costs $5 per call'` |
@@ -478,7 +599,7 @@ reproduced with d2 0.7.1.
 | `missing value after colon` (with `maps must be terminated with }`) | an unquoted hex colour: `#` starts a comment | quote it: `"#1E293B"`, or use a role class |
 | `maps must be terminated with }` | an unclosed `{` | close it; look for an unquoted `#` that commented out a `}` |
 | `block string must be terminated` | an unclosed `\|md` block | `shape: text` with a plain label |
-| `is not a valid config` | an ELK flag or unknown key in `d2-config` | remove it; valid keys: `theme-id dark-theme-id layout-engine pad center sketch theme-overrides dark-theme-overrides`; ELK spacing flags go after `--` on d2check |
+| `is not a valid config` | an ELK flag or unknown key in `d2-config` | remove it; valid keys: `theme-id dark-theme-id layout-engine pad center sketch theme-overrides dark-theme-overrides data`; ELK spacing flags go after `--` on d2check |
 | `is not a valid theme ID` | a `theme-id` the file does not need | delete it: the theme file sets theme 0 |
 | `failed to import` | the theme is not next to the `.d2` (imports resolve from the importing file) or its name is misspelled | `cp ${CLAUDE_SKILL_DIR}/templates/neutral-theme.d2 <dir>/`; `...@neutral-theme` |
 | `failed to bundle local images` | a local icon path that does not exist (paths resolve from the `.d2`) | fix the path, or fetch it: `sh ${CLAUDE_SKILL_DIR}/scripts/icon.sh get lucide:<name> <dir>/icons/` |
@@ -503,6 +624,8 @@ reproduced with d2 0.7.1.
 | `reviewed: NOT visually reviewed` | No rasterizer: no quality claims; report it and name the fix from `sh ${CLAUDE_SKILL_DIR}/scripts/doctor.sh`. |
 | `d2 is not on PATH` | Run `sh ${CLAUDE_SKILL_DIR}/scripts/doctor.sh`: it prints the install command. |
 | `fmt: reformatted ... Read it again` | d2 fmt rewrote the file: Read it before the next Edit. |
+| `D2W/<name> belongs to <path>: its brief is not applied` | Another diagram with the same file name used this work dir. Pass `--brief`, or render an experiment as `D2W/<name>-exp.d2` (SKILL.md step 4). |
+| `another d2check (pid N) is using <D2W>` (exit 1) | A run on the same name is in progress: wait for it, or give the experiment its own name (`<name>-exp.d2`). |
 | `warning: '-l' overrides the file's vars.d2-config` | Drop the flag after `--`; the engine and theme belong in `vars.d2-config`. |
 | `warning: ignored d2 settings from the environment` | Nothing to do for d2check, which already ignores them. Raw `d2` calls read them: `unset` them in the same command (reference/export.md). |
 | a raw `d2` call that never returns | `D2_WATCH` is set, or `-w` was passed: stop it, and clear the variable in the same command as each raw `d2` call (reference/export.md, top); watch mode only in the background (export.md section 9). d2check ignores `D2_WATCH`. |

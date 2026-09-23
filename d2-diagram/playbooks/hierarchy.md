@@ -23,8 +23,8 @@ architecture diagram.
 |---|---|
 | Direction | `direction: down`, declared tier by tier |
 | Nodes | one per package, module, model or role; one size: class `pkg: {width: 120; height: 48}` |
-| Caption | `{class: caption}` saying what an arrow (and red) means |
-| Classes | edges `dep`; the one finding (the cycle, a layer break) `failure`; the subject `focal` |
+| Caption | `{class: caption}` saying what an arrow (and red) means: it is the key (a caption with "=" satisfies S-key) |
+| Classes | edges `dep`; the one finding (the cycle, a layer break) `failure`; the subject `focal` when the request names it |
 
 The arrow means different things per graph: the caption says which.
 
@@ -35,11 +35,12 @@ The arrow means different things per graph: the caption says which.
 | task DAG (Airflow, CI `needs:`) | runs before | the first task | the failing or slow task |
 | role grants | grantee -> granted role | the top role | the role asked about |
 
-**1. Pin the caption on top**: hidden `pin` edges (`style.opacity: 0`) from
+**1. Pin the caption on top**: hidden edges in the theme's `ghost` class from
 it to every top node. Without them it sat beside the apps (744px wide).
 
-**2. No tier zones.** Tiers come from the declaration order; zones around the
-same graph made it 550x622 instead of 450x422.
+**2. No tier zones.** Tiers come from the edges; declare tier by tier so the
+order within each tier follows the reading order. Zones around the same
+graph made it 550x622 instead of 450x422.
 
 **3. Two nodes that both import the same two packages always cross once**
 (23 node orders, 1 crossing each): node order cannot fix it. Merge the pair,
@@ -58,7 +59,6 @@ folder or team, or one graph per app, and list the rest in a table.
 direction: down
 classes: {
   m: {width: 150; height: 48}
-  pin: {style.opacity: 0}
 }
 caption: "Revenue lineage: arrow = feeds" {class: caption}
 charges: "stripe.charges" {class: [service; m; external]}
@@ -67,13 +67,13 @@ stg_charges: stg_charges {class: [service; m]}
 stg_orders: stg_orders {class: [service; m]}
 revenue: fct_revenue {class: [service; m]}
 dash: "Revenue\nLooker" {class: [service; m; focal]}
-caption -> charges: {class: pin}
-caption -> orders: {class: pin}
+caption -> charges: {class: ghost}
+caption -> orders: {class: ghost}
 charges -> stg_charges: {class: dep}
 orders -> stg_orders: {class: dep}
 stg_charges -> revenue: {class: dep}
 stg_orders -> revenue: {class: dep}
-revenue -> dash: {class: flow}
+revenue -> dash: {class: dep}
 ```
 
 ## 3. Tree
@@ -82,10 +82,12 @@ Org chart (the template): the root, then one `zone` per group holding a
 one-column grid: the lead first (`service`), members `muted` (regular weight,
 so each group reads lead first), one `--` line per group into its zone
 (reporting lines carry no arrowheads). Members use role classes, never local
-font styles.
+font styles. The root is structure, not a focus: a `lead`-sized `service`,
+`focal` only when the request highlights someone.
 
-**1. Width grows with groups, not leaves.** 4 groups of 4 = 846px (14.1px
-text); every team as its own tree node, 8 teams under 3 leads = 1150px (11px).
+**1. Width grows with groups, not leaves.** 4 groups of 4 at 148px cards =
+798x384 (15px text; 160px cards: 846px, scale 0.95); every team as its own
+tree node, 8 teams under 3 leads = 1150px (11px).
 
 **2. `horizontal-gap` is also a grid's side padding:** 12 in the group class;
 the default left 60px margins and a 1230px canvas. `grid-rows` = the lead plus
@@ -93,9 +95,10 @@ the members: a bigger group sets its own (`grid-rows: 5`); under the shared 4,
 its 5 cards folded into 2 columns (11.7px text).
 
 **3. The root is a little wider than the two inner groups together**
-(`width: 440` beside 388px; 420-520 all work): their lines drop straight, the
+(`width: 440` beside 364px; 420-520 work): their lines drop straight, the
 outer two turn once at one height and all four land on their group's centre;
-at 200 the four lines left four ports and turned at two heights.
+at 380 the inner lines missed their groups' centres, at 200 the four lines
+left four ports and turned at two heights.
 
 **4. Module trees and containment** (folders; account > database > schema >
 table) grow `direction: right`: leaves stack vertically, so they add height.
@@ -109,7 +112,7 @@ classes: {
   dir: {width: 128; height: 48}
   leaf: {width: 150; height: 40}
 }
-root: "shop-api/" {class: [service; dir; focal-solid]}
+root: "shop-api/" {class: [service; dir]}
 cmd: "cmd/" {class: [service; dir]}
 internal: "internal/" {class: [service; dir]}
 server: "server/" {class: [muted; leaf]}
@@ -136,11 +139,12 @@ left. Keep 2 sides x 3 topics x 3 ideas: the result is wide and short
 - A band is `[zone; layer]`, class `layer: {grid-rows: 1; horizontal-gap: 12;
   vertical-gap: 12}`: a grid's gaps are also its padding (the default 60
   made each band 180px tall).
-- One inner band width: part width = (516 - (n-1)*12)/n, so 4 parts: 120,
-  3: 164, 2: 252; the band edges then line up exactly.
+- One inner band width: part width = (492 - (n-1)*12)/n, so 4 parts: 114,
+  3: 156, 2: 240; the band edges then line up exactly (scale 0.95 beside two
+  bars; 1.00 needs parts under 106px). Parts are `"Name\nTool"` with `tech`.
 - Top = closest to the user. No edges: position is the relation; calls
   between layers are an architecture diagram.
-- One `focal` part; its band `zone-blue`, every other band and bar `zone`.
+- A `focal` part only when the request names it; every band and bar is a
+  plain `zone` (a focal part never sits on the blue panel).
 - Bar titles of about 10 characters: MONITORING took 98 of 112px, SECURITY AND
   IAM overflowed a 104px bar (E-label-overflow).
-- The bands sit in one untitled `zone`: it groups them as one stack.

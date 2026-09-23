@@ -1,16 +1,18 @@
 # After: one edge to the zone, labelled with the routes it stands for (the brief keeps one edge
-# per service; semcheck accepts a container edge that covers every child).
+# per service; semcheck accepts a container edge that covers every child). One width class for
+# the services and a gateway as wide as their row leave no dead corner.
 ...@neutral-theme
 direction: down
+classes: {svc: {width: 110}}
 web: Web app {class: actor}
-gateway: API gateway {class: service}
+gateway: API gateway {class: service; width: 630}
 services: Services {
   class: zone
-  auth: Auth {class: service}
-  catalog: Catalog {class: service}
-  cart: Cart {class: service}
-  orders: Orders {class: [service; focal]}
-  payments: Payments {class: service}
+  auth: Auth {class: [service; svc]}
+  catalog: Catalog {class: [service; svc]}
+  cart: Cart {class: [service; svc]}
+  orders: Orders {class: [service; svc; focal]}
+  payments: Payments {class: [service; svc]}
 }
-web -> gateway: {class: flow}
-gateway -> services: routes /auth /catalog /cart /orders /pay {class: flow}
+web -> gateway: {class: dep}
+gateway -> services: routes /auth /catalog /cart /orders /pay {class: dep}

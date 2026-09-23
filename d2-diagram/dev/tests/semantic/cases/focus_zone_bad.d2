@@ -12,4 +12,4 @@ sf: Snowflake {
 }
 ingest.pipe -> sf.raw: loads {class: dep}
 ingest.fivetran -> sf.raw: loads {class: dep}
-sf.raw -> sf.staging: dbt {class: flow}
+sf.raw -> sf.staging: dbt {class: dep}

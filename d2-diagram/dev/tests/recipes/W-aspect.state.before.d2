@@ -1,0 +1,34 @@
+# Before: the order lifecycle as a tall column: default-height states, the ghosts as tall as
+# an empty box, the finals muted: 356x779, a tower in a doc column. (Round 3 called this local
+# class `ghost`; that name now merges with the theme's 12x48 ghost, so it is `hidden` here.)
+...@neutral-theme
+direction: down
+
+# Invisible balancing children keep the spine straight (reference/layout.md section 3).
+classes: {hidden: {style.opacity: 0}}
+
+# Initial state: a dot with no label.
+start: "" {class: dot}
+pending: Pending {class: state}
+paid: Paid {class: state}
+shipped: Shipped {class: state}
+# Final states: terminal + double border, coloured by outcome.
+delivered: Delivered {class: [success; terminal]; style.double-border: true}
+cancelled: Cancelled {class: [muted; terminal]; style.double-border: true}
+refunded: Refunded {class: [muted; terminal]; style.double-border: true}
+g1: "" {class: hidden; width: 12}
+g2: "" {class: hidden; width: 12}
+g3: "" {class: hidden; width: 12}
+
+# Main path as flow; at each branching state the main edge is declared
+# second, so its target sits in the middle, the exit to the right.
+start -> pending: {class: flow}
+pending -> g1: pay {class: hidden}
+pending -> paid: pay {class: flow}
+pending -> cancelled: cancel {class: dep}
+paid -> g2: ship {class: hidden}
+paid -> shipped: ship {class: flow}
+paid -> refunded: refund {class: dep}
+shipped -> g3: deliver {class: hidden}
+shipped -> delivered: deliver {class: flow}
+shipped -> refunded: return {class: dep}

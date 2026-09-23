@@ -1,0 +1,15 @@
+# After: the steps must run across, so their container becomes a cell of a root grid, where
+# its own direction works; the trigger goes to the container (a grid edge is a straight line).
+...@neutral-theme
+grid-columns: 1
+vertical-gap: 48
+api: Orders API {class: service}
+jobs: "Nightly\njobs" {
+  class: zone
+  direction: right
+  extract: Extract {class: service}
+  load: Load {class: service}
+  report: Report {class: service}
+  extract -> load -> report: {class: dep}
+}
+api -> jobs: triggers {class: dep}

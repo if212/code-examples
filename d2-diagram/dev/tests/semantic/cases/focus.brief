@@ -4,7 +4,7 @@ type: architecture
 reader: team wiki page
 width: 800
 direction: down
-focus: api.orders, web -> api.gw -> api.orders
+focus: api.orders, web -> api.gw -> api.orders  # "Highlight the order service", "the web app reaches the order service through the API gateway"
 out: auth, monitoring
 nodes:
   web: Web app

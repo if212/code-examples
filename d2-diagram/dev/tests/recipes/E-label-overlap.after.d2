@@ -5,5 +5,5 @@ direction: down
 pending: Pending {class: [state; tier]}
 paid: Paid {class: [state; tier; focal]}
 cancelled: Cancelled {class: [state; tier; danger]}
-pending -> paid: "payment\nreceived" {class: flow}
+pending -> paid: "payment\nreceived" {class: dep}
 pending -> cancelled: "customer\ncancels" {class: failure}

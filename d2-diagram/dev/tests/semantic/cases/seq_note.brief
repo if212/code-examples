@@ -4,7 +4,7 @@ type: sequence
 reader: test
 width: 800
 direction: down
-focus: api
+focus: api  # "Focus on the Orders API"
 nodes:
   browser: Browser
   api: Orders API

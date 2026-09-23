@@ -1,0 +1,17 @@
+# expect: W-sibling-size
+# expect-text: siblings in one row have different widths
+# From the round-3 C4 deliverable: the two apps that call the API are peers in one row, but each box
+# hugs its own label, so the row reads as two unrelated sizes (fix: one width class for the row).
+...@neutral-theme
+direction: down
+customer: "Personal banking\ncustomer" {class: actor}
+banking: "Internet banking system" {
+  class: boundary
+  web: "Single-page web app\n[Container]" {class: service}
+  mobile: "Mobile app\n[Container]" {class: service}
+  api: "API application\n[Container]" {class: service; width: 420}
+}
+customer -> banking.web: Uses {class: dep}
+customer -> banking.mobile: Uses {class: dep}
+banking.web -> banking.api: Calls {class: dep}
+banking.mobile -> banking.api: Calls {class: dep}

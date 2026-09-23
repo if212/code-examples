@@ -12,24 +12,24 @@ You ship diagrams a reader understands at a glance, at the size they will see
 them, and you ship only what you have looked at:
 `ROUTE + BRIEF -> INVENTORY -> DRAFT -> RENDER + INSPECT -> FIX -> DELIVER`.
 
-Setup: when `d2` is missing, or d2check exits 3 (`NOT visually reviewed`,
-`approximate`), run `sh ${CLAUDE_SKILL_DIR}/scripts/doctor.sh`. It lists what is
-missing with the exact install commands; `--install` installs d2 and Chromium
-for this user without sudo: ask the user first.
+Setup: `d2` missing, or d2check exit 3: run `sh ${CLAUDE_SKILL_DIR}/scripts/doctor.sh`.
+It prints the install commands (`--install` needs no sudo: ask the user first).
 
 ## 1. Route and brief
 
-`<target>` is the deliverable path without extension, named after the
-subject in kebab-case (`docs/checkout-flow`); `<name>` is its last part.
+`<target>` is the deliverable path without extension, named after the subject
+in kebab-case; no location given: `docs/<name>` if docs/ exists, else
+`./<name>` (say which under Assumed). `<name>` is its last part.
 
-1. Open `workflows/route.md` and match the request to a row: it names the
-   template (`templates/<template>.d2`) and the playbook. Read that playbook.
+1. Match the request to a row of `workflows/route.md`: it names the template
+   and the playbook, and when to ask or split. Read that playbook.
 2. Make the work dir and note the path it prints (D2W below):
    `mkdir -p "${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>" && ls -d "${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>"`
 3. Write `D2W/<name>.brief` as `workflows/brief.md` shows: the request
-   verbatim, then type, reader, width (800 docs, 1600 slides), direction, the
-   one focus, and what is left out. Infer what you can; ask one short question
-   only when the type or scope is truly ambiguous, else record the assumption.
+   verbatim, type, reader, width (800 docs, 1600 slides), direction, focus,
+   what is left out. Focus is `none` unless the request singles something
+   out; then it quotes those words (brief.md section 3). Infer the rest; ask
+   or split only as route.md says, else record the assumption.
 
 ## 2. Inventory
 
@@ -44,15 +44,18 @@ cp ${CLAUDE_SKILL_DIR}/templates/neutral-theme.d2 <dir of target>/
 cp ${CLAUDE_SKILL_DIR}/templates/<template>.d2 <target>.d2
 ```
 
-Snowflake brand: copy `snowflake-brand.d2` instead of the theme, set line 2 of
-`<target>.d2` to `...@snowflake-brand`, use `sf-*` classes (`reference/brand-snowflake.md`).
-Then edit `<target>.d2`:
-- Line 1 says what the diagram shows (it held the template's note). Use the
-  inventory keys verbatim. Nodes first, in their groups; edges last, main path first.
+Snowflake brand: copy `snowflake-brand.d2` instead of the theme, replace the
+`...@neutral-theme` line of `<target>.d2` with `...@snowflake-brand`, use
+`sf-*` classes (`reference/brand-snowflake.md`). Then edit `<target>.d2`:
+- Line 1 says in English what it shows. Inventory keys verbatim. Nodes
+  first, in their groups; edges last, main path first.
 - Every node, container and edge gets a role class, base first, modifier
   last: `[service; focal]` (`reference/design-system.md`). Tables and UML
   classes take none: the template's globs style them.
-- Render settings live only in `vars.d2-config` (the theme sets ELK, pad 24).
+- A colour, dash or line weight that means something gets a key
+  (design-system.md section 8), as the templates show.
+- `direction` only at the root (a container's is ignored, a grid cell's
+  works). Render settings only in `vars.d2-config`.
 - Icons only through `workflows/icons.md`. Syntax: `reference/syntax.md`.
 
 ## 4. Render and inspect
@@ -61,57 +64,60 @@ Then edit `<target>.d2`:
 sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh --brief D2W/<name>.brief <target>.d2
 ```
 
-It formats the file, runs the ASCII tripwire, renders `<target>.svg` (a
-source with layers/steps writes the folder `<target>/`), lints it, checks it
-against the brief, and rasterizes that same SVG. The column width comes from
-the brief (`--column N`, 200..10000, overrides). Read the PNGs on its `READ:`
-line, in order: `col.png` (the reader's view), `ann.png` (a numbered box per
-finding marked `[n]`; whole-diagram and edge-meaning ones have none), `2x.png`
-(detail, when needed). If it printed `fmt: reformatted`, Read the .d2 again
-before editing it.
+It formats, runs the ASCII tripwire, renders `<target>.svg` (layers/steps:
+the folder `<target>/`), post-processes it (svgpost.py moves labels off
+bends, restyles keys and tables), lints, checks it against the brief and
+rasterizes that same SVG. Read the PNGs on its `READ:` line, in order:
+`col.png` (the reader's view at the brief's width), `ann.png` (a numbered box
+per finding `[n]`), `2x.png` (detail). After `fmt: reformatted`, Read the .d2
+again.
+Experiments: `D2W/<name>-exp.d2` beside a copy of the theme (own PNGs).
 
 | Exit | Meaning | Next |
 |---|---|---|
-| 0 | clean (warnings allowed) | walk the rubric on col.png |
+| 0 | clean or warnings | the warnings, then the rubric on col.png |
 | 1 | fmt or compile failed | d2's error and a `hint:` line; else `workflows/review-and-fix.md#compile-and-command-errors` |
 | 2 | E-/S- errors or tripwire hits | step 5 |
 | 3 | no faithful rasterizer | doctor.sh; report what `reviewed:` says |
 
 ## 5. Fix
 
-- Each code d2check lists names its recipe, `workflows/review-and-fix.md#<code>`:
-  Grep that file for `^### <CODE>` with `-A 10`.
-- Judge col.png with the 7-item rubric there: legible at width, accurate,
-  clean routing, one reading direction, focus findable, no clutter, consistent.
-- Budget: 6 render cycles. Cycles 1-4 fix structure: compile errors and all
-  E-/S- errors (independent ones together; one layout change per cycle:
-  direction, grid, engine flags). Cycles 5-6 polish W- findings in rubric order.
-- Stop when d2check exits 0 and the rubric passes. List what is left under Open.
+- Every listed code names its recipe, `workflows/review-and-fix.md#<code>`:
+  Grep that file for `^### <CODE>` with `-A 28`. Walk its rubric on col.png.
+- Budget: 6 render cycles. First compile errors and every E-/S- error
+  (independent ones together; one layout change per cycle). Once those are
+  clean, fix W- and I-sparse findings in rubric order, in any cycle.
+- Stop when d2check exits 0 and no W- or I-sparse is left, except one whose
+  recipe you tried in a render cycle and that failed: Open names the code,
+  the recipe and why it failed. A finding the 2x crop proves false: report
+  it with that proof, never loop on it.
 
 ## 6. Deliver
 
 Produce only the formats asked for (default: the SVG). PNG, PDF, animated
-SVG, GIF, PPTX, ASCII: `reference/export.md`. Working files stay in D2W. Then:
+SVG, GIF, PPTX, ASCII: `reference/export.md`. Working files stay in D2W.
+Reply in the user's language; field names, codes and d2check's quoted lines
+stay as printed:
 
 ```
 Diagram:   <target>.svg or <target>/ (source <target>.d2 + its theme file)
-Brief:     <type> for <reader>; <d2check display: line>; focus = <key>
-Reviewed:  <d2check's reviewed: line, verbatim>
-Checks:    compile ok; lint <e> errors / <w> warnings; semantic <n> errors
+Brief:     <type> for <reader>; <d2check display: line>; focus = <key | none>
+Reviewed:  <the text after d2check's `reviewed:`, e.g. faithful (playwright)>
+Checks:    compile ok; <d2check's checks: line>
 Assumed:   <S-inferred items and choices made instead of asking> | none
-Open:      <warnings left (W-, S-), and why> | none
+Left out:  <the brief's out: items> | none
+Open:      <CODE - recipe tried - why it failed> | none
 Re-render: sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh [--column <width>] <target>.d2
 ```
 
-- `Reviewed: approximate (rsvg)`: say you checked topology and colour only;
-  claim nothing about label fit. `NOT visually reviewed`: make no quality claims.
-- Re-render names no brief: D2W is temporary. d2check's own `re-render:` line
-  is the bare d2 command: same geometry, without the post-processing (text
-  rendering, file mode 644).
+- `approximate (rsvg)`: you checked topology and colour, not label fit.
+  `NOT visually reviewed`: make no quality claims.
+- Asked for labels in another language: say in one line that labels are
+  English by design, and add a glossary (English = the user's term).
 
 ## Editing an existing .d2
 
-Step 1 as usual (the file stands in for the template), then copy it:
+Step 1 as usual (the file stands in for the template);
 `cp <target>.d2 D2W/orig.d2`. Write the brief from
 `python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --dump D2W/orig.d2` plus the
 requested change. Keep keys stable and change only what was asked. The file
@@ -120,7 +126,7 @@ with a theme import, what you add takes role classes; without one, style it
 like its neighbours, and on S-src-cli-engine pin ELK with
 `vars: {d2-config: {layout-engine: elk}}` (say so under Assumed). After
 d2check, run `python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig.d2 <target>.d2`
-and show that only the requested change appears.
+(exit 1: it listed changes) and show that only the requested change appears.
 
 ## Hard rules
 
@@ -130,7 +136,9 @@ and show that only the requested change appears.
 4. On the theme, every node, container and edge has a role class (tables and
    UML classes excepted) and no raw colour. An edited file keeps its own look.
 5. Report `reviewed:` as d2check printed it; never claim more.
-6. Labels are plain English ASCII. No emoji anywhere: diagram, legend, reply.
+6. Labels are plain English ASCII whatever language the user writes in:
+   translate their terms into short English labels, keep product and tech
+   names as written. The whole .d2, comments included, is ASCII. No emoji.
 7. Never run `d2 -w` in the foreground (`reference/export.md` section 9).
 8. Only the requested formats leave D2W. The theme files are imported, never
    rendered on their own.
@@ -139,18 +147,15 @@ and show that only the requested change appears.
 
 | Need | File |
 |---|---|
-| Request -> template and playbook | `workflows/route.md` |
-| Brief and inventory format | `workflows/brief.md` |
+| Request -> template, playbook; ask or split | `workflows/route.md` |
+| Brief, inventory, focus | `workflows/brief.md` |
 | Rubric, one recipe per code, compile errors | `workflows/review-and-fix.md` |
-| Icons: ladder, fetch, verify | `workflows/icons.md`, `reference/icons.md` |
-| Per-type rules: layout, notation, do and don't (route.md names the one) | `playbooks/`: `architecture.md` (systems, C4, LLM apps), `infrastructure.md` (deployment, network, threat model), `pipeline.md`, `hierarchy.md` (dependencies, tree, stack), `sequence.md`, `erd.md` (+ UML class), `flowchart.md` (+ swimlane), `state.md`, `change.md` (walkthrough, compare, steps, timeline, roadmap, gitflow) |
-| Starting diagrams | `templates/*.d2` (themes: `neutral-theme.d2`, `snowflake-brand.d2`) |
-| Roles, colours, type scale, legend, dark mode | `reference/design-system.md` |
-| Snowflake palette and rules | `reference/brand-snowflake.md` |
-| Syntax and traps | `reference/syntax.md` |
-| Engines, direction, grids, spacing, width | `reference/layout.md` |
+| Icons | `workflows/icons.md`, `reference/icons.md` |
+| Per-type rules (route.md names the one) | `playbooks/`: `architecture.md`, `infrastructure.md`, `pipeline.md`, `hierarchy.md`, `sequence.md`, `erd.md`, `flowchart.md`, `state.md`, `change.md` |
+| Starting diagrams, themes | `templates/*.d2` (`neutral-theme.d2`, `snowflake-brand.d2`) |
+| Roles, colours, type, keys | `reference/design-system.md`; Snowflake: `reference/brand-snowflake.md` |
+| Syntax and traps; layout, size budget | `reference/syntax.md`; `reference/layout.md` |
 | Other formats, boards, watch mode | `reference/export.md` |
-| The loop, setup, brief check | `scripts/d2check.sh`, `scripts/doctor.sh`, `scripts/semcheck.py` (`--explain`, `--dump`, `--compare`) |
-| Called by d2check; theme audit; icons | `scripts/d2lint.py`, `d2raster.py`, `pngstats.py`, `raster.cjs`, `font-flags.sh`; `contrast.py`; `icon.sh` |
-| Offline icons, bundled fonts | `assets/icons/`, `assets/fonts/README.md` (`D2_FONT_FAMILY=geist` for a softer look) |
-| Install, prerequisites, troubleshooting | `README.md` |
+| The loop, setup, brief check | `scripts/d2check.sh`, `doctor.sh`, `semcheck.py` (`--explain`, `--dump`, `--compare`) |
+| Called by d2check; audits; icons | `scripts/svgpost.py`, `d2lint.py`, `d2raster.py`, `pngstats.py`, `raster.cjs`, `font-flags.sh`; `contrast.py`; `icon.sh` |
+| Offline icons, fonts; install | `assets/icons/`, `assets/fonts/README.md`; `README.md` |

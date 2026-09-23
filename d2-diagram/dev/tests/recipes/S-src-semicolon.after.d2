@@ -6,5 +6,5 @@ direction: down
 sdk: "C# SDK" {class: actor}
 api: Orders API {class: [service; focal]}
 db: "Orders DB\nPostgres" {class: datastore}
-sdk -> api: HTTPS {class: flow}
+sdk -> api: HTTPS {class: dep}
 api -> db: "read, write" {class: dep}

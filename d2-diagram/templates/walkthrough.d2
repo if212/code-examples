@@ -2,41 +2,60 @@
 ...@neutral-theme
 
 # ONE request through the real parts (C4 dynamic): the architecture stays,
-# the path is `flow`, numbered 1..N in path order (playbooks/change.md).
+# the path is flow, numbered 1..N in path order (playbooks/change.md).
 direction: down
 
-# One width for every box: the spine and each row come out even.
+# Every box compact, "Name\nTechnology" with tech (line 2 small and slate).
+# One width per row: the path cards above the zone, the services, the stores
+# (a cylinder needs 108 for two lines).
 classes: {
-  box: {width: 128}
+  path: {width: 280}
+  svc: {width: 150}
+  store: {width: 150; height: 108}
 }
 
-browser: Browser {class: [actor; box]}
-# The reply as a note, not an upward edge (that detours round everything).
-# height = the Browser's, so the top row lines up.
-reply: "7. The reply retraces the path\nand CloudFront caches it 60 s" {class: note; height: 61}
-cdn: "CDN\nCloudFront" {class: [service; box]}
-# Two zones at most: each adds a title band and padding to a tall chain.
+browser: Browser {class: [actor; compact; path]}
+cdn: "CDN\nCloudFront" {class: [service; compact; tech; path]}
+# The reply as a note beside the part it is about, not an upward edge (that
+# detours round everything). A hidden edge from the browser puts it in the
+# CDN's row; a ghost on the other side keeps hop 1 straight.
+reply: "5. The reply retraces the path;\nCloudFront caches it 60 s" {class: [note; compact]}
+g0: "" {class: ghost}
 aws: AWS VPC {
   class: zone
-  alb: "Load balancer\nALB" {class: [service; box]}
-  gw: "API gateway\nKong" {class: [service; box]}
-  # Off the path: muted, reached by unlabelled secondary edges.
-  orders: "Orders API\nGo" {class: [muted; box]}
-  # Two hops leave it: a width spanning both targets drops both straight.
-  catalog: "Catalog API\nGo" {class: [service; focal]; width: 300}
-  cart: "Cart API\nGo" {class: [muted; box]}
-  cache: "Cache\nRedis" {class: [datastore; box]}
-  db: "Catalog DB\nPostgres" {class: [datastore; box]}
+  # The gateway spans the services it routes to (3 x 150 + 2 x 40): every
+  # route drops straight, and the path is the middle one.
+  gw: "API gateway\nKong" {class: [service; compact; tech]; width: 530}
+  # Off the path: muted, declared left to right (off, path, off).
+  orders: "Orders API\nGo" {class: [muted; compact; tech; svc]}
+  catalog: "Catalog API\nGo" {class: [service; compact; tech; svc; focal]}
+  cart: "Cart API\nGo" {class: [muted; compact; tech; svc]}
+  ordersdb: "Orders DB\nPostgres" {class: [datastore; tech; store; muted]}
+  catalogdb: "Catalog DB\nPostgres" {class: [datastore; tech; store]}
+  cartdb: "Cart DB\nPostgres" {class: [datastore; tech; store; muted]}
 }
 
-# Hops in path order, labelled "N. verb object" (22 characters at most).
-# The gateway's edges go left to right - muted, path, muted - so the path
-# stays one straight line and the muted pair sit beside its label.
+# Hops in path order, "N. verb object" (22 characters at most). Edges off the
+# path are secondary and labelled too: a label takes a rank, so labelled and
+# bare edges out of one row would end on different rows.
+browser -> g0: "1. GET /products/42" {class: ghost}
 browser -> cdn: "1. GET /products/42" {class: flow}
-cdn -> aws.alb: "2. cache miss" {class: flow}
-aws.alb -> aws.gw: "3. forward" {class: flow}
-aws.gw -> aws.orders: {class: secondary}
-aws.gw -> aws.catalog: "4. route /products" {class: flow}
-aws.gw -> aws.cart: {class: secondary}
-aws.catalog -> aws.cache: "5. read cache (miss)" {class: flow}
-aws.catalog -> aws.db: "6. SELECT product 42" {class: flow}
+browser -> reply: "1. GET /products/42" {class: ghost}
+cdn -> aws.gw: "2. cache miss" {class: flow}
+aws.gw -> aws.orders: "/orders" {class: secondary}
+aws.gw -> aws.catalog: "3. route /products" {class: flow}
+aws.gw -> aws.cart: "/cart" {class: secondary}
+aws.orders -> aws.ordersdb: SQL {class: secondary}
+aws.catalog -> aws.catalogdb: "4. SELECT product 42" {class: flow}
+aws.cart -> aws.cartdb: SQL {class: secondary}
+
+# The key: the parts off the path, the path, the routes off it.
+vars: {
+  d2-legend: {
+    a: {class: ghost}
+    b: {class: ghost}
+    m: off the path {class: [muted; compact; svc]}
+    a -> b: the path {class: flow}
+    a -> b: other routes {class: secondary}
+  }
+}

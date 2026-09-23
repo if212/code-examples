@@ -4,7 +4,7 @@ type: pipeline
 reader: data team wiki
 width: 800
 direction: right
-focus: sf
+focus: sf  # "Highlight the Snowflake part"
 out: BI tools
 nodes:
   fivetran: Fivetran

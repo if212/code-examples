@@ -1,33 +1,49 @@
-# Architecture sample for the neutral theme (brief: web + mobile clients, one VPC,
-# async fulfilment, Stripe and a legacy ERP outside). Focus: API gateway.
+# Architecture sample for the neutral theme. Request it stands for: "Checkout:
+# web and mobile clients call the Order service; it writes the Orders DB,
+# charges Stripe through the Payment service and publishes an event that a
+# fulfilment worker turns into a carrier booking; a legacy ERP gets a nightly
+# export. Highlight the Order service."
+# Peers look alike (web and mobile; the lower tiers share one width class);
+# the one focus is the Order service, as wide as the three tiers it calls, so
+# every edge drops straight; the key names each line style and outline.
 ...@../../../templates/neutral-theme
 direction: down
-
-clients: Clients {
-  class: zone
-  web: Web app {class: actor}
-  mobile: Mobile app {class: actor}
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    ext: third party {class: [service; external]}
+    old: legacy (gray label) {class: muted}
+    a -> b: call {class: dep}
+    a -> b: event {class: async}
+    a -> b: nightly batch {class: secondary}
+  }
 }
+classes: {
+  tier: {width: 176}
+  row: {height: 90}
+}
+
+web: Web app {class: [actor; compact; tier]}
+mobile: Mobile app {class: [actor; compact; tier]}
 vpc: Production VPC {
   class: zone
-  gw: API gateway {class: focal}
-  orders: Order service {class: service}
-  db: "Orders DB\nPostgres" {class: datastore}
-  bus: order-events {class: queue}
-  pay: Payment service {class: service}
-  worker: Fulfilment worker {class: service}
-  dlq: Dead letters {class: [queue; danger]}
+  orders: "Order service\nJava" {class: [service; tech; focal]; width: 560}
+  db: Orders DB {class: [datastore; tier; row]}
+  bus: order-events {class: [queue; tier; row]}
+  pay: Payment service {class: [service; tier; row]}
+  worker: Fulfilment worker {class: [service; compact; tier]}
 }
-erp: Legacy ERP {class: muted}
-stripe: Stripe API {class: external}
+erp: Legacy ERP {class: [muted; compact; tier]}
+carrier: Carrier API {class: [service; compact; tier; external]}
+stripe: Stripe API {class: [service; compact; tier; external]}
 
-clients.web -> vpc.gw: HTTPS {class: flow}
-clients.mobile -> vpc.gw: HTTPS {class: dep}
-vpc.gw -> vpc.orders: place order {class: flow}
-vpc.orders -> vpc.db: write {class: dep}
-vpc.orders -> vpc.pay: charge {class: flow}
+web -> vpc.orders: {class: dep}
+mobile -> vpc.orders: {class: dep}
+vpc.orders -> vpc.db: writes {class: dep}
 vpc.orders -> vpc.bus: OrderPlaced {class: async}
-vpc.bus -> vpc.worker: consume {class: async}
-vpc.pay -> stripe: HTTPS {class: flow}
-vpc.pay -> vpc.dlq: on failure {class: failure}
-vpc.worker -> erp: nightly sync {class: secondary}
+vpc.orders -> vpc.pay: charges {class: dep}
+vpc.bus -> vpc.worker: consumes {class: async}
+vpc.db -> erp: nightly export {class: secondary}
+vpc.worker -> carrier: books shipment {class: dep}
+vpc.pay -> stripe: HTTPS {class: dep}

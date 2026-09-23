@@ -1,0 +1,14 @@
+# the same statuses and no key
+...@mini-theme
+grid-rows: 1
+grid-columns: 2
+before: Before {
+  class: zone
+  app: App {class: service}
+  sessions: Session store {class: [datastore; muted]}
+  app -> sessions: {class: dep}
+}
+after: After {
+  class: zone
+  app: App {class: service}
+}

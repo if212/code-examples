@@ -2,10 +2,11 @@
 # different x.
 ...@neutral-theme
 shape: sequence_diagram
-user: User {class: actor}
-app: Mobile app {class: [actor; focal]}
-auth: Auth server {class: actor}
-api: Items API {class: actor}
+classes: {p: {width: 130}}
+user: User {class: [actor; p]}
+app: Mobile app {class: [actor; p]}
+auth: Auth server {class: [actor; p]}
+api: Items API {class: [actor; p]}
 login: Login {
   class: zone
   user -> app: "1. open app" {class: dep}

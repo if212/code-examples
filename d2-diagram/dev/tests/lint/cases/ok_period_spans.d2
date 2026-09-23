@@ -1,0 +1,22 @@
+# expect-clean: E- W-sibling-size
+# A roadmap row: bars one, two and three periods long (168, 348 and 528 = n x 168 + (n - 1) x 12) sit
+# side by side on purpose; W-sibling-size leaves widths that are whole spans of one period alone.
+...@neutral-theme
+grid-rows: 2
+vertical-gap: 8
+classes: {
+  row: {grid-rows: 1; horizontal-gap: 12; vertical-gap: 10}
+  q1: {width: 168; height: 48}
+  q2: {width: 348; height: 48}
+  q3: {width: 528; height: 48}
+}
+a: Platform {
+  class: [zone; row]
+  pg: "Postgres upgrade" {class: [service; q2]}
+  dr: "Failover" {class: [muted; q1]}
+}
+b: Data {
+  class: [zone; row]
+  pipe: "Snowpipe ingest" {class: [success; q1]}
+  cut: "Snowflake cutover" {class: [service; q3]}
+}

@@ -1,4 +1,5 @@
-# After: three rows of three (serpentine grid) fill the column instead of one narrow tower.
+# After: the request's three stages (order, warehouse, delivery) become the three rows of a
+# serpentine grid, each running its own direction: the column fills instead of one narrow tower.
 ...@neutral-theme
 classes: {step: {width: 140}}
 grid-columns: 1
@@ -9,16 +10,16 @@ order: Order {
   direction: right
   receive: Receive order {class: [service; step]}
   validate: Validate {class: [service; step]}
-  reserve: Reserve stock {class: [service; step]}
-  receive -> validate -> reserve: {class: flow}
+  charge: Charge card {class: [service; step]}
+  receive -> validate -> charge: {class: dep}
 }
-pay: Payment {
+warehouse: Warehouse {
   class: zone
   direction: left
-  charge: Charge card {class: [service; step; focal]}
+  reserve: Reserve stock {class: [service; step]}
   pick: Pick {class: [service; step]}
   pack: Pack {class: [service; step]}
-  charge -> pick -> pack: {class: flow}
+  reserve -> pick -> pack: {class: dep}
 }
 deliver: Delivery {
   class: zone
@@ -26,7 +27,7 @@ deliver: Delivery {
   print: Print label {class: [service; step]}
   ship: Ship {class: [service; step]}
   notify: Notify buyer {class: [service; step]}
-  print -> ship -> notify: {class: flow}
+  print -> ship -> notify: {class: dep}
 }
-order.reserve -> pay.charge: {class: flow}
-pay.pack -> deliver.print: {class: flow}
+order.charge -> warehouse.reserve: {class: dep}
+warehouse.pack -> deliver.print: {class: dep}

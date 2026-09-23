@@ -12,5 +12,5 @@ services: Services {
   billing: Billing {class: service}
   orders: Orders {class: [service; focal]}
 }
-clients.web -> services.orders: {class: flow}
+clients.web -> services.orders: {class: dep}
 clients.mobile -> services.billing: {class: dep}

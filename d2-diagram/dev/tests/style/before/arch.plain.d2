@@ -2,29 +2,25 @@
 vars: {d2-config: {layout-engine: elk; pad: 24}}
 direction: down
 
-clients: Clients {
-  web: Web app
-  mobile: Mobile app
-}
+web: Web app
+mobile: Mobile app
 vpc: Production VPC {
-  gw: API gateway
-  orders: Order service
-  db: "Orders DB\nPostgres" {shape: cylinder}
+  orders: "Order service\nJava"
+  db: Orders DB {shape: cylinder}
   bus: order-events {shape: queue}
   pay: Payment service
   worker: Fulfilment worker
-  dlq: Dead letters {shape: queue}
 }
 erp: Legacy ERP
+carrier: Carrier API
 stripe: Stripe API
 
-clients.web -> vpc.gw: HTTPS
-clients.mobile -> vpc.gw: HTTPS
-vpc.gw -> vpc.orders: place order
-vpc.orders -> vpc.db: write
-vpc.orders -> vpc.pay: charge
+web -> vpc.orders
+mobile -> vpc.orders
+vpc.orders -> vpc.db: writes
 vpc.orders -> vpc.bus: OrderPlaced
-vpc.bus -> vpc.worker: consume
+vpc.orders -> vpc.pay: charges
+vpc.bus -> vpc.worker: consumes
+vpc.db -> erp: nightly export
+vpc.worker -> carrier: books shipment
 vpc.pay -> stripe: HTTPS
-vpc.pay -> vpc.dlq: on failure
-vpc.worker -> erp: nightly sync

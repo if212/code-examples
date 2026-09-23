@@ -1,34 +1,60 @@
 # C4 container template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
 ...@neutral-theme
 
-# One C4 level per diagram (this is the container level). Neutral theme,
-# never theme 303. Labels: "Name\n[Type: Technology]\nDescription".
+# One C4 level per diagram (container level); neutral theme, never theme 303.
+# Elements "Name\n[Type: Technology]" (tech: line 2 in 14px slate). A third
+# line (what it does) only when the request says it: on one row it cost 42px.
+# Technology not given: "[Container]", and say so under Assumed.
 direction: down
 
-customer: "Customer\n[Person]\nBuys products online" {shape: c4-person; class: actor}
-staff: "Staff\n[Person]\nManages the catalog" {shape: c4-person; class: actor}
-
-# System boundary: title in the bottom corner that no edge leaves through.
-shop: "Online shop [Software System]" {
-  class: boundary
-  label.near: bottom-right
-  web: "Web app\n[Container: React]\nStorefront in the browser" {class: service}
-  admin: "Admin app\n[Container: React]\nCatalog and orders" {class: service}
-  # Wide enough to sit under both callers: both edges drop in straight.
-  api: "API\n[Container: Go]\nCart, checkout, orders" {class: [service; focal]; width: 300}
-  # The container that calls an external system sits in the last row,
-  # so that edge leaves the boundary without passing another container.
-  worker: "Worker\n[Container: Go]\nPayments, receipts" {class: service}
-  db: "Database\n[Container: Postgres]\nProducts, orders" {class: datastore}
+# Geometry only: one size per element kind keeps every row even.
+classes: {
+  person: {shape: c4-person; width: 120; height: 90}
+  box: {width: 150; height: 56}
 }
 
-stripe: "Stripe\n[Software System]\nCard payments" {class: [service; external]}
+# C4 names itself: a title, and a key of the element kinds, then the line.
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    c: container {class: [service; box]}
+    x: external system {class: [service; external]}
+    d: database {class: datastore}
+    a -> b: relationship {class: dep}
+  }
+}
+title: "Container diagram: Online shop" {class: title}
 
-# Relationships: "verb\n[protocol]" - two short lines stay clear of neighbours.
-customer -> shop.web: "Uses\n[HTTPS]" {class: flow}
-staff -> shop.admin: "Uses\n[HTTPS]" {class: dep}
-shop.web -> shop.api: "Calls\n[JSON/HTTPS]" {class: flow}
-shop.admin -> shop.api: "Calls\n[JSON/HTTPS]" {class: dep}
-shop.api -> shop.worker: "Queues jobs\n[AMQP]" {class: async}
-shop.api -> shop.db: "Reads, writes\n[SQL]" {class: dep}
-shop.worker -> stripe: "Charges cards\n[HTTPS]" {class: dep}
+# Row 1: the people, and the external system the worker calls (lifted beside
+# them by `stripe <- shop.worker`: no rank under the boundary, no void).
+customer: "Customer\n[Person]" {class: [actor; tech; person]}
+staff: "Staff\n[Person]" {class: [actor; tech; person]}
+stripe: "Stripe\n[Software System]" {class: [service; tech; external; box]}
+
+# The system under review is the boundary, not a focal node: its title
+# bottom-left (every edge enters from above), one line, casing kept.
+shop: "Online shop [Software System]" {
+  class: boundary
+  label.near: bottom-left
+  style.text-transform: none
+  web: "Web app\n[Container: React]" {class: [service; tech; box]}
+  admin: "Admin app\n[Container: React]" {class: [service; tech; box]}
+  # Written `shop.worker <- shop.api`, the worker joins the apps' row.
+  worker: "Worker\n[Container: Go]" {class: [service; tech; box]}
+  # Focal because the request says "Focus on the API". The hub spans the
+  # three columns above it, so its three edges drop straight.
+  api: "API\n[Container: Go]" {class: [service; tech; box; focal]; width: 420}
+  # Wider than one column, so the last row is not a void (190: I-sparse).
+  db: "Database\n[Container: Postgres]" {class: [datastore; tech]; width: 300; height: 107}
+}
+
+# "Verb [protocol]" on one line, in the request's words; one class for all
+# (C4 draws every relationship alike; the protocol says async).
+customer -> shop.web: "Uses [HTTPS]" {class: dep}
+staff -> shop.admin: "Uses [HTTPS]" {class: dep}
+shop.web -> shop.api: "Calls [JSON/HTTPS]" {class: dep}
+shop.admin -> shop.api: "Calls [JSON/HTTPS]" {class: dep}
+shop.worker <- shop.api: "Queues jobs [AMQP]" {class: dep}
+stripe <- shop.worker: "Charges cards [HTTPS]" {class: dep}
+shop.api -> shop.db: "Reads, writes [SQL]" {class: dep}

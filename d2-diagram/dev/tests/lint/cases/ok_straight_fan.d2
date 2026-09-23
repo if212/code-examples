@@ -1,0 +1,15 @@
+# expect-clean: E- W-fanout
+# A wide source over its callees: every fan edge drops straight down from the source's bottom side.
+# That is the fix for a comb, so W-fanout stays quiet (it fires only when 2+ fan edges bend).
+...@neutral-theme
+direction: down
+classes: {tier: {width: 130}}
+gateway: API gateway {class: service; width: 600}
+auth: Auth {class: [service; tier]}
+catalog: Catalog {class: [service; tier]}
+orders: Orders {class: [service; tier]}
+payments: Payments {class: [service; tier]}
+gateway -> auth: {class: dep}
+gateway -> catalog: {class: dep}
+gateway -> orders: {class: dep}
+gateway -> payments: {class: dep}

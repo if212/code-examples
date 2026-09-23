@@ -1,0 +1,10 @@
+# the same view, named by its title node (not inventory)
+...@mini-theme
+direction: down
+title: "Container diagram: Shop" {class: title}
+customer: Customer {class: actor}
+shop: Shop {
+  class: boundary
+  web: Web App {class: service}
+}
+customer -> shop.web: Uses {class: dep}

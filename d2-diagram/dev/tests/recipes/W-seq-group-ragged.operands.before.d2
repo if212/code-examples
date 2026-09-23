@@ -1,0 +1,23 @@
+# Before: the failure operand ends in a note on the Order lifeline, the success operand does not:
+# the two operands of one alt start at different x.
+...@neutral-theme
+shape: sequence_diagram
+classes: {p: {width: 170}}
+order: Order service {class: [actor; p]}
+payment: Payment service {class: [actor; p]}
+inventory: Inventory service {class: [actor; p]}
+order -> payment: "1. Charge card" {class: dep}
+order -> inventory: "2. Reserve stock" {class: dep}
+alt: "alt" {
+  class: zone
+  ok: "[stock reserved]" {
+    class: zone-green
+    inventory -> order: "3. stock reserved" {class: secondary}
+  }
+  failed: "[reservation fails]" {
+    class: zone-amber
+    inventory -> order: "3. reservation failed" {class: failure}
+    order -> payment: "4. compensate: refund charge" {class: failure}
+    order.cancel: Cancels order {class: [note; compact]}
+  }
+}

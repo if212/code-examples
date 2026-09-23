@@ -1,0 +1,18 @@
+# Before: Orders is painted blue as "the busiest service" and the web client's path is flow,
+# but the request singles nothing out: the reader looks for a reason that is not there.
+...@neutral-theme
+direction: down
+classes: {col: {width: 150}; span: {width: 320}}
+web: Web client {class: [actor; col]}
+mobile: Mobile client {class: [actor; col]}
+gateway: API gateway {class: [service; span]}
+orders: Orders {class: [service; col; focal]}
+catalog: Catalog {class: [service; col]}
+orders_db: "Orders DB\nPostgres" {class: [datastore; col]}
+catalog_db: "Catalog DB\nPostgres" {class: [datastore; col]}
+web -> gateway: {class: flow}
+mobile -> gateway: {class: dep}
+gateway -> orders: {class: flow}
+gateway -> catalog: {class: dep}
+orders -> orders_db: {class: dep}
+catalog -> catalog_db: {class: dep}

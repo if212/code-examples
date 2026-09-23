@@ -1,85 +1,91 @@
 # Playbook: state machines
 
-Use for the lifecycle of one thing: an order, a deployment, a subscription,
-a pull request, a ticket. Not for a process with decisions and parallel steps
-(`playbooks/flowchart.md`) or messages between systems
-(`playbooks/sequence.md`). Template: `templates/state.d2` (initial dot,
-a composite state, two final states coloured by outcome).
+The lifecycle of one thing: an order, a deployment, a subscription, a pull request, a
+ticket. Not a process with decisions and parallel steps (`playbooks/flowchart.md`) or
+messages between systems (`playbooks/sequence.md`). Template: `templates/state.d2` (an
+order: initial dot, a straight main path, one exit per state in a side column, keyed).
 
 ## Skeleton
 
 | Part | How |
 |---|---|
-| Direction | `direction: down`; the main path is the spine |
+| Direction | `direction: down`; the main path is one straight spine |
 | Initial state | `start: "" {class: dot}`: one filled dot, no label |
-| States | `state` boxes, named as conditions: `Queued`, `In review`, `Paid` |
-| The state that matters | `[state; focal]` |
-| Composite state | a `zone` holding its substates |
-| Final states | `{class: [success; terminal]; style.double-border: true}`; `danger` for failure outcomes, `muted` for neutral ones |
-| Transitions | main path `flow`; failure exits `failure`; others `dep` |
+| States | `[state; compact; box]`, one local `box: {width: 140}`; named as conditions: `Pending`, `In review` |
+| Final states | `[<outcome>; compact; box; terminal]` + `style.double-border: true` (rule 7) |
+| Transitions | the main path `flow` when the request writes it as a chain; exits `dep`, failures `failure` |
+| Balance | a `ghost` on the far side of every state with a side exit (rule 3) |
+| Key | `vars.d2-legend`: the line classes, plus the dot and the double border when the request asks to mark them (rule 8) |
 
-## Budget at 800px
+## Budget at 800px (measured on the template)
 
-A state machine is narrow: the template (initial dot, 3 states, 2 finals) is
-270x761px, and each further state with a labelled transition adds about
-160px. About seven states on the spine fill the 1280px height budget; past
-that, split into a composite overview plus one diagram per composite.
+A compact state and its labelled transition take about 146px of height: the template
+(dot, 3 states on the spine, 4 finals) is 630 x 598 with its key beside it. About 7
+states on the spine reach 1000px; past that, draw an overview with composite states and
+one diagram per composite.
 
 ## Notation checklist
 
-- [ ] Exactly one initial dot, no label (`S-state-start`).
-- [ ] Every state reachable from it (`S-unreachable`).
-- [ ] Nothing leaves a final state (`S-end-has-exit`).
+- [ ] Exactly one initial dot, no label (`S-state-start`); every state reachable
+      (`S-unreachable`); nothing leaves a final state (`S-end-has-exit`).
 - [ ] Every transition labelled with its event; guards in brackets, quoted.
-- [ ] Outcomes readable by colour AND by name (`Live`, `Failed`).
+- [ ] Outcomes readable by color AND by name (`Delivered`, `Cancelled`).
+- [ ] `flow` only on a chain the request writes (`workflows/brief.md` section 3); one
+      `focal` state at most, and only when the request highlights it.
 
 ## Rules
 
 ### 1. Initial dot without a label, finals as double-bordered pills
 
+A labelled `start` or a plain box for an end is improvised notation. The modifier goes
+before `terminal` (`[success; compact; box; terminal]`), or the pill turns back into a
+box; the pill's inner border is concentric, a box's is not.
+
+### 2. Main path first, as flow
+
+ELK ranks by the edges; declaration order breaks ties: which sibling goes left, which
+branch is the spine (`reference/layout.md` section 3). Declare the states top to bottom,
+then each state's transitions: the main-path one first, its exit after it.
+
+### 3. A straight spine: one ghost across every side exit
+
+ELK centres a state between its two successors, so the spine steps sideways at every
+state with an exit (40-80px, `W-dogleg`). Give each such state a theme `ghost` on the
+far side and label its edge like the main-path one: the next state is then the middle
+successor and stays on the axis. One ghost balances a 2-way fork; a ghost is as tall as
+its rank-mates (48 beside `compact` states: `reference/design-system.md` section 7).
+
 ```d2
 # cwd: ../templates
 ...@neutral-theme
 direction: down
+classes: {box: {width: 140}}
 start: "" {class: dot}
-pending: Pending {class: state}
-paid: Paid {class: [success; terminal]; style.double-border: true}
-expired: Expired {class: [muted; terminal]; style.double-border: true}
+pending: Pending {class: [state; compact; box]}
+paid: Paid {class: [success; compact; box; terminal]; style.double-border: true}
+expired: Expired {class: [compact; box; terminal]; style.double-border: true}
+g1: "" {class: ghost}
 start -> pending: {class: flow}
+pending -> g1: pay {class: ghost}
 pending -> paid: pay {class: flow}
 pending -> expired: "timeout [15 min]" {class: dep}
 ```
 
-A labelled `start` or a plain box for the end is improvised notation. The
-modifier goes before `terminal` (`[success; terminal]`), or the pill turns
-back into a box. The pill's inner border is concentric; a box's is not.
+### 4. Exits: one side column, solid, in the order they happen
 
-### 2. Main path first, as flow
-
-Declare the states top to bottom, then the main-path transitions (`flow`),
-then the exits. ELK ranks in declaration order.
-
-### 3. Shared exits: one transition out of a composite state
-
-When several states can fail, cancel or time out the same way, put them in a
-`zone` and draw ONE transition from the zone (the template's `active ->
-failed: any step fails`). The spine stays straight. Measured on an order
-lifecycle with its own exit from each state: ELK centres every branching
-state between its two successors, so the spine stepped sideways by 40-80px
-at every branching state.
-
-### 4. Other exits: one side column, main path unbroken
-
-Exits that belong to one state only sit to the right of the spine, in the
-order they happen. Keep every exit dashed (`failure` or `dep`) and every
-main-path hop solid blue, so the path stays readable even when the spine
-steps sideways.
+Exits sit right of the spine in the order they happen, each final one rank below the
+state it leaves: the column fills rank by rank, beside the key. Two exits into one final
+share it (`paid -> refunded`, `shipped -> refunded`); that final then drops to the lower
+source's rank and leaves a gap in the column. A neutral exit is `dep` (solid slate), a
+failure `failure` (red, dashed); the main path stays the only blue line. d2check moves an
+exit's label off its bend. When several states fail the same way, put them in a `zone`
+and draw ONE transition from the zone (`active -> failed: any step fails`).
 
 ### 5. Labels are events; guards are quoted
 
-`pay`, `ship`, `health checks pass`: the event that fires the transition.
-UML form `"event [guard] / action"`; quote it, because an unquoted `[` is a
-syntax error. The initial transition carries no label.
+`pay`, `ship`, `health checks pass`: the event that fires the transition. UML form
+`"event [guard] / action"`; quote it, because an unquoted `[` is a syntax error. The
+initial transition carries no label.
 
 ```d2-bad
 # expect: unexpected text
@@ -88,23 +94,25 @@ pending -> paid: pay [card ok]
 
 ### 6. Loops: back two ranks with `<-`, no neighbour 2-cycles
 
-A pair of opposite transitions between neighbours puts both labels side by
-side at one height: `submit` and `request changes` read as one phrase.
-Route rework back to a state two ranks up and write it with `<-`
-(`draft <- testing: tests fail`): it runs up the side, clear of the spine.
-The `->` form draws the same line but trips `W-long-edge`. A labelled
-self-transition (`pending -> pending: retry`) always sets its label on the
-loop (`W-label-on-bend`, no recipe clears it): use one only when staying put
-is the point, and name it in one word.
+A pair of opposite transitions between neighbours puts both labels side by side at one
+height: `submit` and `request changes` read as one phrase. Route rework back to a state
+two ranks up and write it with `<-` (`draft <- testing: tests fail`): it runs up the side,
+clear of the spine; the `->` form draws the same line and trips `W-long-edge`. A labelled
+self-transition sets its label on the loop: use one only when staying put is the point,
+named in one word.
 
-### 7. Colour by outcome, not by taste
+### 7. Finals: full weight, colored by outcome
 
-Green (`success`) only for the good end, red (`danger`) only for failure,
-`muted` for neutral ends such as `Expired` or `Cancelled`. One `focal` state
-at most.
+A good end is `success` (green), a bad end `danger` (red), a neutral end (`Cancelled`,
+`Refunded`, `Expired`) a plain `terminal`: white, slate outline, bold, as heavy as the
+states. `muted` is only for a state the request does not name (inferred) or leaves out of
+scope: never for an outcome the reader must notice.
 
-### 8. Legend only when colour carries more than two meanings
+### 8. The key: line classes, and the markers when the request asks
 
-The outcome colours and the dashed exits explain themselves through their
-labels. Add a `vars.d2-legend` (`reference/design-system.md` section 8) only
-when a third encoding appears, and check the width budget first.
+Two line classes (`flow`, `dep`) already need a key (`S-key`): one `vars.d2-legend` line
+each, named by meaning (`main path`, `side exit`). When the request asks to mark the start
+and final states, the same legend shows the dot (`s: start {class: dot}`) and names the
+double border its swatch cannot show (`f: final state (double border) {class: [compact;
+box; terminal]; style.double-border: true}`), as in the template. d2check restyles and
+places it.

@@ -7,32 +7,31 @@ type: architecture
 reader: GitHub README
 width: 800
 direction: down
-focus: services.orders
-out: admin UI, observability, CI/CD
+focus: services.orders  # "Highlight Orders"
+out: admin UI, observability, CI/CD, languages of the services (not given)
 nodes:
-  web: Web app\nReact
-  mobile: Mobile app\niOS, Android
+  web: Web client
+  mobile: Mobile client
   gateway: API gateway\nKong
+  events: Order events\nKafka {shape: queue}
   services: Services
-  services.catalog: Catalog\nGo
-  services.orders: Orders\nJava
-  services.notify: Notifications\nPython
-  services.payments: Payments\nNode.js
-  data: Data
+  services.payments: Payments
+  services.catalog: Catalog
+  services.orders: Orders
+  services.notify: Notifications
+  data: Data and third parties
+  data.stripe: Stripe\ncard payments {external}
   data.db: Shop DB\nPostgres {shape: cylinder}
-  data.events: Events\nKafka {shape: queue}
-  saas: Third party
-  saas.sendgrid: SendGrid {external}
-  saas.stripe: Stripe {external}
+  data.sendgrid: SendGrid\nemail {external}
 edges:
   web -> gateway
   mobile -> gateway
-  gateway -> services.orders: REST
-  gateway -> services.catalog: REST
   gateway -> services.payments: REST
-  services.orders -> data.db
-  services.catalog -> data.db
-  services.orders -> data.events {dashed}
-  data.events -> services.notify {dashed}
-  services.notify -> saas.sendgrid
-  services.payments -> saas.stripe
+  gateway -> services.catalog: REST
+  gateway -> services.orders: REST
+  services.orders -> events: publishes {dashed}
+  events -> services.notify: consumes {dashed}
+  services.payments -> data.stripe: charges
+  services.catalog -> data.db: uses
+  services.orders -> data.db: uses
+  services.notify -> data.sendgrid: sends email

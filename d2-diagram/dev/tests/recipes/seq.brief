@@ -5,7 +5,7 @@ type: sequence
 reader: engineers reading a design doc
 width: 800
 direction: down
-focus: auth
+focus: auth  # "Focus on the auth server"
 out: MFA, password reset
 nodes:
   app: Mobile app

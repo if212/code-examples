@@ -1,0 +1,29 @@
+# expect-clean: E- W-long-edge
+# The sink recipe of the round-3 Kubernetes review (k8s-b): `pg <- cluster.ns.api` lifts the external
+# Postgres to the top rank, so its one edge climbs straight out of the cluster. A long edge to a lone
+# node is the fix here, not the fault: W-long-edge fires only when such an edge needs 2+ bends.
+...@neutral-theme
+direction: down
+internet: Internet {class: actor}
+lb: Cloud load balancer {class: service}
+cluster: Cluster {
+  class: zone
+  ingress: Ingress controller {class: service}
+  ns: Namespace {
+    class: boundary
+    web: web frontend {class: service}
+    api: api Deployment {class: service; width: 360}
+    config: ConfigMap {class: service}
+    secret: Secret {class: service}
+    pvc: PVC {class: service}
+  }
+}
+pg: "Postgres\nmanaged, external" {class: [datastore; external]}
+internet -> lb: HTTPS {class: dep}
+lb -> cluster.ingress: {class: dep}
+cluster.ingress -> cluster.ns.web: {class: dep}
+cluster.ingress -> cluster.ns.api: {class: dep}
+cluster.ns.api -> cluster.ns.config: reads {class: dep}
+cluster.ns.api -> cluster.ns.secret: reads {class: dep}
+cluster.ns.api -> cluster.ns.pvc: mounts {class: dep}
+pg <- cluster.ns.api: ":5432" {class: dep}

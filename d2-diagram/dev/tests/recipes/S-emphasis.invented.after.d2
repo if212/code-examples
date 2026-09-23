@@ -1,0 +1,18 @@
+# After: focus none: every node keeps its base role and peers share one class and one edge
+# class (the gateway spans both services, so every edge drops straight).
+...@neutral-theme
+direction: down
+classes: {col: {width: 150}; span: {width: 320}}
+web: Web client {class: [actor; col]}
+mobile: Mobile client {class: [actor; col]}
+gateway: API gateway {class: [service; span]}
+orders: Orders {class: [service; col]}
+catalog: Catalog {class: [service; col]}
+orders_db: "Orders DB\nPostgres" {class: [datastore; col]}
+catalog_db: "Catalog DB\nPostgres" {class: [datastore; col]}
+web -> gateway: {class: dep}
+mobile -> gateway: {class: dep}
+gateway -> orders: {class: dep}
+gateway -> catalog: {class: dep}
+orders -> orders_db: {class: dep}
+catalog -> catalog_db: {class: dep}

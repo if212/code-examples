@@ -1,4 +1,12 @@
 ...@mini-theme
+vars: {
+  d2-legend: {
+    h1: {style.opacity: 0}
+    h2: {style.opacity: 0}
+    h1 -> h2: happy path {class: flow}
+    h1 -> h2: fails {class: failure}
+  }
+}
 direction: down
 start: "" {class: dot}
 queued: Queued {class: service}

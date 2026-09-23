@@ -14,9 +14,12 @@ Rules (--check):
   decorative stroke      exempt: a container with a tinted fill (the tint and the
                          title mark the region), a node whose fill alone reaches
                          3.0:1, and any class marked with a `# decorative` comment
+  colors                 #RGB, #RRGGBB, rgb(), the 148 CSS names (silver) and ${vars};
+                         any other value set on a class is a failure (it cannot be
+                         audited); transparent and none mean no color
 Works on `d2 fmt` output in both the compact and the expanded layout.
 
-exit codes (shared by every script of the skill):
+exit codes (the skill's convention; semcheck.py differs):
   0   pass (every pair meets its minimum)
   1   hard failure: a theme file cannot be read
   2   findings: a contrast failure (--check), or a pair below 4.5:1
@@ -29,18 +32,32 @@ import os
 import re
 import sys
 
+sys.dont_write_bytecode = True  # keep the skill's scripts/ free of __pycache__
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:  # one table of the 148 CSS named colours, shared with d2lint's E-contrast
+    from d2lint import CSS_NAMED
+except ImportError:  # contrast.py copied alone: white and black still work
+    CSS_NAMED = {'white': 'FFFFFF', 'black': '000000'}
+
 THEME0 = {  # d2 theme 0, used for codes a theme file does not override
     'N1': '#0A0F25', 'N2': '#676C7E', 'N3': '#9499AB', 'N4': '#CFD2DD', 'N5': '#DEE1EB',
     'N6': '#EEF1F8', 'N7': '#FFFFFF', 'B1': '#0D32B2', 'B2': '#0D32B2', 'B3': '#E3E9FD',
     'B4': '#E3E9FD', 'B5': '#EDF0FD', 'B6': '#F7F8FE', 'AA2': '#4A6FF3', 'AA4': '#EDF0FD',
     'AA5': '#F7F8FE', 'AB4': '#EDF0FD', 'AB5': '#F7F8FE'}
-NAMED = {'white': '#FFFFFF', 'black': '#000000'}
+NAMED = {k: '#' + v for k, v in CSS_NAMED.items()}
+NO_COLOR = ('transparent', 'none', '')
 EDGE_HINTS = ('source-arrowhead', 'target-arrowhead')
 
 
 def hexcolor(v):
-    v = NAMED.get(str(v).lower(), v)
-    if isinstance(v, str) and re.fullmatch(r'#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?', v):
+    if not isinstance(v, str):
+        return None
+    v = v.strip()
+    v = NAMED.get(v.lower(), v)
+    m = re.fullmatch(r'rgba?\(\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*[, ]\s*(\d{1,3})\s*([,/]\s*[\d.]+%?\s*)?\)', v)
+    if m and all(int(g) <= 255 for g in m.groups()[:3]):
+        return '#' + ''.join('%02X' % int(g) for g in m.groups()[:3])
+    if re.fullmatch(r'#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?', v):
         v = v.upper()
         return '#' + ''.join(c * 2 for c in v[1:]) if len(v) == 4 else v
     return None
@@ -151,8 +168,9 @@ def kind_of(name, cls):
         return 'edge'
     label = cls.get('label', {})
     if (isinstance(label, dict) and 'near' in label) or 'text-transform' in style \
-            or re.search(r'zone|boundary|container', name):
-        return 'container'
+            or re.search(r'zone|boundary|container', name) or name == 'key' \
+            or any(k in cls for k in ('grid-rows', 'grid-columns')):
+        return 'container'  # key: the grid box around the chips
     return 'node'
 
 
@@ -203,6 +221,12 @@ def check(path):
         fill, stroke = hexcolor(st(cls, 'fill')), hexcolor(st(cls, 'stroke'))
         text = hexcolor(st(cls, 'font-color'))
         out = []
+        # a color that is set but unreadable would otherwise skip its check: a false PASS
+        for key, role in (('font-color', 'text'), ('fill', 'fill'), ('stroke', 'stroke')):
+            raw = st(cls, key)
+            if isinstance(raw, str) and raw.strip().lower() not in NO_COLOR and not hexcolor(raw):
+                fails += 1
+                out.append(f"{role} '{raw}' cannot be audited - use #RRGGBB  FAIL")
         if text:
             bgs = [('fill', fill)] if fill else grounds
             out.append(judge('text', text, bgs, 4.5))
@@ -272,9 +296,9 @@ def main(argv):
         return 64
     low = False
     for fg, bg in zip(argv[::2], argv[1::2]):
-        a, b = hexcolor(fg if fg.startswith('#') else '#' + fg), hexcolor(bg if bg.startswith('#') else '#' + bg)
+        a, b = (hexcolor(c) or hexcolor('#' + c) for c in (fg, bg))
         if not a or not b:
-            print(f'contrast.py: not a hex color: {fg if not a else bg} (use RRGGBB or #RRGGBB)', file=sys.stderr)
+            print(f'contrast.py: not a color: {fg if not a else bg} (use RRGGBB, #RRGGBB or a CSS name)', file=sys.stderr)
             return 64
         r = ratio(a, b)
         low = low or r < 4.5

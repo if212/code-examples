@@ -1,20 +1,30 @@
 # After: the initial state is a bare dot: class dot, label "".
 # brief: state.brief
+# allow: I-sparse
 ...@neutral-theme
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: main path {class: flow}
+    a -> b: failure {class: failure}
+  }
+}
 direction: down
+classes: {s: {width: 140}}
 
 # Initial state: a dot with no label.
 start: "" {class: dot}
-queued: Queued {class: state}
+queued: Queued {class: [state; compact; s]}
 # Composite state: its substates run inside one zone.
 active: In progress {
   class: zone
-  building: Building {class: state}
-  deploying: Deploying {class: [state; focal]}
+  building: Building {class: [state; compact; s]}
+  deploying: Deploying {class: [state; compact; s; focal]}
 }
 # Final states: terminal + double border, coloured by outcome.
-live: Live {class: [success; terminal]; style.double-border: true}
-failed: Failed {class: [danger; terminal]; style.double-border: true}
+live: Live {class: [success; compact; s; terminal]; style.double-border: true}
+failed: Failed {class: [danger; compact; s; terminal]; style.double-border: true}
 
 # Main path first, as flow. Labels are events; quote them when they hold
 # a guard: "start [runner free]".
@@ -22,5 +32,7 @@ start -> queued: {class: flow}
 queued -> active.building: "start [runner free]" {class: flow}
 active.building -> active.deploying: build passes {class: flow}
 active.deploying -> live: checks pass {class: flow}
+active.deploying -> g1: checks pass {class: ghost}
 # One transition out of the composite state covers every state inside it.
 active -> failed: any step fails {class: failure}
+g1: "" {class: ghost}

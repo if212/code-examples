@@ -1,0 +1,13 @@
+# After: the group is a plain zone; the focal node is the only blue thing.
+...@neutral-theme
+direction: right
+gateway: API gateway {class: service}
+orders: Orders {class: service}
+pay: Payments {
+  class: zone
+  api: Payments API {class: [service; focal]}
+  ledger: "Ledger\nPostgres" {class: datastore}
+  api -> ledger: {class: dep}
+}
+gateway -> orders: {class: dep}
+gateway -> pay.api: {class: dep}

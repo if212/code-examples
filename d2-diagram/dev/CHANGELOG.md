@@ -1,5 +1,87 @@
 # Changelog
 
+## 2.1.0 - 2026-09-23: round 4 fix wave
+
+From the round-3 evidence (10 benchmark requests judged, 5 review lenses): emphasis
+is earned, every encoding has a key, the checker no longer calls an unfinished
+picture clean, and the size budget fits a doc column.
+
+Workflow
+- Focus is `none` unless the request asks for emphasis; any other focus quotes the
+  request words (`focus: api  # "Focus on the API"`, Snowflake `# brand`). `flow`
+  marks one described path; peers share one class (workflows/brief.md section 3).
+- A colour, dash or weight that means something gets a key: `vars.d2-legend` for
+  lines, a `key` row of `chip`s for statuses, a `title` plus key for C4.
+- Stop rule: no W- or I-sparse ships unless its recipe was tried in a render cycle
+  and failed; `Open:` names the code, the recipe and why. The "honest shape" escape
+  hatches are gone; the structure check bans them.
+- Labels are English ASCII whatever the user's language, comments included; the
+  reply follows the user's language (a glossary when other labels were asked for).
+- Report: `Reviewed:` without the doubled prefix, `Checks:` from d2check's
+  `checks:` line, a `Left out:` line; default location `docs/<name>` when docs/
+  exists; experiments as `D2W/<name>-exp.d2`; the brand swap replaces the import line.
+- route.md: one-picture exception to the offline/online split, named notations
+  without a row (use case, fishbone, activity, component), Chinese "architecture
+  diagram" genres, DFD without trust zones, keyword traps, notation-clash defaults,
+  one ASK/SPLIT policy for all docs.
+
+Recipes (workflows/review-and-fix.md, every one proven by a before/after pair)
+- New codes: W-dogleg, W-label-on-lifeline, S-key, S-src-direction.
+- Rewritten around measured levers: W-tall (2x2 flowchart fold: a 10-rank CI/CD
+  550x1263 -> 754x657; `db <- api` lift 610x1034 -> 680x834; sequence and state
+  budgets), W-aspect (compact spine, ghosts, side column: 356x779 -> 395x599),
+  W-long-edge (`sink <- caller`: 647x941 -> 557x721), W-fanout (a source as wide
+  as the row it feeds: a straight fan), I-sparse (container fill),
+  W-sibling-size (widths), W-seq-group-ragged (operands end alike), S-emphasis
+  (invented, ungrounded, focal in zone-blue), S-src-icon-family (k8s + lucide at
+  326CE5 when icons are asked), S-src-class (two themes; a list over a single
+  class).
+- dev/tests/recipes: 131 pairs. The after file of each new or rewritten W- recipe
+  renders clean, or its comment gives the reason for the code its `# allow:` line
+  keeps; no note over an activation bar, no focal colour without a request.
+- Rubric rows for invented emphasis, missing keys, doglegs and labels far from
+  their decision.
+
+Toolchain
+- `scripts/svgpost.py` (new): d2check's post step moves labels off bends, borders
+  and foreign lifelines, restyles and places the native legend, draws table rules
+  and headers in the design system, sets tech lines at 14px slate.
+- d2lint: the doc budget (target 1.125x, W-tall past 1.25x, aspect 0.6-2.5 with
+  size guards; slides 0.55x, 1.2-3.2), W-dogleg, W-label-on-lifeline, I-sparse
+  for half-empty containers, W-sibling-size widths, per-operand
+  W-seq-group-ragged; fewer false alarms (W-long-edge needs 2+ bends, W-fanout
+  a bent comb, E-label-overflow on the front card of `style.multiple`).
+- semcheck: S-emphasis errors for invented or ungrounded emphasis, S-key,
+  S-src-direction, two themes, list over a single class, request terms split on
+  `/`, a note for non-Latin requests.
+
+Design
+- Theme classes `ghost compact tech title chip key` in both themes; lighter
+  sequence chrome (`actor`), constraint tags and class types in slate (AA2).
+
+Templates and playbooks
+- All 23 templates pass the templates gate at an 800px column: displayed height
+  at most 900 (the tallest was 1226), content aspect 0.6-2.5, and no finding
+  beyond the `# expect:` line of their test brief (gitflow: its diagonal cut and
+  merge lines); a key wherever S-key asks for one, emphasis only where the test
+  request asks. Playbooks carry the per-type levers: the flowchart fold, the
+  sequence row budget and saga variant, the state spine with ghosts, C4 with
+  `db <- api`, pipeline stages as containers, Kubernetes attachments.
+
+Docs and tests
+- reference/layout.md section 9: the budget table and a compaction lever per
+  type; `sink <- caller` and ghost sizing in section 3; approximate figures marked.
+- reference/syntax.md, export.md, icons.md: fact-check corrections (class-set
+  shapes in filters, container sizes are minimums, list-over-list, `data` key,
+  keyword messages, the full env list, the watch pid in D2W, the D6 icon pair).
+- dev/tests/routing: 86 held-out cases (36 Chinese), share-based gate, an EDIT or
+  OUT call scores right whatever template it names.
+- dev/tests/structure: (m) svgpost is shipped, named, called and pre-approved;
+  (n) no escape-hatch wording; (o) the recipe lookup (`-A 28`) reads the longest
+  recipe whole.
+- dev/tests/refs/check_export.sh fills the doc commands with quoted paths, so it
+  passes with a TMPDIR that has spaces.
+
 ## 2.0.0 - 2026-09-23: rewrite
 
 The skill was rebuilt around one idea: ship only what was looked at, at the

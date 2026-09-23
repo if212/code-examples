@@ -1,5 +1,13 @@
 # invisible balancing children (reference/layout.md section 3): not part of the graph
 ...@mini-theme
+vars: {
+  d2-legend: {
+    h1: {style.opacity: 0}
+    h2: {style.opacity: 0}
+    h1 -> h2: lifecycle {class: flow}
+    h1 -> h2: exit {class: dep}
+  }
+}
 classes: {ghost: {style.opacity: 0}}
 start: "" {class: dot}
 pending: Pending {class: service}

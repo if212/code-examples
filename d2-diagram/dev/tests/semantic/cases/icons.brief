@@ -1,9 +1,9 @@
-# request: "An API server that stores data in Postgres."
+# request: "An API server that stores data in Postgres. Highlight the API server."
 type: architecture
 reader: test
 width: 800
 direction: down
-focus: api
+focus: api  # "Highlight the API server"
 out: -
 nodes:
   api: API server

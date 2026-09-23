@@ -9,7 +9,7 @@ type: stack
 reader: new engineers reading the onboarding doc
 width: 800
 direction: down   # top = closest to the user
-focus: stack.ai.gateway
+focus: stack.ai.gateway  # "Highlight the LLM gateway"
 out: calls between layers (architecture view), environments, costs
 nodes:
   stack: ""

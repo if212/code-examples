@@ -2,17 +2,29 @@
 # brief: flow.brief
 # expect: S-edge-label
 ...@neutral-theme
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: main path {class: flow}
+    a -> b: failure {class: failure}
+    a -> b: success {class: ok}
+  }
+}
 direction: down
+classes: {end: {width: 105}}
 push: Push {class: terminal}
 build: Build and test {class: service}
 gate: Tests pass? {class: [decision; focal]}
 deploy: Deploy to prod {class: service}
 notify: Notify team {class: service}
-live: Live {class: [success; terminal]}
-blocked: Blocked {class: [danger; terminal]}
+live: Live {class: [success; end; terminal]}
+blocked: Blocked {class: [danger; end; terminal]}
 push -> build: {class: flow}
 build -> gate: {class: flow}
-gate -> deploy: {class: flow}
 gate -> notify: {class: failure}
+gate -> deploy: {class: flow}
+gate -> g1: {class: ghost}
 deploy -> live: {class: ok}
 notify -> blocked: {class: failure}
+g1: "" {class: ghost; height: 66}

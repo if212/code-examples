@@ -2,18 +2,19 @@
 ...@neutral-theme
 
 # Dependents above their dependencies, one node per package, declared tier by
-# tier (playbooks/hierarchy.md). No tier zones: they only cost room here
-# (550x622 vs 450x422).
+# tier (playbooks/hierarchy.md): tiers come from the edges, declaration order
+# only sorts each tier. No tier zones: they cost room (550x622 vs 450x422).
 direction: down
 
-# Geometry only: one box size for every package; pin hides the layout edges.
+# Geometry only: one box size for every package. The theme's ghost class
+# hides the two layout edges below.
 classes: {
   pkg: {width: 120; height: 48}
-  pin: {style.opacity: 0}
 }
 
-# The caption states what an arrow means (and the red). Hidden edges to each
-# top node keep it above them; without them it sat beside the apps (744px).
+# The caption is the key: what an arrow and red mean (a caption with "="
+# counts as one). Hidden edges to each top node keep it above them; without
+# them it sat beside the apps (744px).
 caption: "Monorepo: arrow = imports, red = cycle" {class: caption}
 
 web: "apps/web" {class: [service; pkg]}
@@ -26,8 +27,8 @@ billing: billing {class: [service; pkg]}
 users: users {class: [service; pkg]}
 db: db {class: [service; pkg]}
 
-caption -> web: {class: pin}
-caption -> api: {class: pin}
+caption -> web: {class: ghost}
+caption -> api: {class: ghost}
 
 # Two apps that import the same two packages always cross once (23 node
 # orders, 1 crossing each): keep such pairs rare. The one finding is the

@@ -1,14 +1,26 @@
 # Before: Notify team leads nowhere and the brief does not mark it as an end.
 ...@neutral-theme
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: main path {class: flow}
+    a -> b: failure {class: failure}
+    a -> b: success {class: ok}
+  }
+}
 direction: down
+classes: {end: {width: 105}}
 push: Push {class: terminal}
 build: Build and test {class: service}
 gate: Tests pass? {class: [decision; focal]}
 deploy: Deploy to prod {class: service}
 notify: Notify team {class: service}
-live: Live {class: [success; terminal]}
+live: Live {class: [success; end; terminal]}
 push -> build: {class: flow}
 build -> gate: {class: flow}
-gate -> deploy: yes {class: flow}
 gate -> notify: no {class: failure}
+gate -> deploy: yes {class: flow}
+gate -> g1: yes {class: ghost}
 deploy -> live: {class: ok}
+g1: "" {class: ghost; height: 66}

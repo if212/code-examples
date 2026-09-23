@@ -9,13 +9,14 @@ grid-rows: 1
 horizontal-gap: 12
 
 # Geometry only. A grid's gaps are also its padding (default 60px: bands
-# 180px tall). Every band is 516px inside: part width = (516 - (n-1)*12)/n,
-# so 4 parts: 120, 3: 164, 2: 252, and the band edges line up exactly.
+# 180px tall). Every band is 492px inside: part width = (492 - (n-1)*12)/n,
+# so 4 parts: 114, 3: 156, 2: 240, and the band edges line up exactly
+# (scale 0.95; 1.00 needs parts under 106px, narrower than "LLM gateway").
 # Bars: a centred title of about 10 characters (MONITORING: 98 of 112px).
 classes: {
   layer: {grid-rows: 1; horizontal-gap: 12; vertical-gap: 12}
-  p4: {width: 120; height: 60}
-  p3: {width: 164; height: 60}
+  p4: {width: 114; height: 60}
+  p3: {width: 156; height: 60}
   bar: {width: 112; label.near: center-center}
 }
 
@@ -29,30 +30,31 @@ stack: "" {
 
   apps: Apps {
     class: [zone; layer]
-    bot: "Support bot\nSlack" {class: [service; p3]}
-    copilot: "Sales copilot\nSalesforce" {class: [service; p3]}
-    bi: "Dashboards\nLooker" {class: [service; p3]}
+    bot: "Support bot\nSlack" {class: [service; tech; p3]}
+    copilot: "Sales copilot\nSalesforce" {class: [service; tech; p3]}
+    bi: "Dashboards\nLooker" {class: [service; tech; p3]}
   }
-  # The band holding the focus is the only tinted one.
+  # Focal because the request says "Highlight the LLM gateway"; its band
+  # stays a plain zone (a focal part never sits on the blue panel).
   ai: ML and AI {
-    class: [zone-blue; layer]
-    gateway: "LLM gateway\nLiteLLM" {class: [service; p4; focal]}
-    search: "Vectors\npgvector" {class: [service; p4]}
-    features: "Features\nFeast" {class: [service; p4]}
-    registry: "Models\nMLflow" {class: [service; p4]}
+    class: [zone; layer]
+    gateway: "LLM gateway\nLiteLLM" {class: [service; tech; p4; focal]}
+    search: "Vectors\npgvector" {class: [service; tech; p4]}
+    features: "Features\nFeast" {class: [service; tech; p4]}
+    registry: "Models\nMLflow" {class: [service; tech; p4]}
   }
   data: Data {
     class: [zone; layer]
-    ingest: "Ingestion\nFivetran" {class: [service; p4]}
-    transform: "Transform\ndbt" {class: [service; p4]}
-    warehouse: "Warehouse\nSnowflake" {class: [service; p4]}
-    schedule: "Scheduling\nAirflow" {class: [service; p4]}
+    ingest: "Ingestion\nFivetran" {class: [service; tech; p4]}
+    transform: "Transform\ndbt" {class: [service; tech; p4]}
+    warehouse: "Warehouse\nSnowflake" {class: [service; tech; p4]}
+    schedule: "Scheduling\nAirflow" {class: [service; tech; p4]}
   }
   infra: Infrastructure {
     class: [zone; layer]
-    cloud: "Cloud\nAWS" {class: [service; p3]}
-    compute: "Compute\nEKS" {class: [service; p3]}
-    iac: "Provisioning\nTerraform" {class: [service; p3]}
+    cloud: "Cloud\nAWS" {class: [service; tech; p3]}
+    compute: "Compute\nEKS" {class: [service; tech; p3]}
+    iac: "Provisioning\nTerraform" {class: [service; tech; p3]}
   }
 }
 

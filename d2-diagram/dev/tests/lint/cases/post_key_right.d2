@@ -1,0 +1,20 @@
+# post: svgpost
+# expect-clean: E-
+# F2: a narrow diagram keeps its key at the right (canvas + key fit the 800px column): no drop shadow,
+# a paper frame with a 1px ink-300 outline, radius 8, the title KEY and slate item text (test_svgpost.sh).
+...@neutral-theme
+direction: down
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: request {class: dep}
+    a -> b: event {class: async}
+  }
+}
+api: Orders API {class: service}
+bus: Order events {class: queue}
+worker: Email worker {class: service}
+api -> bus: publishes {class: async}
+worker <- bus: consumes {class: async}
+api -> worker: health check {class: dep}

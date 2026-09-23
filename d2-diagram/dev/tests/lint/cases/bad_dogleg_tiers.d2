@@ -1,0 +1,71 @@
+# expect: W-dogleg
+# expect-text: dogleg sideways
+# expect-text: the lower tier does not line up with its callers
+# From the round-3 e-commerce deliverable: the data tier sits left of the services that call it, so
+# three service -> store edges step sideways (58-168px) between the tiers.
+...@neutral-theme
+
+direction: down
+
+# One size per tier (W-sibling-size, W-fanout): services and the gateway span one row.
+classes: {
+  tier: {width: 110; height: 77}
+  low: {width: 100}
+}
+
+# Row 1: clients, main-path client first.
+web: Web client {class: actor}
+mobile: Mobile client {class: actor}
+
+# Row 2: the edge tier; the gateway is as wide as the tier it routes to.
+edge: Edge {
+  class: zone
+  cdn: CDN {class: service; width: 760}
+  gateway: API gateway {class: service; width: 760}
+}
+
+# Row 3: services, each above the store or external it calls;
+# Auth and Cart call nothing below, so they take the row's ends.
+services: Services {
+  class: zone
+  auth: Auth {class: [service; tier]}
+  catalog: Catalog {class: [service; tier]}
+  order: Order {class: [service; tier; focal]}
+  notify: "Notification\nworker" {class: [service; tier]}
+  payment: Payment {class: [service; tier]}
+  cart: Cart {class: [service; tier]}
+}
+
+# Row 4: stores and the event stream beside the third parties.
+data: Data {
+  class: zone
+  catalog_db: "Catalog DB\nPostgres" {class: [datastore; low]}
+  cache: "Cache\nRedis" {class: [datastore; low]}
+  order_db: "Order DB\nPostgres" {class: [datastore; low]}
+  kafka: "Events\nKafka" {class: queue}
+}
+# height = the Data zone's height, so both zones end on one line.
+external: External {
+  class: zone
+  height: 209
+  sendgrid: SendGrid {class: [service; low; external]}
+  stripe: Stripe {class: [service; low; external]}
+}
+
+# Edges: main path first.
+web -> edge.cdn: {class: flow}
+mobile -> edge.cdn: {class: dep}
+edge.cdn -> edge.gateway: {class: flow}
+edge.gateway -> services.order: {class: flow}
+edge.gateway -> services.auth: {class: dep}
+edge.gateway -> services.catalog: {class: dep}
+edge.gateway -> services.payment: {class: dep}
+edge.gateway -> services.cart: {class: dep}
+services.catalog -> data.catalog_db: {class: dep}
+services.catalog -> data.cache: {class: dep}
+services.order -> data.order_db: {class: dep}
+services.order -> data.kafka: {class: async}
+# Async consumer above its broker: `<-` keeps the edge short.
+services.notify <- data.kafka: {class: async}
+services.notify -> external.sendgrid: {class: dep}
+services.payment -> external.stripe: {class: dep}

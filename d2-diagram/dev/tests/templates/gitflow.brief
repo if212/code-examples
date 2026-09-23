@@ -6,8 +6,9 @@ type: gitflow
 reader: contributors reading CONTRIBUTING.md
 width: 800
 direction: right   # time runs right, one row per branch
-focus: git.d1.c -> git.d2.c -> git.d4.c -> git.d5.c -> git.d7.c   # the develop line
+focus: git.d1.c -> git.d2.c -> git.d4.c -> git.d5.c -> git.d7.c   # "we work on develop"
 out: feature branches, CI checks, version bump commits
+# expect: W-diagonal-edge x6 - cut and merge lines run diagonally between branch rows by design
 nodes:
   git: ""
   git.t1: "1.0"

@@ -7,15 +7,18 @@ shown, plus the D2 source to change it later.
 
 Claude does not just write D2 and hope. For every diagram it:
 
-1. writes a short **brief**: who reads it, where (README column, slide), the one
-   thing to highlight, and every box and arrow the request implies;
+1. writes a short **brief**: who reads it, where (README column, slide), what to
+   highlight (only what the request asks for), and every box and arrow the
+   request implies;
 2. starts from a **template** matched to the request (architecture, sequence,
    ERD, state machine, ...) and a **design system** (role classes, one accent
    colour, bundled fonts);
-3. renders with **d2check**, which lints the geometry (text too small at the
-   target width, edges through boxes, labels on bends, crossings), compares the
-   drawing with the brief (missing, reversed or misrouted arrows, a lost
-   highlight), and rasterizes the exact SVG it ships so Claude can look at it;
+3. renders with **d2check**, which moves edge labels off bends and restyles
+   keys and tables, lints the geometry (text too small at the target width,
+   edges through boxes, drifting main paths, towers, dead space), compares the
+   drawing with the brief (missing, reversed or misrouted arrows, a lost or
+   invented highlight, a colour code without a key), and rasterizes the exact
+   SVG it ships so Claude can look at it;
 4. fixes what the checks and its own eyes find, using a catalog of proven
    recipes, and reports honestly how the result was verified.
 
@@ -23,10 +26,11 @@ Claude does not just write D2 and hope. For every diagram it:
 typically lavender boxes, 28px container titles with arrows running through
 them, grey italic edge labels and curved splines, and, when the canvas is wider
 than the column, text shrunk to 7-9px. Through this skill the same content comes
-out as a light, calm card: slate boxes with one blue focus path, small
-uppercase group titles tucked in the corner, upright 14px edge labels, straight
+out as a light, calm card: slate boxes, blue only where the request asks for
+emphasis, a key for every colour or dash that means something, small uppercase
+group titles tucked in the corner, upright 14px edge labels, straight
 orthogonal arrows, and a layout sized for the column, so the smallest text
-stays at 12px or more and the height within 1.6x the width.
+stays at 12px or more and the height within 1.25x the column width.
 
 ## What is in the box
 
@@ -35,7 +39,7 @@ stays at 12px or more and the height within 1.6x the width.
 | Templates | 23 finished starting diagrams, one per question a reader asks ([the catalog](#templates)); [workflows/route.md](workflows/route.md) routes a request to one |
 | Design system | [templates/neutral-theme.d2](templates/neutral-theme.d2): role classes (`service`, `datastore`, `focal`, `zone`, `flow`, ...), light-only, contrast-checked; plus a Snowflake brand theme |
 | Playbooks | Nine sets of per-type rules that make the difference: [playbooks/](playbooks/) |
-| d2check | One command: format, ASCII check, render, lint, semantic check, faithful PNGs, a clear summary with exit codes |
+| d2check | One command: format, ASCII check, render, post-process (labels off bends, keys and tables restyled), lint, semantic check, faithful PNGs, a clear summary with exit codes |
 | Recipes | [workflows/review-and-fix.md](workflows/review-and-fix.md): one proven fix for every finding code, plus d2's compile errors |
 | Icons | A resolver backed by 250 verified icon names ([workflows/icons.md](workflows/icons.md)) and an offline pack of 40 Lucide icons |
 | Fonts | IBM Plex Sans and Geist Mono (Lato for Snowflake), embedded in every SVG |
@@ -214,7 +218,9 @@ routing, from the question a request asks rather than the word it uses (a
 
 Past a template's budget (about 15 boxes at 800px), Claude splits the
 picture into an overview and a detail, or into step boards. Two questions in
-one request become two diagrams.
+one request become two diagrams. Labels are always English: ask in any
+language and the reply comes in yours, with a glossary if you asked for
+labels in another language.
 
 ## Fonts and themes
 

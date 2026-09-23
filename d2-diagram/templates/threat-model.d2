@@ -1,26 +1,31 @@
 # Threat model template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
 ...@neutral-theme
 
-# DFD on the neutral theme: external entity = box, process = numbered circle
-# (the number is the ID the threats cite), data store = cylinder, trust
-# boundary = dashed boundary, stacked in trust order from the internet down
-# (playbooks/infrastructure.md).
-# direction: right was 1538px wide (7.3px text).
+# DFD on the neutral theme: external entity = grey box (people and third
+# parties alike), process = numbered circle (the ID the threats cite), data
+# store = cylinder, trust boundary = dashed boundary, stacked in trust order
+# from the internet down (playbooks/infrastructure.md). One look per element
+# kind and one edge class: nothing needs a key.
 direction: down
 
-# Geometry only; the stores share one width. A circle needs equal width and
-# height: 116 holds ~12 characters ("2. Checkout API" spilled below it).
+# Geometry only. A 110px circle holds 11 characters ("4. Payments", 8px to
+# spare; at 100 it touched the rim). A store as wide as a circle keeps one
+# column pitch: each store drops straight to its process and the Data
+# boundary stands 18px out (120 beside 100: 46px).
+# endlabel: a flow's label rides at its lower end, beside the line, in the
+# band above the element below (mid-edge labels: 1029px tall, 0.47 aspect).
+# Snowflake brand: ${sf-gray} in place of ${ink-600}.
 classes: {
-  proc: {shape: circle; width: 116; height: 116}
-  store: {width: 140}
+  proc: {shape: circle; width: 110; height: 110}
+  store: {width: 110}
+  endlabel: {target-arrowhead.style: {font-color: ${ink-600}; font-size: 14}}
 }
 
-# As wide as the two processes it calls, so both flows drop straight.
-browser: Customer browser {class: actor; width: 300}
+# As wide as the DMZ below it: both flows drop straight and it sits centred
+# over the boundary (at 300 it stood 15px to the right).
+browser: Customer browser {class: [actor; compact]; width: 340}
 
-# One chain of processes per column. A circle's ports sit ~40px apart, so
-# its fan-outs jog: one web app feeding Auth and Payments, 4 of 7 labels on bends.
-# Boundary titles stay short: "Internal network" was struck by an edge.
+# One chain of processes per column. Boundary titles of 9 characters at most.
 dmz: DMZ {
   class: boundary
   login: "1. Login" {class: [service; proc]}
@@ -29,23 +34,28 @@ dmz: DMZ {
 internal: Internal {
   class: boundary
   auth: "3. Auth" {class: [service; proc]}
+  # Focal because the request says "the Payments process" (under review).
   pay: "4. Payments" {class: [service; proc; focal]}
 }
 data: Data {
   class: boundary
-  users: "Users DB\nPostgres" {class: [datastore; store]}
-  ledger: "Payments DB\nPostgres" {class: [datastore; store]}
+  users: Users DB {class: [datastore; store]}
+  ledger: Payments DB {class: [datastore; store]}
 }
-stripe: "Stripe\n3rd party" {class: [service; external]}
+# Beside the Data boundary; 120 wide, so the figure holds aspect 0.63 (0.58
+# at its natural width).
+stripe: Stripe {class: [actor; compact]; width: 120}
 
-# Every flow labelled "what\nprotocol", on two short lines (one line each,
-# neighbouring labels overlapped: E-label-overlap). The flows under review
-# are flow, the rest dep. Arrows follow the data: a read points from the
-# store, written `process <- store` so it stays short.
-browser -> dmz.login: "credentials\nHTTPS" {class: dep}
-browser -> dmz.checkout: "card token\nHTTPS" {class: flow}
-dmz.login -> internal.auth: "credentials\nmTLS" {class: dep}
-dmz.checkout -> internal.pay: "card token\nmTLS" {class: flow}
-internal.auth <- data.users: "password hash\nSQL" {class: dep}
-internal.pay -> stripe: "token, amount\nHTTPS" {class: flow}
-internal.pay -> data.ledger: "charge id\nSQL" {class: dep}
+# Every flow "what\nprotocol"; the card token is named in its labels (no
+# flow class: the token path forks from the browser beside the login flow
+# and must turn to reach Stripe). Arrows follow the data: a read points
+# from the store, written `process <- store` so the store stays below.
+browser -> dmz.login: {class: [endlabel; dep]; target-arrowhead.label: "credentials\nHTTPS"}
+browser -> dmz.checkout: {class: [endlabel; dep]; target-arrowhead.label: "card token\nHTTPS"}
+dmz.login -> internal.auth: {class: [endlabel; dep]; target-arrowhead.label: "credentials\nmTLS"}
+dmz.checkout -> internal.pay: {class: [endlabel; dep]; target-arrowhead.label: "card token\nmTLS"}
+# `a <- b` puts target-arrowhead at b: this label sits by the store.
+internal.auth <- data.users: {class: [endlabel; dep]; target-arrowhead.label: "password hash\nSQL"}
+internal.pay -> data.ledger: {class: [endlabel; dep]; target-arrowhead.label: "charge id\nSQL"}
+# Three short lines keep the label within Stripe's column (no void beside the stack).
+internal.pay -> stripe: {class: [endlabel; dep]; target-arrowhead.label: "token,\namount\nHTTPS"}

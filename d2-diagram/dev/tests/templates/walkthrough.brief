@@ -1,35 +1,35 @@
 # request: "Walk me through what happens when a shopper opens a product page, for
 #  the onboarding doc. The browser sends GET /products/42 to CloudFront; on a cache
-#  miss CloudFront forwards it to the ALB in our AWS VPC, which passes it to the Kong
-#  API gateway. Kong routes /products to the Catalog API; it also fronts the Orders
-#  and Cart APIs (all three are Go services). The Catalog API reads the Redis cache,
-#  misses, and selects product 42 from the Postgres catalog DB. The reply goes back
-#  the same way and CloudFront caches it for 60 seconds. Number the hops and
-#  highlight the Catalog API."
+#  miss CloudFront forwards it to the Kong API gateway in our AWS VPC. Kong routes
+#  /products to the Catalog API; it also fronts the Orders and Cart APIs on /orders
+#  and /cart. Each API is a Go service with its own Postgres database, and the
+#  Catalog API selects product 42 from the catalog DB. The reply goes back the same
+#  way and CloudFront caches it for 60 seconds. Number the hops and highlight the
+#  Catalog API."
 type: walkthrough
 reader: new engineers reading the onboarding doc
 width: 800
 direction: down
-focus: aws.catalog
+focus: aws.catalog, browser -> cdn -> aws.gw -> aws.catalog -> aws.catalogdb  # "highlight the Catalog API"; "The browser sends GET /products/42 to CloudFront"
 out: DNS and TLS handshakes, auth, the cache write-back, logging
 nodes:
   browser: Browser
-  reply: 7. The reply retraces the path\nand CloudFront caches it 60 s {note}
+  reply: 5. The reply retraces the path;\nCloudFront caches it 60 s {note}
   cdn: CDN\nCloudFront
   aws: AWS VPC
-  aws.alb: Load balancer\nALB
   aws.gw: API gateway\nKong
   aws.orders: Orders API\nGo
   aws.catalog: Catalog API\nGo
   aws.cart: Cart API\nGo
-  aws.cache: Cache\nRedis {shape: cylinder}
-  aws.db: Catalog DB\nPostgres {shape: cylinder}
+  aws.ordersdb: Orders DB\nPostgres {shape: cylinder}
+  aws.catalogdb: Catalog DB\nPostgres {shape: cylinder}
+  aws.cartdb: Cart DB\nPostgres {shape: cylinder}
 edges:
   browser -> cdn: 1. GET /products/42
-  cdn -> aws.alb: 2. cache miss
-  aws.alb -> aws.gw: 3. forward
-  aws.gw -> aws.orders
-  aws.gw -> aws.catalog: 4. route /products
-  aws.gw -> aws.cart
-  aws.catalog -> aws.cache: 5. read cache (miss)
-  aws.catalog -> aws.db: 6. SELECT product 42
+  cdn -> aws.gw: 2. cache miss
+  aws.gw -> aws.orders: /orders
+  aws.gw -> aws.catalog: 3. route /products
+  aws.gw -> aws.cart: /cart
+  aws.orders -> aws.ordersdb: SQL {inferred}
+  aws.catalog -> aws.catalogdb: 4. SELECT product 42
+  aws.cart -> aws.cartdb: SQL {inferred}

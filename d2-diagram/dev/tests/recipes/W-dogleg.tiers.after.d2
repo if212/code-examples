@@ -1,0 +1,26 @@
+# After: each caller with two partners is as wide as both (2 x 130 + the 20px gap): every
+# edge drops straight, and lint takes the 280 as a whole span of the row's 130 (no W-sibling-size).
+...@neutral-theme
+direction: down
+classes: {col: {width: 130}; pair: {width: 280}; low: {width: 130; height: 92}}
+gateway: API gateway {class: service; width: 600}
+services: Services {
+  class: zone
+  catalog: Catalog {class: [service; pair]}
+  orders: Orders {class: [service; pair]}
+  billing: Billing {class: [service; col]}
+}
+data: Data {
+  class: zone
+  catalog_db: Catalog DB {class: [datastore; low]}
+  cache: Cache {class: [datastore; low]}
+  orders_db: Orders DB {class: [datastore; low]}
+  events: Events {class: [queue; low]}
+  billing_db: Billing DB {class: [datastore; low]}
+}
+gateway -> services: routes {class: dep}
+services.catalog -> data.catalog_db: {class: dep}
+services.catalog -> data.cache: {class: dep}
+services.orders -> data.orders_db: {class: dep}
+services.orders -> data.events: {class: async}
+services.billing -> data.billing_db: {class: dep}

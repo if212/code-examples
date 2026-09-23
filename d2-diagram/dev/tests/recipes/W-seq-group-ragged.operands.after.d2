@@ -1,0 +1,25 @@
+# After: both operands end in their outcome, a note on the same participant: they span the same
+# lifelines and line up. (No activation bars in either file: a note declared while a bar is
+# open is drawn over it.)
+...@neutral-theme
+shape: sequence_diagram
+classes: {p: {width: 170}}
+order: Order service {class: [actor; p]}
+payment: Payment service {class: [actor; p]}
+inventory: Inventory service {class: [actor; p]}
+order -> payment: "1. Charge card" {class: dep}
+order -> inventory: "2. Reserve stock" {class: dep}
+alt: "alt" {
+  class: zone
+  ok: "[stock reserved]" {
+    class: zone-green
+    inventory -> order: "3. stock reserved" {class: secondary}
+    order.confirm: Confirms order {class: [note; compact]}
+  }
+  failed: "[reservation fails]" {
+    class: zone-amber
+    inventory -> order: "3. reservation failed" {class: failure}
+    order -> payment: "4. compensate: refund charge" {class: failure}
+    order.cancel: Cancels order {class: [note; compact]}
+  }
+}

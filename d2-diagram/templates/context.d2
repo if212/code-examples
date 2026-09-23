@@ -2,39 +2,50 @@
 ...@neutral-theme
 
 # One system as ONE box: the people who use it above, the systems it calls
-# below, so every arrow points down. Nothing inside it: that is c4.d2
-# (playbooks/architecture.md, C4).
+# below, so every arrow points down. Its insides are c4.d2 (playbooks/architecture.md).
 direction: down
 
-# c4-person sizes itself by its label (192 vs 155px wide, heads unequal):
-# one class gives every person the same body and head.
+# Geometry only: c4-person sizes itself by its label (heads unequal), so
+# one class evens the people; one box size for every neighbour system.
 classes: {
-  person: {shape: c4-person; width: 176; height: 160}
+  person: {shape: c4-person; width: 120; height: 90}
+  box: {width: 160; height: 56}
 }
 
-customer: "Customer\n[Person]\nBuys products online" {class: [actor; person]}
-staff: "Staff\n[Person]\nManages the catalog" {class: [actor; person]}
+# C4 names itself: a title, and a key of what each look means.
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    s: system in scope {class: [service; box; focal]}
+    x: external system {class: [service; external]}
+    a -> b: relationship {class: dep}
+    a -> b: nightly batch {class: async}
+  }
+}
+title: "System context: Online shop" {class: title}
 
-# The system reaches past the first and last system below it, so every
-# edge drops straight: 480px jogged the outer two of 4 (W-label-on-bend),
-# 700 is straight. 3 systems below: 480.
-shop: "Online shop\n[Software System]\nCatalog, cart, checkout" {class: [service; focal]; width: 700}
+customer: "Customer\n[Person]" {class: [actor; tech; person]}
+staff: "Staff\n[Person]" {class: [actor; tech; person]}
 
-# Neighbour systems: one row, in the order of their edges. 4 per row fit
-# (852px, 13px text; a 5th: 1057px, 10.5px). Systems that call this one go
-# in the TOP row beside the people: 4 above and 4 below stayed 852px, clean.
-# More below: one box per kind, "Payments\n[Software System]\nStripe, PayPal"
-# (zones of two systems each fell to 7-11px text).
-stripe: "Stripe\n[Software System]\nCard payments" {class: [service; external]}
-sendgrid: "SendGrid\n[Software System]\nOrder emails" {class: [service; external]}
-easypost: "EasyPost\n[Software System]\nShipping labels" {class: [service; external]}
-erp: "ERP\n[Software System]\nInvoices and stock" {class: [service; external]}
+# The one system in scope (focal: "Highlight the shop") spans the row below
+# it, so all four edges drop straight (at 480px the people's labels collided).
+shop: "Online shop\n[Software System]" {class: [service; tech; box; focal]; width: 700}
 
-# "Verb object\n[protocol]", the verb from the side that starts the call.
-# The main user's edge is flow; batch and event integrations are async.
-customer -> shop: "Places orders\n[HTTPS]" {class: flow}
-staff -> shop: "Manages catalog\n[HTTPS]" {class: dep}
-shop -> stripe: "Charges cards\n[HTTPS]" {class: dep}
-shop -> sendgrid: "Sends receipts\n[HTTPS]" {class: dep}
-shop -> easypost: "Buys labels\n[HTTPS]" {class: dep}
-shop -> erp: "Exports orders\n[SFTP, nightly]" {class: async}
+# Neighbours: one row, in the order of their edges; 4 fit the column. Systems
+# that call this one join the people's row. More below: one box per kind
+# ("Payments\n[Software System]" for Stripe and PayPal).
+stripe: "Stripe\n[Software System]" {class: [service; tech; box; external]}
+sendgrid: "SendGrid\n[Software System]" {class: [service; tech; box; external]}
+easypost: "EasyPost\n[Software System]" {class: [service; tech; box; external]}
+erp: "ERP\n[Software System]" {class: [service; tech; box; external]}
+
+# "Verb object [protocol]", from the side that starts the call; the edge
+# says what the neighbour does, so the boxes need no third line. People the
+# request lists together share one class; the nightly export is async.
+customer -> shop: "Places orders [HTTPS]" {class: dep}
+staff -> shop: "Manages the catalog [HTTPS]" {class: dep}
+shop -> stripe: "Charges cards [HTTPS]" {class: dep}
+shop -> sendgrid: "Sends receipts [HTTPS]" {class: dep}
+shop -> easypost: "Buys labels [HTTPS]" {class: dep}
+shop -> erp: "Exports orders nightly [SFTP]" {class: async}

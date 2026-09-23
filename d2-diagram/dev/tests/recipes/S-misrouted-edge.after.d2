@@ -1,8 +1,9 @@
 # After: every edge connects the real nodes by full path.
+# allow: W-aspect
 ...@neutral-theme
 direction: right
 src: Sources {class: zone; app: "App DB\nPostgres" {class: datastore}}
 ingest: Ingest {class: zone; fivetran: Fivetran {class: service}}
 wh: Snowflake {class: zone; raw: RAW {class: [datastore; focal]}}
-src.app -> ingest.fivetran: {class: flow}
-ingest.fivetran -> wh.raw: {class: flow}
+src.app -> ingest.fivetran: {class: dep}
+ingest.fivetran -> wh.raw: {class: dep}

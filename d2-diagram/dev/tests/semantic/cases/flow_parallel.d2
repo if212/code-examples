@@ -1,4 +1,12 @@
 ...@mini-theme
+vars: {
+  d2-legend: {
+    h1: {style.opacity: 0}
+    h2: {style.opacity: 0}
+    h1 -> h2: happy path {class: flow}
+    h1 -> h2: cancels {class: failure}
+  }
+}
 direction: down
 placed: Order placed {class: terminal}
 checks: Checks run in parallel {

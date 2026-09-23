@@ -1,0 +1,21 @@
+# request: "Kubernetes deployment with icons: internet users -> a cloud load balancer ->
+#  the web ingress -> the web service -> its Deployment, which uses a managed Postgres."
+type: deployment
+reader: platform docs
+width: 800
+direction: down
+focus: none
+out: namespaces, replicas
+nodes:
+  internet: Internet\nusers
+  lb: Load balancer\ncloud
+  ingress: web\nIngress
+  svc: web\nService
+  deploy: web\nDeployment
+  pg: Postgres\nmanaged
+edges:
+  internet -> lb
+  lb -> ingress
+  ingress -> svc
+  svc -> deploy
+  deploy -> pg

@@ -1,0 +1,16 @@
+# request: "Orders publishes events that the notifier consumes; payments go through Stripe. Show the order path
+#   from the web app."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: web -> orders  # "the order path from the web app"
+nodes:
+  web: Web app
+  orders: Orders
+  notify: Notifier
+  stripe: Stripe {external}
+edges:
+  web -> orders: places
+  orders -> notify: publishes {dashed}
+  orders -> stripe: charges

@@ -1,44 +1,50 @@
 # Deployment template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
 ...@neutral-theme
 
-# Doc column: top-down (playbooks/infrastructure.md). Nesting = real containment: cloud > cluster > namespace.
-# Each level adds ~50px of padding per side: three levels is the most that fits 800px.
+# Doc column: top-down (playbooks/infrastructure.md). Nesting is real
+# containment: region > cluster > namespace; each level costs ~80px of height.
 direction: down
 
-users: Shoppers {class: actor}
+# Geometry only: one width for a workload and the sink under it, so every
+# edge drops straight; 124 keeps three columns and three levels at 800px.
+classes: {
+  card: {width: 124; height: 64}
+  sink: {width: 124; height: 107}
+}
+
+users: Shoppers {class: [actor; compact]; width: 150}
 
 aws: AWS us-east-1 {
   class: boundary
-  alb: "Load balancer\nAWS ALB" {class: service}
+  # As wide as the workloads it routes to: its three edges drop straight.
+  alb: "Load balancer\nAWS ALB" {class: [service; tech; card]; width: 440}
 
   eks: EKS cluster prod {
     class: zone
-    # Short zone titles: the edge into the first child struck a 15-character
-    # title here (12 were clear).
+    # A plain zone: the focus is a node, never blue on a blue panel.
     shop: "ns: shop" {
-      class: zone-blue
-      # Replicas: one card with style.multiple, count in the label.
-      web: "storefront\n3 pods" {class: service; style.multiple: true}
-      api: "orders-api\n3 pods" {class: [service; focal]; style.multiple: true}
-      search: "search-api\n2 pods" {class: service; style.multiple: true}
+      class: zone
+      # Replicas: one card with style.multiple, the count in the label.
+      web: "storefront\n3 pods" {class: [service; tech; card]; style.multiple: true}
+      api: "orders-api\n3 pods" {class: [service; tech; card; focal]; style.multiple: true}
+      search: "search-api\n2 pods" {class: [service; tech; card]; style.multiple: true}
     }
   }
 
-  # Sinks in one row, each straight below the workload that uses it.
-  data: Data {
-    class: zone
-    redis: "Sessions\nElastiCache" {class: datastore}
-    rds: "Orders DB\nRDS Postgres" {class: datastore}
-    os: "Search index\nOpenSearch" {class: datastore}
-  }
+  # Sinks straight under the workload that uses each one, in its order, and
+  # no zone of their own (a Data zone cost 85px of height).
+  redis: "Sessions\nElastiCache" {class: [datastore; tech; sink]}
+  rds: "Orders DB\nRDS Postgres" {class: [datastore; tech; sink]}
+  os: "Search index\nOpenSearch" {class: [datastore; tech; sink]}
 }
 
-# Edges: direction = who opens the connection. Ports on the hops that leave
-# a zone; the ALB-to-pod hops cross two borders, so they stay unlabeled.
-users -> aws.alb: "HTTPS :443" {class: flow}
-aws.alb -> aws.eks.shop.api: {class: flow}
+# Direction = who opens the connection; the port on each hop that leaves a
+# zone. The ALB-to-pod hops cross two borders: unlabelled. "Highlight
+# orders-api" names a node, not a path: every edge is dep.
+users -> aws.alb: "HTTPS :443" {class: dep}
 aws.alb -> aws.eks.shop.web: {class: dep}
+aws.alb -> aws.eks.shop.api: {class: dep}
 aws.alb -> aws.eks.shop.search: {class: dep}
-aws.eks.shop.api -> aws.data.rds: ":5432" {class: flow}
-aws.eks.shop.web -> aws.data.redis: ":6379" {class: dep}
-aws.eks.shop.search -> aws.data.os: ":443" {class: dep}
+aws.eks.shop.web -> aws.redis: ":6379" {class: dep}
+aws.eks.shop.api -> aws.rds: ":5432" {class: dep}
+aws.eks.shop.search -> aws.os: ":443" {class: dep}

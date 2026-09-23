@@ -4,7 +4,7 @@ type: flowchart
 reader: team wiki
 width: 800
 direction: down
-focus: gate
+focus: gate, push -> build -> gate -> deploy  # "Focus on the test gate", "on a push we build and run the tests; if they pass we deploy"
 out: rollbacks, approvals
 nodes:
   push: Push {start}

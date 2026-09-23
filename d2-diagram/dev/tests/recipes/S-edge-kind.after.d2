@@ -1,13 +1,22 @@
 # After: `->`, the operator the brief uses.
 # brief: arch.brief
 ...@neutral-theme
-direction: down
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: call or write {class: dep}
+    a -> b: event, async {class: async}
+  }
+}
+direction: right
+classes: {tier: {width: 180}}
 web: Web app {class: actor}
 api: Orders API {class: [service; focal]}
-db: "Orders DB\nPostgres" {class: datastore}
-events: "Order events\nKafka" {class: queue}
+db: "Orders DB\nPostgres" {class: [datastore; tier]}
+events: "Order events\nKafka" {class: [queue; tier]}
 mailer: Mailer {class: service}
-web -> api: HTTPS {class: flow}
+web -> api: HTTPS {class: dep}
 api -> db: {class: dep}
 api -> events: {class: async}
 events -> mailer: {class: async}

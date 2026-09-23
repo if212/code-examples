@@ -32,7 +32,22 @@ S-reversed-edge S-edge-kind S-duplicate-edge S-node-label S-node-label-case S-ed
 S-duplicate-label S-missing-column S-erd-anchor S-erd-cardinality S-seq-order S-seq-return S-seq-group
 S-seq-group-actor S-seq-actor-order S-state-start S-unreachable S-end-has-exit S-decision S-dead-end
 S-emphasis S-inferred S-src-hash S-src-semicolon S-src-icon-family S-src-cli-engine S-arrowhead
-S-src-class'''.split())
+S-src-class S-key S-src-direction'''.split())
+# FIXPLAN I1 (round 4): S-key and S-src-direction are new
+
+# cases that must not live in the repo as files (every shipped or dev file stays pure ASCII): written to a
+# temp folder at start, named GEN:<file> in the argv of a run
+GENERATED = {
+    'zh.brief': '# request: "\u7528\u6237\u884c\u4e3a\u65e5\u5fd7 \u4ece Kafka \u7ecf Flink \u843d\u5230 Hive"\n'
+                'type: pipeline\nreader: test\nwidth: 800\ndirection: right\nfocus: none\nnodes:\n'
+                '  logs: User behaviour logs\n  kafka: Kafka\n  flink: Flink\n  hive: Hive\nedges:\n'
+                '  logs -> kafka: publish\n  kafka -> flink: consume\n  flink -> hive: write\n',
+    # "draw a Kubernetes topology with icons: the internet reaches a pod", in Chinese
+    'icons_k8s_zh.brief': '# request: "\u753b\u4e00\u4e2a\u5e26\u56fe\u6807\u7684 Kubernetes \u62d3\u6251\u56fe\uff1a'
+                          '\u4e92\u8054\u7f51\u8bbf\u95ee\u4e00\u4e2a pod"\ntype: deployment\nreader: test\nwidth: 800\n'
+                          'direction: down\nfocus: none\nnodes:\n  inet: Internet\n  pod: Pod\nedges:\n  inet -> pod: HTTPS\n',
+}
+GEN_DIR = tempfile.mkdtemp(prefix='semgen-')
 
 # (brief, diagram, exact set of error+warning codes)
 CODESETS = [
@@ -98,7 +113,6 @@ CODESETS = [
     ('cls.brief', 'cls_typo.d2', {'S-src-class'}),
     ('cls.brief', 'cls_none.d2', {'S-src-class'}),
     ('cls.brief', 'cls_import.d2', set()),      # classes via a nested import and `classes: {...@f}`
-    ('cls.brief', 'cls_sf.d2', {'S-src-class'}),
     ('cls_column.brief', 'cls_column.d2', {'S-src-class'}),
     ('cls_column.brief', 'cls_column_quoted.d2', set()),     # the fix: a quoted "class" is a column name
     # invisible balancing children (opacity 0, by class or inline) are not part of the graph (B21)
@@ -121,6 +135,28 @@ CODESETS = [
     ('cmp_arch.brief', 'cmp_twins.d2', {'S-duplicate-label'}),
     ('swim.brief', 'swim_good.d2', set()),
     ('swim.brief', 'swim_bad.d2', {'S-decision', 'S-edge-label'}),
+    # round 4 (FIXPLAN F1): emphasis is earned - invented, ungrounded, blue on blue, peers styled unlike
+    ('focus_invented.brief', 'focus_invented.d2', {'S-emphasis'}),
+    ('focus_ungrounded.brief', 'focus_one.d2', {'S-emphasis'}),
+    ('focus_nocomment.brief', 'focus_one.d2', {'S-emphasis'}),
+    ('focus_grounded.brief', 'focus_grounded.d2', set()),
+    ('focus_loose.brief', 'focus_grounded.d2', set()),      # quote marks, case, punctuation do not count
+    ('focus_zone_blue.brief', 'focus_zone_blue.d2', {'S-emphasis'}),
+    ('peers.brief', 'peers_asym.d2', {'S-emphasis'}),
+    # round 4 (F2): a colour, dash or shape that means something has a key that names it
+    ('key.brief', 'key_missing.d2', {'S-key'}),
+    ('key.brief', 'key_partial.d2', {'S-key'}),
+    ('key.brief', 'key_full.d2', set()),
+    ('key_chips.brief', 'key_chips.d2', set()),              # chips are the key, not inventory
+    ('key_chips.brief', 'key_chips_none.d2', {'S-key'}),
+    ('c4_title.brief', 'c4_no_title.d2', {'S-key'}),
+    ('c4_title.brief', 'c4_with_title.d2', set()),           # the title node is not inventory
+    # round 4 (D6): k8s + lucide in the k8s blue when the request asks for icons
+    ('icons_k8s.brief', 'icons_k8s_lucide.d2', set()),
+    ('icons_k8s.brief', 'icons_k8s_pale.d2', {'S-src-icon-family'}),
+    ('icons_k8s_plain.brief', 'icons_k8s_lucide.d2', {'S-src-icon-family'}),
+    ('slash.brief', 'slash.d2', set()),
+    ('cls_sf.brief', 'cls_sf.d2', {'S-src-class'}),
 ]
 
 # (name, argv, expected exit, substrings that must appear, substrings that must not)
@@ -171,7 +207,47 @@ RUNS = [
      ['-> workflows/review-and-fix.md#s-emphasis'], []),
     ('focus: missing focal class is named', ['focus.brief', 'focus_bad.d2'], 1,
      ["focus 'api.orders' is not styled focal", "main-path edge 'api.gw -> api.orders' is not styled as the main "
-      "path", "'api.gw' is styled focal but is not the brief's focus"], []),
+      "path", "'api.gw' is styled focal but the brief's focus does not name it"], []),
+    ('focus: invented emphasis names node and edge', ['focus_invented.brief', 'focus_invented.d2'], 1,
+     ["'api' is styled focal but the brief's focus does not name it: give it its base class (service)",
+      "edge 'web -> api' is the main path (flow) but the focus names no such path: use dep"], []),
+    ('focus: a quote the request does not say', ['focus_ungrounded.brief', 'focus_one.d2'], 1,
+     ["the focus comment quotes 'Highlight the API', which the request does not say"], []),
+    ('focus: no quote at all', ['focus_nocomment.brief', 'focus_one.d2'], 1,
+     ['focus: api quotes no request words'], []),
+    ('focus: blue on blue', ['focus_zone_blue.brief', 'focus_zone_blue.d2'], 1,
+     ["focal 'ns.worker' sits inside the zone-blue 'ns': blue on blue"], []),
+    ('focus: peers styled unlike is a warning', ['peers.brief', 'peers_asym.d2'], 0,
+     ['WARN  S-emphasis', 'peers styled unlike'], ['ERROR']),
+    ('key: missing key names the encodings', ['key.brief', 'key_missing.d2'], 1,
+     ['async, dep, external, flow carry meaning but there is no key'], []),
+    ('key: a key that leaves encodings out', ['key.brief', 'key_partial.d2'], 1,
+     ['the key leaves out async, external'], []),
+    ('key: C4 needs a title node', ['c4_title.brief', 'c4_no_title.d2'], 1, ['a C4 diagram names itself'], []),
+    ('icons: k8s + pale lucide asks for the k8s blue', ['icons_k8s.brief', 'icons_k8s_pale.d2'], 1,
+     ['--color 326CE5'], []),
+    ('icons: a request that asks for icons in Chinese allows k8s + lucide', ['GEN:icons_k8s_zh.brief',
+     'icons_k8s_lucide.d2'], 0, ['verdict: PASS'], ['S-src-icon-family']),
+    ('request: a non-Latin request is named', ['GEN:zh.brief', 'zh.d2'], 0,
+     ['INFO  S-missing-node', 'the request is not in English'], []),
+    ('request: code_verifier/code_challenge are two names', ['slash.brief', 'slash.d2'], 0, [],
+     ['code_verifier/code_challenge']),
+    ('--lint: a class list over a single class is dropped', ['--lint', 'list_over_single.d2'], 1,
+     ["`db.class: [datastore; muted]` is ignored: 'db' already has the single class 'datastore'"],
+     ["`app.class: [service; focal]` is ignored"]),
+    ('--lint: direction in a plain container', ['--lint', 'direction_in_box.d2'], 0,
+     ["WARN  S-src-direction", "`direction: right` inside 'jobs' is ignored"], ["inside 'rows.row1'"]),
+    ('--lint: two themes imported', ['--lint', 'two_themes.d2'], 1,
+     ['imports both neutral-theme and snowflake-brand'], []),
+    ('brief: two attribute blocks are exit 2', ['double.brief', 'arrow_label.d2'], 2,
+     ['two attribute blocks - write one: {external, inferred}'], []),
+    ('--render-hints: sql_table', ['--render-hints', 'erd_good.d2'], 0, ['sql_table'], ['bottom-title']),
+    ('--render-hints: a container title at the bottom', ['--render-hints', 'bottom_title.d2'], 0, ['bottom-title'],
+     []),
+    ('--render-hints: a node label at the bottom is not a title', ['--render-hints', 'bottom_node.d2'], 0, [],
+     ['bottom-title']),
+    ('--json: an input error is JSON', ['--lint', 'no_such.d2', '--json'], 2, ['"exit": 2', '"error": "no such file'],
+     []),
     ('misroute names the container', ['grid.brief', 'grid_bad.d2'], 1, ["between containers 'ingest' and 'sf'"], []),
     ('container focus asks for zone-blue', ['focus_zone.brief', 'focus_zone_bad.d2'], 1,
      ["focus 'sf' is a container: give it class: zone-blue"], []),
@@ -179,6 +255,9 @@ RUNS = [
     ('nullable FK drawn exactly-one is caught', ['erd_nullable.brief', 'erd_nullable_bad.d2'], 1,
      ['should be cf-one (zero or one) but shows cf-one-required (exactly one)'], []),
     ('hint: unknown text exits 1', ['--hint', 'no such error'], 1, ['hint: no known pattern'], []),
+    ('hint: an import beside a .d2 in a folder with spaces', ['--hint', 'err: failed to compile x.d2: /tmp/my docs/x.d2:1:1: '
+     'failed to import "/tmp/my docs/neutral-theme.d2": open /tmp/my docs/neutral-theme.d2: no such file or directory'], 0,
+     ['`neutral-theme.d2` is not next to the .d2', "'/tmp/my docs'/"], ['../']),
     ('brief: D2 styling in attributes is exit 2', ['d2style.brief', 'arrow_label.d2'], 2,
      ["unknown attribute 'style.stroke-dash'", 'classes and styles go in the .d2'], []),
     ('extra title node asks for {note}', ['arrow_label.brief', 'titled.d2'], 1,
@@ -267,7 +346,7 @@ HINTS = [
     ('hint_brace.d2', 'wrap the whole label in double quotes'),      # { in a label
     ('hint_cfgkey.d2', 'valid d2-config keys'),                      # unknown d2-config key
     ('hint_import.d2', '`nosuch-theme.d2` is not next to the .d2'),  # missing import
-    ('hint_import_sf.d2', 'cp ${CLAUDE_SKILL_DIR}/templates/snowflake-brand.d2'),
+    ('hint_import_sf.d2', '/templates/snowflake-brand.d2 '),         # the real path: runnable as printed
     ('hint_icon.d2', 'local icon path does not exist'),              # missing local icon
     ('hint_dagre.d2', 'needs the ELK engine'),
     ('hint_color.d2', 'theme codes (B1, N2) work only inside theme-overrides'),
@@ -304,6 +383,7 @@ RENDERED = {}       # d2 file -> (svg path or None, stderr): filled once, before
 
 
 def run(argv, cwd=CASES, stdin=None):
+    argv = [os.path.join(GEN_DIR, a[4:]) if a.startswith('GEN:') else a for a in argv]
     p = subprocess.run([sys.executable, CHECK] + argv, cwd=cwd, capture_output=True, text=True, input=stdin)
     return p.returncode, p.stdout + p.stderr
 
@@ -334,7 +414,8 @@ def t_codeset(case):
         return False, f'no JSON (exit {code}): {out[-400:]}', set()
     got = {i['code'] for i in findings if i['severity'] in ('error', 'warn')}
     want_exit = 1 if any(i['severity'] == 'error' for i in findings) else 0
-    long_msgs = [f"{i['code']} ({len(i['message'])} chars)" for i in findings if len(i['message']) > MSG_MAX]
+    long_msgs = [f"{i['code']} ({len(i['message'])} chars)" for i in findings
+                 if len(i['message']) > MSG_MAX and i['code'] != 'S-inferred']   # d2lint prints S-inferred in full
     ok = got == want and code == want_exit and not long_msgs
     detail = 'codes: ' + (', '.join(sorted(got)) or '-') if got == want else \
         f'missing={sorted(want - got)} unexpected={sorted(got - want)}'
@@ -400,17 +481,18 @@ def t_brief_example(_):
         return False, f'{BRIEF_MD} missing', set()
     md = open(BRIEF_MD, encoding='utf-8').read()
     brief_md, d2_md = fenced(md, 'brief', 'Worked example'), fenced(md, 'd2', 'Worked example')
-    bpath, dpath = os.path.join(HERE, 'brief_example.brief'), os.path.join(HERE, 'brief_example.d2')
     if brief_md is None or d2_md is None:
         return False, 'brief.md has no ```brief and ```d2 block under a "Worked example" heading', set()
-    if brief_md.strip() != open(bpath).read().strip() or d2_md.strip() != open(dpath).read().strip():
-        return False, 'brief.md worked example and dev/tests/semantic/brief_example.{brief,d2} differ', set()
     if not os.path.isfile(THEME):
         return False, f'theme not found at {THEME} (set NEUTRAL_THEME=/path/to/neutral-theme.d2)', set()
+    # the example is checked as brief.md prints it (no copy to keep in sync)
     with tempfile.TemporaryDirectory() as tmp:
-        shutil.copy(dpath, tmp)
+        bpath, dpath = os.path.join(tmp, 'brief_example.brief'), os.path.join(tmp, 'brief_example.d2')
+        for p, text in ((bpath, brief_md), (dpath, d2_md)):
+            with open(p, 'w', encoding='utf-8') as fh:
+                fh.write(text)
         shutil.copy(THEME, os.path.join(tmp, 'neutral-theme.d2'))
-        code, out = run(['--json', bpath, os.path.join(tmp, 'brief_example.d2')], cwd=HERE)
+        code, out = run(['--json', bpath, dpath], cwd=tmp)
     try:
         d = json.loads(out)
     except ValueError:
@@ -507,6 +589,16 @@ def t_static(_):
 
 
 def main():
+    for name, text in GENERATED.items():
+        with open(os.path.join(GEN_DIR, name), 'w', encoding='utf-8') as fh:
+            fh.write(text)
+    try:
+        return run_all()
+    finally:
+        shutil.rmtree(GEN_DIR, ignore_errors=True)
+
+
+def run_all():
     args = sys.argv[1:]
     k = args[args.index('-k') + 1] if '-k' in args else ''
     verbose = '-v' in args
@@ -523,7 +615,7 @@ def main():
             return c[0]
         if kind in ('hint', 'dump'):
             return f'{kind} {c[0] if kind == "hint" else c}'
-        return {'example': 'brief.md worked example == brief_example.* and checks clean',
+        return {'example': 'the brief.md worked example checks clean',
                 'speed': 'runtime with --svg', 'static': 'every emitted code is S- and in the contract',
                 'env': 'D2_* environment overrides are ignored',
                 'nod2': 'd2 missing from PATH is named as such, with the install and doctor.sh',

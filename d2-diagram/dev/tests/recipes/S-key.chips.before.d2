@@ -1,0 +1,22 @@
+# Before: green means added and grey text means removed here, and nothing says so: a
+# reader sees colour with no key.
+...@neutral-theme
+grid-rows: 1
+horizontal-gap: 32
+classes: {box: {width: 150}}
+before: Before {
+  class: zone
+  shop: Shop monolith {class: [service; box]}
+  checkout: Checkout module {class: [service; box; muted]}
+  stripe: Stripe {class: [service; box; external]}
+  shop -> checkout: {class: dep}
+  checkout -> stripe: {class: dep}
+}
+after: After {
+  class: zone
+  shop: Shop monolith {class: [service; box]}
+  payments: Payments service {class: [service; box; success]}
+  stripe: Stripe {class: [service; box; external]}
+  shop -> payments: {class: dep}
+  payments -> stripe: {class: dep}
+}

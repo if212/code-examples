@@ -1,0 +1,17 @@
+# Before: message 6 spans three lifelines and its label is longer than any gap between them:
+# d2 centres it over the span, on the Authorization server's lifeline, and the post step has
+# no gap to move it to.
+...@neutral-theme
+shape: sequence_diagram
+classes: {p: {width: 170}}
+user: User {class: [actor; p]}
+spa: Browser SPA {class: [actor; p]}
+auth: Authorization server {class: [actor; p]}
+api: Resource API {class: [actor; p]}
+user -> spa: "1. Log in" {class: dep}
+spa -> auth: "2. GET /authorize (code_challenge)" {class: dep}
+auth -> spa: "3. redirect with code" {class: secondary}
+spa -> auth: "4. POST /token (code, code_verifier)" {class: dep}
+auth -> spa: "5. access token" {class: secondary}
+spa -> api: "6. GET /orders with Authorization: Bearer access_token and the request id" {class: dep}
+api -> spa: "7. 200 orders" {class: secondary}
