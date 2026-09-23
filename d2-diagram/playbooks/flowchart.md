@@ -1,10 +1,11 @@
-# Playbook: flowcharts, CI/CD pipelines, step-by-step boards
+# Playbook: flowcharts, CI/CD pipelines, swimlanes
 
 Use for a process with decisions: request handling, approval flows, CI/CD
 and release pipelines, runbooks. Not for data moving between systems
 (`playbooks/pipeline.md`) or an object's lifecycle (`playbooks/state.md`).
 Templates: `templates/flowchart.d2` (parallel checks, a decision, a failure
-boundary, one failure lane) and `templates/steps.d2` (one board per step).
+boundary, one failure lane) and `templates/swimlane.d2` (who does each step,
+rule 8). Step-by-step boards: `playbooks/change.md` section 3.
 
 ## Skeleton
 
@@ -23,7 +24,7 @@ boundary, one failure lane) and `templates/steps.d2` (one board per step).
 - A layer gap is 40px; a labelled edge adds a label layer (98px). The
   template (7 steps, 2 containers, one decision) is 639x997px.
 - Past about 15 steps, or three nested decisions, split into boards
-  (rule 8) or two diagrams.
+  (`playbooks/change.md` section 3) or two diagrams.
 
 ## Notation checklist
 
@@ -42,7 +43,9 @@ happy-path edges (`flow`), then the failure edges: the failure lane then runs
 on the right (declared first, it runs on the left). ELK centres a decision
 over the two things below it (the next step and the lane), so the spine
 below a decision sits off the spine above it (about 100px in the template);
-no declaration order removes that.
+no declaration order removes that. The hidden third target of W-label-on-bend
+does (`gate -> ghost` declared before the main edge), at a cost: an empty
+column on the left (I-sparse), 81px more height and a bend in the failure lane.
 
 ### 2. Label decision branches, and only them
 
@@ -100,31 +103,29 @@ green box. The last hop into success is `ok` (green); nothing else is green.
 - Put tools in the label's second line only when the request names them:
   `"Build image\nDocker"`.
 
-### 8. Step-by-step boards: one layout for every step
+### 8. Swimlanes: who does each step, and where work changes hands
 
-d2 lays out every board on its own, so a board that adds edges moves the
-nodes. Declare every node AND every edge in the base board with the edges
-hidden, then reveal one edge per step:
-
-```d2
-# cwd: ../templates
-...@neutral-theme
-direction: down
-user: User {class: actor}
-api: API {class: focal}
-db: DB {class: datastore}
-user -> api: 1. request {class: dep; style.opacity: 0}
-api -> db: 2. query {class: dep; style.opacity: 0}
-steps: {
-  "1": {(user -> api)[0]: {class: flow; style.opacity: 1}}
-  "2": {
-    (user -> api)[0].class: dep
-    (api -> db)[0]: {class: flow; style.opacity: 1}
-  }
-}
-```
-
-The output is a FOLDER, not one file: d2check renders `flow.d2` to
-`flow/index.svg` plus `flow/1.svg`, `flow/2.svg`, and lints every board.
-`reference/export.md`: board files and single boards section 5, animation
-section 6, names section 10.
+`templates/swimlane.d2`, `type: swimlane`: a process where 2+ named people, roles or
+teams hand work over (approvals, escalations, refunds). Agents or services as the
+actors: a plain flowchart. Rules 2 and 6 hold; the layout is a grid:
+- One grid row per lane (`[zone; lane]`). Every lane has the same `grid-columns` and
+  cell size, so steps line up across lanes; time runs right.
+- The lane name is a `caption` in a hidden fixed-width slot (a bare caption sticks to
+  the top of its cell); the brief lists it as `cust.h.t: Customer {note}`.
+- Staircase: inside a lane the next step takes the next column; a handoff goes straight
+  up or down in the same column. Empty cells stay, hidden with `style.opacity: 0`.
+- Never skip a lane: that edge cuts through the lane between
+  (`W-edge-through-container`). Route the handoff through a real step there, reorder
+  the lanes, or end in the lane that produces the outcome (`Claim paid` in Finance).
+- Rework is a later step in time, never an edge back across lanes. Label decision
+  exits only: the 24px gaps hold nothing more.
+- 3 lanes x 4 step columns of 128px: 794x434 at 14px. A 5th column needs 112px cells
+  (12.9px text), too narrow for a 2-line decision. More steps: lanes as grid columns,
+  time running down (`grid-columns: N` at the root, `grid-rows: K` in every lane).
+- A decision cell holds two lines of about 9 characters (`Within\n30 days?`):
+  `On sanctions\nlist?` needed 189px (E-label-overflow).
+- A grid edge is a straight line between cell centres: a step hands work only to the
+  lane above or below it. A process that needs more (a step handing work to two lanes
+  on one side; requester, procurement, legal and finance all trading work: 4 E-, 10 W-)
+  is a flowchart, the role first in each label (`"Legal review:\nclear the vendor?"`);
+  say so under `Assumed:`.

@@ -135,12 +135,9 @@ sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh <target>.d2 <target>-animated.svg -- -
   file. For an animation, keep the source to the base board plus steps.
 - It plays in browsers, also inside `<img>` (Markdown images). Give each
   board 1500-3000 ms.
-- If every frame looks the same, check how the steps assign classes. When a
-  step sets a class list on a node that already has a class, d2 ignores it.
-  A single class replaces the node's classes, including a cylinder shape
-  that came from a class. Reset the class, then assign the list, and undo
-  the previous step's highlight the same way:
-  `db.class: null; db.class: [datastore; focal]`.
+- If every frame looks the same, d2 ignored a step's class re-assignment:
+  reset first, and undo the previous step's highlight the same way
+  (`reference/syntax.md` section 7).
 - Its name must differ from the board directory: a raw `d2` render to
   `<target>.svg` deletes `<target>/` (section 5).
 

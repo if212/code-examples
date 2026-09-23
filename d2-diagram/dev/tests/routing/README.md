@@ -52,12 +52,13 @@ python3 blind_eval.py heldout.json ../../../workflows/route.md --per-request --g
 
 ## Results
 
-route.md sha1 4d255dab (the frozen version, CATALOG-SPEC section 2.2), 2026-09-23:
+route.md sha1 4d255dab (the frozen version, CATALOG-SPEC section 2.2), 2026-09-23, two
+independent runs (build, then verification), scores given as run 1, run 2:
 
 | Set | Mode | Templates | Calls | Call misses (template right) |
 |---|---|---|---|---|
-| heldout | one session | 30/30 | 29/30 | H14 bare "password reset": drew sequence, ASK expected |
-| heldout | per request | 30/30 | 29/30 | H14, same |
-| dev | one session | 99/99 | 96/99 | R09, R52, R71: drew the default where ASK was expected |
-| validation | one session | 24/24 | 24/24 | - |
-| validation2 | one session | 20/20 | 20/20 | - |
+| heldout | one session | 30/30, 30/30 | 29/30, 30/30 | run 1: H14 bare "password reset" drew sequence, ASK expected |
+| heldout | per request | 30/30, 30/30 | 29/30, 29/30 | H14, both runs |
+| dev | one session | 99/99, 99/99 | 96/99, 98/99 | run 1: R09, R52, R71 drew the default (ASK); run 2: R44 drew one (SPLIT) |
+| validation | one session | 24/24, 24/24 | 24/24, 24/24 | - |
+| validation2 | one session | 20/20, 20/20 | 20/20, 20/20 | - |

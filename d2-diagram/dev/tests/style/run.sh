@@ -12,6 +12,7 @@
 #     column view, for arch, flow and state - look at it
 # exit 0 = all pass, 1 = a check failed
 set -u
+unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 SKILL=$(CDPATH='' cd -- "$HERE/../../.." && pwd)
 OUT=${1:-${TMPDIR:-/tmp}/d2-style-test}

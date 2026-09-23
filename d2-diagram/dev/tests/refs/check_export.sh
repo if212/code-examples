@@ -309,9 +309,11 @@ if doc 'base, then layers, then scenarios, then steps, whatever the order'; then
   [ "$got" = "BASE0 LAYER1 SCEN2 STEP3 " ] && pass "frame order: base, layers, scenarios, steps" || fail "frame order: $got"
 fi
 
-# ---- section 6 tip: a class list re-assigned in a step is ignored; reset first
+# ---- section 6 tip: a class list re-assigned in a step is ignored; reset first. The rule lives in
+# syntax.md section 7 (one home) and export.md links it: check both, then prove the rule itself
 L='db.class: null; db.class: [datastore; focal]'
-if doc "$L"; then
+if doc 'reference/syntax.md` section 7' &&
+  { grep -F -q -- "$L" "$S/reference/syntax.md" || { fail "syntax.md section 7 no longer contains: $L"; false; }; }; then
   printf '%s\n' 'classes: {datastore: {shape: cylinder}; focal: {style.stroke: "#2563EB"}}' \
     'db: DB {class: datastore}' 'a -> db' \
     'steps: {s1: {db.class: [datastore; focal]}; s2: {db.class: focal}; s3: {'"$L"'}}' > "$T/cls.d2"

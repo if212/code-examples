@@ -1,10 +1,12 @@
-# Architecture playbook: systems, deployments, C4
+# Architecture playbook: systems, C4, LLM apps
 
-Use for "what are the parts and how do they talk" (architecture), "where does
-each part run" (deployment, Kubernetes) and C4 views. Templates:
-`${CLAUDE_SKILL_DIR}/templates/architecture.d2`, `${CLAUDE_SKILL_DIR}/templates/deployment.d2`,
-`${CLAUDE_SKILL_DIR}/templates/c4.d2`. Roles: `${CLAUDE_SKILL_DIR}/reference/design-system.md`;
-layout: `${CLAUDE_SKILL_DIR}/reference/layout.md`; icons: `${CLAUDE_SKILL_DIR}/workflows/icons.md`.
+Use for "what are the parts and how do they talk" (architecture), C4 context
+and container views, and LLM apps. Templates: `${CLAUDE_SKILL_DIR}/templates/architecture.d2`,
+`${CLAUDE_SKILL_DIR}/templates/context.d2`, `${CLAUDE_SKILL_DIR}/templates/c4.d2`,
+`${CLAUDE_SKILL_DIR}/templates/llm-app.d2`. Where each part runs (deployment,
+Kubernetes), networks and threat models: `${CLAUDE_SKILL_DIR}/playbooks/infrastructure.md`.
+Roles: `${CLAUDE_SKILL_DIR}/reference/design-system.md`; layout:
+`${CLAUDE_SKILL_DIR}/reference/layout.md`; icons: `${CLAUDE_SKILL_DIR}/workflows/icons.md`.
 
 ## 1. Skeleton for an 800px column
 
@@ -85,53 +87,25 @@ half its width from the zone's left edge (116px in the deployment template):
 a 15-character title was struck (E-edge-through-label), 12 characters were not.
 
 **5. Leave short jogging edges bare.** A label sits at its edge's midpoint,
-which a jog can put on the bend: `SQL`, `emails` and `charges` on the store and
-third-party edges hit the bends in Geist (3 W-label-on-bend), while `REST` on
-the gateway's long runs was clean in every bundled font.
+which a jog can put on the bend: `SQL` and `charges` on the store and
+third-party edges hit the bends (3 W-label-on-bend); `REST` on long runs did not.
 
-**6. Even rows.** One `width` for a whole tier (`width: 140`): the service
-zone spans the zones below (720px over 724px; at natural widths 621px, off
-centre). 140 fits label lines of ~13 characters; a 15-character line touched
-both borders and no lint flagged it: widen the tier or wrap. Zones side by
-side: give the shorter the taller one's `height` (a minimum), or they end 68px apart.
+**6. Even rows.** One `width` for a whole tier (`width: 140` fits label lines
+of ~13 characters: wrap longer ones, no lint flags a line touching both
+borders): the service zone then spans the zones below. Zones side by side:
+give the shorter the taller one's `height`, or they end 68px apart.
 
-**7. Draw the entry point as wide as the tier it feeds** (`width: 560`, for
-`direction: down` only). ELK centres it on its flow target: a 142px gateway
-sat over Orders and left a 274px empty corner (I-sparse); 560px grounds the
-top at the same canvas width.
+**7. Draw the entry point as wide as the tier it feeds** (`width: 560`,
+`direction: down` only): ELK centres it on its flow target, so a 142px
+gateway left a 274px empty corner (I-sparse).
 
-## 4. Deployment and Kubernetes
+**8. Events: producers, topics and consumers as three zones down.** Topics
+are `queue`s in a `zone-violet` (no `width` on a queue), consumers a `zone`
+titled at the bottom (`label.near: bottom-left`: every edge enters from above);
+edges `async` and unlabelled; topics and consumers in producer order. 3 + 3 +
+4 nodes: 766x604, 15px; two consumers of the same two topics cost one crossing.
 
-- Nesting is real containment: cloud (`boundary`) > cluster (`zone`) >
-  namespace (`zone-blue` when it is the focus). Each level adds 50px per side:
-  three fit 800px; `direction: right` with three was 1342px (8.3px text).
-- One card per workload: `style.multiple: true`, the count in the label (121px
-  wide; three pod boxes in a group took 356px and a 1015px canvas, 11px text).
-- Sinks in one data zone, each below the workload that uses it: all vertical.
-- Label hops that leave a zone (`":5432"`); a hop crossing two borders put its
-  label on a border (W-edge-label-on-border): leave it bare.
-
-```d2
-# cwd: ../templates
-...@neutral-theme
-aws: AWS us-east-1 {
-  class: boundary
-  eks: EKS prod {
-    class: zone
-    shop: "ns: shop" {
-      class: zone-blue
-      api: "orders-api\n3 pods" {class: [service; focal]; style.multiple: true}
-    }
-  }
-  data: Data {
-    class: zone
-    rds: "Orders DB\nRDS Postgres" {class: datastore}
-  }
-}
-aws.eks.shop.api -> aws.data.rds: ":5432" {class: flow}
-```
-
-## 5. C4
+## 4. C4
 
 - The neutral theme, never theme 303: it drew person and text labels white on
   white (1.00:1, E-contrast). One C4 level per diagram.
@@ -148,3 +122,29 @@ aws.eks.shop.api -> aws.data.rds: ":5432" {class: flow}
   drop in straight (else W-label-on-bend on the jogging one).
 - The template uses 1226 of the 1280px height budget (one more label line:
   1242px): add containers beside the existing ones, not in a new row.
+- Context (level 1, `${CLAUDE_SKILL_DIR}/templates/context.d2`): the system is
+  ONE `[service; focal]` box, people above and the systems it calls below, so
+  every arrow points down; systems that call it join the top row (4 above and
+  4 below: 852px, 13px text; a 5th in one row: 1057px, 10.5px). Its `width`
+  reaches past the first and last system below (700 for 4; 480 jogged two).
+- `c4-person` sizes itself by its label (192 vs 155px wide): one class,
+  `person: {shape: c4-person; width: 176; height: 160}`, evens them.
+- More than 4 systems below: one box per kind,
+  `"Payments\n[Software System]\nStripe, PayPal"` (zones of two: 7-11px text).
+
+## 5. LLM apps: agents, RAG, copilots, MCP
+
+`${CLAUDE_SKILL_DIR}/templates/llm-app.d2`: the user on top; the app that
+orchestrates every call is the focus and as wide as the row it calls (580px:
+four straight edges; at its natural width 3 labels sat on bends); below it
+the model, tools (a `zone` holding a one-column grid, `grid-rows` = the tool
+count: 5 under 3 folded into 2 columns, 11.3px), memory and the retriever;
+the vector index at the bottom, where the query and the nightly indexing meet.
+
+- Every online call is ONE `<->` edge, `"request / answer"` (`"prompt /
+  reply"`, `"query / chunks"`): two opposite edges drew twice the lines and
+  widened the canvas by 28px. The offline upsert is `->`.
+- The app runs the tools: edges to tools start at the app, never the model.
+  The model is `[service; external]` unless self-hosted: `"LLM\nClaude API"`.
+- MCP: the host (Claude Desktop, an IDE) is the hub, each MCP server a zone of
+  its tools, the store behind a tool below it (410x811px, clean).

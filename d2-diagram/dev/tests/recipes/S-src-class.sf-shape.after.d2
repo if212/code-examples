@@ -1,0 +1,8 @@
+# After: the sf-* class stays and the shape the message names is set on the object.
+...@snowflake-brand
+direction: down
+placed: Order placed {class: sf-node}
+paid: Payment taken? {class: [sf-node; sf-primary]; shape: diamond}
+shipped: Shipped {class: sf-node}
+placed -> paid: {class: sf-flow}
+paid -> shipped: yes {class: sf-flow}

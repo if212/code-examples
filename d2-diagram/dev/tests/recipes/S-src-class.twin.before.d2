@@ -1,0 +1,8 @@
+# Before: a neutral-theme class in a Snowflake file: d2 ignores `focal`, the focus looks like every node.
+...@snowflake-brand
+direction: down
+app: Streamlit app {class: sf-node}
+wh: Warehouse {class: focal}
+db: ANALYTICS {class: sf-datastore}
+app -> wh: SQL {class: sf-flow}
+wh -> db: reads {class: sf-edge}

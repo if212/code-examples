@@ -1,0 +1,7 @@
+...@mini-sf
+# neutral shape and outcome roles in a Snowflake file: no twin, so no neutral import either
+start: Order placed {class: sf-node}
+gate: Paid? {class: [decision; sf-primary]}
+done: Shipped {class: [sf-node; success]}
+start -> gate: {class: sf-flow}
+gate -> done: yes {class: sf-flow}

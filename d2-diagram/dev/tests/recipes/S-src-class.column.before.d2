@@ -1,0 +1,9 @@
+# Before: a table column named class: d2 reads `class:` as the keyword, so the row vanishes.
+...@neutral-theme
+direction: right
+students: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  name: varchar
+  class: varchar
+}

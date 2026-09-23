@@ -39,6 +39,7 @@ label, a triangle head), and `W-unclassed` flags it once most peers carry one.
 | Start or end of a flow | `terminal` | pill, shape only (see section 3) |
 | Initial pseudo-state, label `""` | `dot` | 20px dark dot |
 | Annotation, one short sentence | `note` | amber page, 14px regular |
+| Lane, row, tick or time header in a grid; a dependency graph's key line (never a title) | `caption` | text only: 15px bold UPPERCASE slate-600 |
 
 | Modifier | Class | Look | Rule |
 |---|---|---|---|
@@ -71,8 +72,9 @@ All edges: 14px upright labels, slim `arrow` heads that follow the operator
 
 `class: [a; b]` applies left to right; the LAST class wins each key. Base role
 first, modifier last: `[datastore; focal]`, `[queue; danger]` (dead-letter
-queue), `[state; danger]`. The reverse `[focal; service]` draws a plain
-service box (`S-emphasis` on the focus). A modifier alone is a radius-8 box.
+queue); a template's geometry class goes between: `[service; pkg; focal]`.
+`[focal; service]` draws a plain service box; any class but `terminal` after
+`focal` fails `S-emphasis`. A modifier alone is a radius-8 box.
 
 `terminal` sets only the pill (radius 99, 1px outline) and takes its colors
 from the theme defaults or from a modifier listed BEFORE it:
@@ -213,8 +215,7 @@ container fill (B4), where AA needs 4.5:
 | 303 C4 | blue fills, every edge dashed | white on `#438dd5` 3.49 | person and text labels white on white; use `neutral-theme` with `c4-person` |
 | 200, 201 | dark only | - | not for docs |
 
-All built-ins keep 28px container titles (above 16px nodes), italic edge
-labels and no role semantics.
+All built-ins: 28px container titles over 16px nodes, italic edge labels, no roles.
 
 ## 11. Theme codes (for theme-overrides)
 

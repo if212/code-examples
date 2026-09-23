@@ -1,15 +1,14 @@
 # Infrastructure playbook: deployments, networks, threat models
 
-Where each part runs, what can reach what, and where data crosses a trust
-boundary. Runtime calls: `${CLAUDE_SKILL_DIR}/playbooks/architecture.md`; roles
-and colours: `${CLAUDE_SKILL_DIR}/reference/design-system.md`.
+Where each part runs, what can reach what, where data crosses a trust boundary.
+Runtime calls: `playbooks/architecture.md`; roles: `reference/design-system.md`.
 
 ## 1. Pick the view
 
 | The reader asks | Start from | Holds at 800px |
 |---|---|---|
 | Where does each part run, how many copies? | `${CLAUDE_SKILL_DIR}/templates/deployment.d2` | 3 nesting levels, 10 workload cards |
-| What can reach what, through which gateway or rule? | `${CLAUDE_SKILL_DIR}/templates/network.d2` | 1 VPC x 2 AZs x 3 subnet tiers x 2 nodes |
+| What can reach what, through which gateway or rule? | `${CLAUDE_SKILL_DIR}/templates/network.d2` | 1 VPC x 2 AZs x 2 subnet tiers x 2 nodes, 2 data services |
 | Where does data cross a trust boundary, and what crosses? | `${CLAUDE_SKILL_DIR}/templates/threat-model.d2` | 3 boundaries, 10 elements, 10 flows |
 
 "Our AWS infra from Terraform" asks both: a deployment and a network diagram.
@@ -53,28 +52,31 @@ aws.eks.shop.api -> aws.data.rds: ":5432" {class: flow}
 | Arrows | allowed traffic, from the side that opens the connection, labelled with the port (`":5432"`) or `egress` |
 | VPC | one `boundary`, CIDR and region in its title |
 | Subnet | one `zone`, AZ and CIDR in its title: `"Public 1a\n10.0.1.0/24"`; CIDRs inside the VPC's, none overlapping |
-| Node | one width in every subnet: class `n: {width: 104; height: 56}`, datastores `width: 104` |
+| Node | one size in every subnet: class `n: {width: 104; height: 56}`; RDS or ElastiCache: ONE node below both AZs (rule 5) |
 | Classes | ingress `flow` (the focus path), data access `dep`, egress `secondary`; every subnet plain `zone` |
 
 **1. No AZ frame.** It is one more nesting level (~100px wider; the template
 is 826px, 13.5px text) and needs an ELK flag: name the AZ in each subnet title.
 
-**2. Line the AZ columns up.** Give every node one width (natural cylinders
-made the data subnets 327 and 334px beside 328px ones) and wire both AZs
-alike, so each tier is one row. Declare AZ b mirrored: the ingress runs down
-the outer columns and the gateway sits centred (in the same order, 62px left).
-Label the per-AZ copies apart (`"NAT\ngateway 1a"`): identical labels raise
-`S-duplicate-label`.
+**2. Line the AZ columns up:** one node size (natural cylinders made two
+subnets 327 and 334px beside 328px ones), both AZs wired alike so each tier
+is one row, AZ b declared mirrored so the gateway sits centred (62px left
+otherwise). Per-AZ copies: `"NAT\ngateway 1a"` (same labels: S-duplicate-label).
+Subnet title lines of 12 characters at most: the edge into the left node enters
+102px in, and `10.40.11.0/24` was struck. 13: `n` at `width: 120` and a 600px
+gateway (890px, 12.5px text); longer: `"Private 1a\n172.31.16.0\n/20"`.
 
 **3. A gateway is as wide as the columns it serves** (`width: 520`): its four
 edges drop straight; at its natural width four labels sat on bends.
 
 **4. Traffic that points up is written `upper <- lower`** (`vpc.pub_a.nat <-
-vpc.app_a.worker: egress`). Written `->`, egress crossed twice, struck two
-subnet titles and widened the canvas to 979px.
+vpc.app_a.worker`); as `->`, egress crossed twice and struck two titles.
 
-**5. No edge between AZs.** One replication edge made the template 1572px
-tall (W-tall): write `primary` and `standby` in the labels instead.
+**5. No edge between AZs** (one made the template 1572px tall). A managed
+Multi-AZ service is ONE node below both AZs, subnets in its label: one endpoint,
+and the standby takes no connections (a copy per AZ drew 1b calling it). Each is
+as wide as the columns it serves, the cache (300) above the database (560) by a
+hidden `pin` edge: four straight edges (a Data zone around them jogged two).
 
 **6. Rules live in labels.** A node has one parent, so a security group is a
 second label line (`"orders-api\nsg-app"`), never a container. Kubernetes
@@ -83,6 +85,7 @@ network policies: one zone per namespace, one edge per allowed ingress.
 **7. On-premises and VPN: the site is a second `boundary` above the VPC,** one
 edge between the two gateways. A lone node inside a subnet zone had its edge
 strike the two-line subnet title (E-edge-through-label): put it in the VPC.
+VPN access to nodes in both AZs crossed every tier: draw it as a second diagram.
 
 ```d2
 # cwd: ../templates
@@ -110,11 +113,9 @@ dc: "Data center\n172.16.0.0/12" {class: [service; external]}
 tgw: "Transit gateway\nus-east-1" {class: [service; focal]; width: 520}
 shared: "Shared VPC\n10.0.0.0/16" {class: service}
 prod: "Prod VPC\n10.1.0.0/16" {class: service}
-dev: "Dev VPC\n10.2.0.0/16" {class: service}
 dc -> tgw: Direct Connect {class: flow}
 tgw -- shared: {class: dep}
 tgw -- prod: {class: dep}
-tgw -- dev: {class: dep}
 ```
 
 ## 4. Threat model (data-flow diagram)

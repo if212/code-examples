@@ -1,0 +1,20 @@
+# a swimlane gets the flowchart checks: start, reachability, dead ends, labelled decision exits
+...@mini-theme
+direction: right
+cust: Customer {
+  class: zone
+  ask: Ask for a refund {class: terminal}
+}
+sup: Support {
+  class: zone
+  check: Over 100 USD? {class: decision}
+  pay: Refund paid {class: terminal}
+}
+mgr: Manager {
+  class: zone
+  ok: Approve {class: service}
+}
+cust.ask -> sup.check: {class: flow}
+sup.check -> sup.pay: no {class: flow}
+sup.check -> mgr.ok: yes {class: dep}
+mgr.ok -> sup.pay: {class: dep}

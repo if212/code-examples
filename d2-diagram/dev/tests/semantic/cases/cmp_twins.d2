@@ -1,0 +1,15 @@
+# compare: the same part in each panel reads the same (not S-duplicate-label); other types still warn
+...@mini-theme
+grid-columns: 2
+before: Before {
+  class: zone
+  web: Web app {class: service}
+  mono: Monolith {class: service}
+  web -> mono: {class: dep}
+}
+after: After {
+  class: zone-blue
+  web: Web app {class: service}
+  api: API {class: [service; focal]}
+  web -> api: {class: flow}
+}

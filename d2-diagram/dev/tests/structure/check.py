@@ -6,9 +6,10 @@ usage: python3 dev/tests/structure/check.py [--skill DIR] [-v]     (wrapper: sh 
   (a) SKILL.md frontmatter parses (PyYAML, else a regex fallback); name, description,
       a quoted string argument-hint and allowed-tools are present
   (b) every path and link in SKILL.md, README.md, dev/README.md, workflows/, playbooks/ and
-      reference/ exists (placeholders like <type> match any file), and every #anchor into a
-      .md file names a real heading; files outside dev/ never link into dev/ (the zip has no
-      dev/), and only README.md may name dev/ paths, as text
+      reference/ exists (placeholders like <type> match any file), every #anchor into a .md
+      file names a real heading, and every `x.md section N` / `rule N` (or a file's own
+      `section N`) names a numbered heading there; files outside dev/ never link into dev/
+      (the zip has no dev/), and only README.md may name dev/ paths, as text
   (c) every runtime file (outside dev/) is reachable from SKILL.md through references
   (d) every code d2lint.py and semcheck.py can emit has a `### <CODE>` heading in
       workflows/review-and-fix.md, and every code heading is a code the scripts emit
@@ -284,7 +285,99 @@ def check_b(skill, rep):
                 continue
             if anchor not in anchors_cache.setdefault(f, headings(os.path.join(skill, f))):
                 errs.append('%s: prints %s#%s, which has no heading' % (rel, f, anchor))
-    rep.check('b', 'every referenced path and anchor exists', sorted(set(errs)))
+    errs += section_refs(skill)
+    rep.check('b', 'every referenced path, anchor, section and rule exists', sorted(set(errs)))
+
+
+SEC_RE = re.compile(r'(?P<doc>(?:\$\{CLAUDE_SKILL_DIR\}/)?[\w/-]*[\w-]+\.md)`?[):,]*\s+(?:\w+\s+){0,6}?'
+                    r'(?P<kind>sections?|rules?)\s+(?P<nums>\d+(?:\s*(?:-|,|and|to)\s*\d+)*)')
+OWN_RE = re.compile(r'(?<![\w.])(?P<kind>[Ss]ections?|rules?)\s+(?P<nums>\d+(?:\s*(?:-|,|and)\s*\d+)*)')
+
+
+def outline(path):
+    """numbers of a doc's sections (`## N.`) and rules (`### N.` or `**N.`), fences skipped"""
+    secs, rules, fence = set(), set(), False
+    for line in read(path).splitlines():
+        if line.startswith('```'):
+            fence = not fence
+            continue
+        m = re.match(r'^(#{2,6})\s+(\d+)\.', line) if not fence else None
+        if m:
+            (secs if len(m.group(1)) == 2 else rules).add(int(m.group(2)))
+        b = re.match(r'^\*\*(\d+)\.', line) if not fence else None
+        if b:
+            rules.add(int(b.group(1)))
+    return secs, rules
+
+
+def section_refs(skill):
+    """`playbooks/change.md section 3`, `rule 8`, `(section 7)`: the numbered heading must exist. Prose is
+    read by paragraph, so a reference that wraps a line is still seen; d2 files: their comments."""
+    def nums_of(t):
+        out = []
+        for part in t.replace('and', ',').replace('to', '-').split(','):
+            part = part.strip()
+            if '-' in part:
+                a, b = part.split('-', 1)
+                out += list(range(int(a), int(b) + 1))
+            elif part:
+                out.append(int(part))
+        return out
+
+    def locate(cur, ref):
+        ref = ref.replace('${CLAUDE_SKILL_DIR}/', '').strip('`')
+        for cand in (ref, os.path.normpath(os.path.join(os.path.dirname(cur), ref))):
+            if os.path.isfile(os.path.join(skill, cand)):
+                return cand
+        if '/' not in ref:
+            for d in (os.path.dirname(cur), 'reference', 'workflows', 'playbooks', ''):
+                if os.path.isfile(os.path.join(skill, d, ref)):
+                    return os.path.join(d, ref) if d else ref
+        return None
+
+    errs, cache = [], {}
+    files = [f for f in all_files(skill) if f.endswith(('.md', '.d2')) and not f.startswith('dev/')]
+    for rel in sorted(files):
+        text = read(os.path.join(skill, rel))
+        if rel.endswith('.d2'):
+            paras = [(n, l) for n, l in enumerate(text.splitlines(), 1) if l.lstrip().startswith('#')]
+        else:
+            paras, buf, start, fence = [], [], 1, False
+            for n, line in enumerate(text.splitlines() + [''], 1):
+                if line.startswith('```') or not line.strip():
+                    if buf:
+                        paras.append((start, ' '.join(buf)))
+                        buf = []
+                    fence = fence != line.startswith('```')
+                    continue
+                if fence:
+                    continue
+                if not buf:
+                    start = n
+                buf.append(line.strip())
+        own = cache.setdefault(rel, outline(os.path.join(skill, rel)))
+        for n, para in paras:
+            spans = []
+            for m in SEC_RE.finditer(para):
+                spans.append((m.start('kind'), m.end('nums')))
+                doc = locate(rel, m.group('doc'))
+                if not doc:
+                    continue        # a missing file is reported by the path check above
+                o = cache.setdefault(doc, outline(os.path.join(skill, doc)))
+                have = o[1] if m.group('kind').startswith('rule') else o[0]
+                for k in nums_of(m.group('nums')):
+                    if k not in have:
+                        errs.append('%s:%d: %s has no %s %d ("%s")' % (rel, n, doc, m.group('kind').rstrip('s'), k,
+                                                                       m.group(0)[:60]))
+            for m in OWN_RE.finditer(para):
+                if any(a <= m.start('kind') < b for a, b in spans):
+                    continue
+                have = own[1] if m.group('kind').lower().startswith('rule') else own[0]
+                for k in nums_of(m.group('nums')):
+                    if k not in have:
+                        errs.append('%s:%d: no %s %d in this file ("...%s")' % (
+                            rel, n, m.group('kind').lower().rstrip('s'), k, para[max(0, m.start() - 40):m.end()]))
+    return errs
 
 
 def refs_in(skill, rel, text):

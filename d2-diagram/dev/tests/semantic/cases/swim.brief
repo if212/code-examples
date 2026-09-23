@@ -1,0 +1,19 @@
+# request: "Refund approval: the customer asks, support checks the amount, a manager approves refunds over 100 USD."
+type: swimlane
+reader: test
+width: 800
+direction: right
+focus: none
+nodes:
+  cust: Customer
+  cust.ask: Ask for a refund {start}
+  sup: Support
+  sup.check: Over 100 USD? {decision}
+  sup.pay: Refund paid {end}
+  mgr: Manager
+  mgr.ok: Approve
+edges:
+  cust.ask -> sup.check
+  sup.check -> sup.pay: no
+  sup.check -> mgr.ok: yes
+  mgr.ok -> sup.pay

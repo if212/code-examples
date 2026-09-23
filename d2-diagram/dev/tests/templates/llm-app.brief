@@ -20,17 +20,17 @@ nodes:
   tools.orders: Order status
   tools.refunds: Issue refund
   memory: Chat history\nRedis {shape: cylinder}
-  retriever: Retriever\nhybrid, top-8
+  retriever: Retriever\nhybrid search
   index: Nightly indexing
   index.docs: Help center\nZendesk {external}
   index.embed: Embed job\nAirflow
   vectors: Vector index\npgvector {shape: cylinder}
 edges:
-  user -> app: question
+  user <-> app: question / answer
   app <-> llm: prompt / reply
   app <-> tools: call / result
   app <-> memory: history
-  app -> retriever: query
-  retriever -> vectors: top-8 search
+  app <-> retriever: query / chunks
+  retriever <-> vectors: search / top-8
   index.docs -> index.embed: articles
   index.embed -> vectors: upsert {dashed}

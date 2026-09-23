@@ -1,6 +1,6 @@
 ---
 name: d2-diagram
-description: Design, render and visually review polished technical diagrams with D2, delivering an SVG plus its .d2 source. Use for architecture/system, deployment/Kubernetes, C4, data pipeline, flowchart/CI-CD, sequence/protocol, ER/SQL schema, UML class, state machine and step-by-step diagrams, and the other types in its template catalog, whenever the user wants a diagram (even if D2 is not named), and to restyle, fix or re-export an existing .d2. Includes a neutral design system and a Snowflake brand theme. Not for data charts (bar/line/scatter) or UI mockups.
+description: Design, render and visually review polished technical diagrams with D2, delivering an SVG plus its .d2 source. Use for architecture/system, deployment/Kubernetes, network/VPC, C4 context and container, data pipeline/ETL/RAG indexing, LLM/agent apps, sequence/protocol, request walkthrough, flowchart/CI-CD/runbook, swimlane, state machine, ER/SQL schema, UML class, dependency/lineage graph, org chart/tree/mind map, layered stack, threat model/DFD, before/after, timeline/postmortem, roadmap, git branching and step-by-step diagrams whenever the user wants a diagram (even if D2 is not named), and to restyle, fix or re-export an existing .d2. Includes a neutral design system and a Snowflake brand theme. Not for data charts (bar/line/scatter) or UI mockups.
 argument-hint: "[what to draw | path/to/file.d2] [width=800] [brand=snowflake]"
 license: MIT
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(d2 *), Bash(sh ${CLAUDE_SKILL_DIR}/scripts/*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/*), Bash(cp *), Bash(mkdir *), Bash(ls *), Bash(chmod 644 *), Bash(nohup d2 *)
@@ -44,11 +44,11 @@ cp ${CLAUDE_SKILL_DIR}/templates/neutral-theme.d2 <dir of target>/
 cp ${CLAUDE_SKILL_DIR}/templates/<template>.d2 <target>.d2
 ```
 
-Snowflake brand: copy `snowflake-brand.d2` instead, make line 2 of the copy
-`...@snowflake-brand` and use its `sf-*` classes (`reference/brand-snowflake.md`).
+Snowflake brand: copy `snowflake-brand.d2` instead of the theme, set line 2 of
+`<target>.d2` to `...@snowflake-brand`, use `sf-*` classes (`reference/brand-snowflake.md`).
 Then edit `<target>.d2`:
-- Use the inventory keys verbatim. Nodes first, inside their groups; edges
-  last, main path first.
+- Line 1 says what the diagram shows (it held the template's note). Use the
+  inventory keys verbatim. Nodes first, in their groups; edges last, main path first.
 - Every node, container and edge gets a role class, base first, modifier
   last: `[service; focal]` (`reference/design-system.md`). Tables and UML
   classes take none: the template's globs style them.
@@ -143,7 +143,7 @@ and show that only the requested change appears.
 | Brief and inventory format | `workflows/brief.md` |
 | Rubric, one recipe per code, compile errors | `workflows/review-and-fix.md` |
 | Icons: ladder, fetch, verify | `workflows/icons.md`, `reference/icons.md` |
-| Per-type rules: layout skeleton, notation, do and don't | `playbooks/*.md` (route.md names the one) |
+| Per-type rules: layout, notation, do and don't (route.md names the one) | `playbooks/`: `architecture.md` (systems, C4, LLM apps), `infrastructure.md` (deployment, network, threat model), `pipeline.md`, `hierarchy.md` (dependencies, tree, stack), `sequence.md`, `erd.md` (+ UML class), `flowchart.md` (+ swimlane), `state.md`, `change.md` (walkthrough, compare, steps, timeline, roadmap, gitflow) |
 | Starting diagrams | `templates/*.d2` (themes: `neutral-theme.d2`, `snowflake-brand.d2`) |
 | Roles, colours, type scale, legend, dark mode | `reference/design-system.md` |
 | Snowflake palette and rules | `reference/brand-snowflake.md` |

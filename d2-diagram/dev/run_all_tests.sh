@@ -11,7 +11,7 @@
 #   -j N         parallel jobs inside the recipes and snippets suites (default 4)
 #   -h, --help   this text
 # Suites run one after another, in this order:
-#   structure lint d2check semantic style templates snippets export recipes icons routing
+#   structure lint d2check doctor semantic style templates snippets export recipes icons routing
 # Logs: ${TMPDIR:-/tmp}/d2-diagram-tests/<suite>.log (the tail of a failed suite is printed);
 # the templates suite leaves each template's review PNGs in templates/work/ there.
 # exit: 0 every suite that ran passed | 1 a suite failed | 2 usage error or d2/python3 missing
@@ -21,7 +21,7 @@ HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 SKILL=$(dirname -- "$HERE")
 T="$HERE/tests"
 LOG=${TMPDIR:-/tmp}/d2-diagram-tests
-ALL="structure lint d2check semantic style templates snippets export recipes icons routing"
+ALL="structure lint d2check doctor semantic style templates snippets export recipes icons routing"
 QUICK="structure lint snippets templates"
 PYTHONDONTWRITEBYTECODE=1
 export PYTHONDONTWRITEBYTECODE
@@ -33,6 +33,7 @@ suite      needs                         checks
 structure  python3 (d2 for fmt)          package structure: links, reachability, codes, ASCII, classes, ...
 lint       d2, python3 (Chromium)        d2lint codes on their cases; rasterizer and pngstats checks
 d2check    d2, python3, Chromium         d2check end to end: exit codes, summary, files, routes, boards
+doctor     d2, python3, node, Chromium   doctor.sh on simulated machines, one dependency removed at a time; --help and usage exits
 semantic   d2, python3                   semcheck: brief parsing, S- codes, hints, dump/compare
 style      d2, python3, Chromium         theme contrast and fmt, class coverage, Snowflake rules
 templates  d2, python3 (Chromium)        every template: d2check exit 0 against its brief at 800px
@@ -126,6 +127,7 @@ run_suite() {  # run_suite NAME -> 0 pass | 1 fail | 3 skipped (the log says why
     structure) sh "$T/structure/check.sh" ;;
     lint) python3 "$T/lint/run_tests.py" ;;
     d2check) sh "$T/lint/test_d2check.sh" ;;
+    doctor) sh "$T/lint/test_doctor.sh" ;;
     semantic) python3 "$T/semantic/run_tests.py" ;;
     style) sh "$T/style/run.sh" "$LOG/style" ;;
     templates) suite_templates ;;

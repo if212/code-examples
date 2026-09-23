@@ -47,7 +47,13 @@ TYPES = ('architecture', 'deployment', 'c4', 'pipeline', 'sequence', 'erd', 'cla
 TYPE_ALIASES = {'flow': 'flowchart', 'cicd': 'flowchart', 'ci-cd': 'flowchart', 'uml': 'class',
                 'uml-class': 'class', 'er': 'erd', 'sql': 'erd', 'schema': 'erd', 'k8s': 'deployment',
                 'kubernetes': 'deployment', 'topology': 'deployment', 'state-machine': 'state',
-                'data-pipeline': 'pipeline', 'seq': 'sequence', 'other': 'other'}
+                'data-pipeline': 'pipeline', 'seq': 'sequence', 'other': 'other',
+                # catalog types (templates/<type>.d2 is the type; these are other names for it)
+                'dfd': 'threat-model', 'threat': 'threat-model', 'vpc': 'network', 'dynamic': 'walkthrough',
+                'lineage': 'depgraph', 'dependency': 'depgraph', 'dag': 'depgraph', 'before-after': 'compare',
+                'delta': 'compare', 'gantt': 'roadmap', 'lanes': 'swimlane', 'org': 'tree', 'mindmap': 'tree',
+                'hierarchy': 'tree', 'layers': 'stack', 'rag': 'llm-app', 'agent': 'llm-app', 'mcp': 'llm-app',
+                'system-context': 'context', 'git': 'gitflow'}
 HEADER_KEYS = ('type', 'reader', 'width', 'direction', 'focus', 'out', 'layout', 'title', 'brand')
 SECTIONS = {'nodes': 'nodes', 'edges': 'edges', 'messages': 'edges', 'relationships': 'edges',
             'transitions': 'edges'}
@@ -397,7 +403,8 @@ def parse_brief(path):
         for i in range(1, len(parts)):
             anc = '.'.join(parts[:i])
             if anc not in inv['nodes']:
-                inv['nodes'][anc] = {'key': anc, 'label': None, 'attrs': {'_implied': True}, 'line': 0}
+                inv['nodes'][anc] = {'key': anc, 'label': None, 'attrs': {'_implied': True, '_ancestor': True},
+                                     'line': 0}
     if path.endswith('.brief'):
         missing = [k for k in ('type', 'reader', 'width', 'direction', 'focus') if k not in inv['meta']]
         if missing:
@@ -588,7 +595,7 @@ def parse_svg(path, board=''):
                 b = _bbox_of(r)
                 if b:
                     masks.append(b)
-    nodes, edges, lifelines = {}, [], set()
+    nodes, edges, lifelines, hidden_nodes = {}, [], set(), set()
     order = 0
 
     def hidden(el):
@@ -620,6 +627,8 @@ def parse_svg(path, board=''):
                             record_edge(ident, m, ch, order, toks[1:])
                     else:
                         record_node(ident, ch, order, toks[1:])
+                elif ident and not legend and not EDGE_RE.match(ident):
+                    hidden_nodes.add(norm_key(ident))     # a hidden helper (grid slot, spacer) still exists
             if tag != 'marker':
                 walk(ch, legend)
 
@@ -686,7 +695,7 @@ def parse_svg(path, board=''):
                       'order': order, 'classes': classes, 'board': board})
 
     walk(root, False)
-    return {'nodes': nodes, 'edges': edges, 'lifelines': lifelines,
+    return {'nodes': nodes, 'edges': edges, 'lifelines': lifelines, 'hidden_nodes': hidden_nodes,
             'lifelines_norm': {norm_key(x) for x in lifelines}, 'boards': [board]}
 
 
@@ -728,6 +737,7 @@ def load_graph(path):
         lifelines |= g['lifelines']
     edges = sorted((e for grp in best.values() for e in grp), key=lambda e: e['order'])
     return {'nodes': nodes, 'edges': edges, 'lifelines': lifelines,
+            'hidden_nodes': set().union(*(g.get('hidden_nodes', set()) for g in graphs)),
             'lifelines_norm': {norm_key(x) for x in lifelines}, 'boards': [g['boards'][0] for g in graphs]}
 
 
@@ -1137,6 +1147,8 @@ class D2Source:
             info['shape'] = unquote(value).lower()
         if segs[-1] != 'class' or key.startswith(('&', '!&')) or (path[-1:] == ('classes',) and len(segs) == 1):
             return          # not a use: a glob filter (&class), or a class NAMED "class"
+        if re.search(r'''(["'])class\1\s*$''', key, re.I):
+            return          # a quoted "class" is a name (a table column called class), not the keyword
         names = value[1:-1].split(';') if value.startswith('[') and value.endswith(']') else [value]
         for nm in names:
             nm = unquote(nm.strip())
@@ -1204,7 +1216,13 @@ def defined_classes(paths):
 # the same role in the other skill theme: a neutral class in a Snowflake file and back
 SF_TWIN = {'service': 'sf-node', 'actor': 'sf-node', 'focal': 'sf-primary', 'focal-solid': 'sf-primary',
            'datastore': 'sf-datastore', 'external': 'sf-external', 'muted': 'sf-muted', 'zone': 'sf-container',
-           'zone-blue': 'sf-container', 'dep': 'sf-edge', 'flow': 'sf-flow', 'failure': 'sf-failure'}
+           'zone-blue': 'sf-container', 'dep': 'sf-edge', 'flow': 'sf-flow', 'failure': 'sf-failure',
+           'state': 'sf-node', 'boundary': 'sf-container', 'zone-green': 'sf-container',
+           'zone-amber': 'sf-container', 'zone-violet': 'sf-container', 'secondary': 'sf-edge',
+           'async': 'sf-edge', 'ok': 'sf-flow'}
+# neutral shape roles the Snowflake theme has no class for: the shape goes on the object, next to an sf-* class
+SF_SHAPE = {'decision': 'shape: diamond', 'terminal': 'style.border-radius: 99', 'dot': 'shape: circle; width: 20; '
+            'height: 20', 'note': 'shape: page', 'queue': 'shape: queue', 'caption': 'shape: text'}
 NEUTRAL_TWIN = {'sf-node': 'service', 'sf-primary': 'focal', 'sf-datastore': 'datastore', 'sf-external': 'external',
                 'sf-muted': 'muted', 'sf-container': 'zone', 'sf-edge': 'dep', 'sf-flow': 'flow',
                 'sf-failure': 'failure'}
@@ -1279,7 +1297,17 @@ def class_findings(d2file, notes=None):
             theme = next((t for t in ('neutral-theme', 'snowflake-brand') if low in theme_classes(t)
                           and 2 * len(theme_classes(t) & known) < len(theme_classes(t))), None)
             near = near_class(low, known)
-            if theme:
+            if theme == 'neutral-theme' and sf_file:    # never mix the two themes: say how the brand draws it
+                if low in SF_SHAPE:
+                    fix = f"'{name}' is a neutral-theme class with no snowflake-brand twin: keep an sf-* class and " \
+                          f"set the shape on the object, {SF_SHAPE[low]} (brand-snowflake.md section 3)"
+                else:
+                    fix = f"'{name}' is a neutral-theme class with no snowflake-brand twin: drop it; the brand " \
+                          f"has no outcome colours, so name the outcome in the label (brand-snowflake.md section 3)"
+            elif theme == 'snowflake-brand' and not sf_file and known & theme_classes('neutral-theme'):
+                fix = f"'{name}' is a snowflake-brand class with no neutral-theme twin: use a role class of this " \
+                      f"file's theme (design-system.md)"
+            elif theme:
                 fix = f"'{name}' is a {theme} class, and nothing here imports that theme: put `...@{theme}` on line 1"
             elif near:
                 fix = f"class '{name}' is defined neither here nor in the imports, so d2 ignores it: " \
@@ -1487,7 +1515,15 @@ def diff(inv, g, rep):
     expected = dict(inv_nodes)
     if collapse_cols:
         expected = {k: v for k, v in expected.items() if '.' not in k or k in comp_nodes}
-    missing = [k for k in expected if k not in comp_nodes]
+    hidden_nodes = g.get('hidden_nodes', set())
+
+    def helper(k):
+        # a grid slot hidden with style.opacity: 0 is not drawn, but the drawn nodes inside it prove it
+        # exists: excused when the brief only implies it (a dotted key) or the drawing hides it; a
+        # container with nothing drawn inside, or a hidden leaf, is still missing
+        return any(c.startswith(k + '.') for c in comp_nodes) and (
+            expected[k]['attrs'].get('_ancestor') or k in hidden_nodes)
+    missing = [k for k in expected if k not in comp_nodes and not helper(k)]
     extra = [k for k in comp_nodes if k not in expected and k not in span_map]
     for k in missing:
         leaf = leaf_of(k).lower()
@@ -1501,6 +1537,8 @@ def diff(inv, g, rep):
                         [e], box(e))
                 extra.remove(e)
         else:
+            if want['attrs'].get('_ancestor') and any(m.startswith(k + '.') for m in missing):
+                continue    # only implied by a dotted key: the listed node inside it is reported
             near = [c for c in comp_nodes if c not in expected and looks_like_typo(leaf_of(c), leaf)]
             hint = f"; the diagram has similar key(s): {', '.join(comp_nodes[c]['id'] for c in near)}" if near else ''
             what = f" ({want['label']})" if want['label'] else ''
@@ -1757,8 +1795,8 @@ def diff(inv, g, rep):
                     (seen_as if len(seen_as) < 60 else '') + ': declare all actors first, in reading order, '
                     'before any message', order)
 
-    # --- flowcharts and state machines: start, reachability, ends, decisions
-    if typ in ('flowchart', 'state'):
+    # --- flowcharts, swimlanes and state machines: start, reachability, ends, decisions
+    if typ in ('flowchart', 'state', 'swimlane'):
         adj = defaultdict(set)
         for e in g['edges']:
             s, d = norm_key(e['src']), norm_key(e['dst'])
@@ -1804,7 +1842,7 @@ def diff(inv, g, rep):
                 continue
             if any(o.startswith(k + '.') for o in inv_nodes):
                 continue
-            if not exits(k) and typ == 'flowchart':
+            if not exits(k) and typ in ('flowchart', 'swimlane'):
                 rep.add('warn', 'S-dead-end', f"'{v['key']}' has no outgoing edge and is not marked {{end}}",
                         [v['key']], box(k))
             if v['attrs'].get('decision'):
@@ -1935,6 +1973,10 @@ def diff(inv, g, rep):
             by_label[t.lower()].append(n['id'])
     for t, ids in by_label.items():
         if len(ids) > 1:
+            keys = [norm_key(i) for i in ids]
+            if typ == 'compare' and all('.' in k for k in keys) and len({k.split('.', 1)[1] for k in keys}) == 1 \
+                    and len({k.split('.', 1)[0] for k in keys}) == len(keys):
+                continue    # compare: the same part drawn once in each panel (before.web, after.web)
             rep.add('warn', 'S-duplicate-label', f"{len(ids)} different nodes read {t!r} ({', '.join(ids)}): merge "
                     f"them or make the labels distinct", ids)
 
@@ -2017,7 +2059,8 @@ def _brief_quote(s):
 
 def source_case(text, lab):
     """Zone and boundary titles reach the SVG upper-cased (text-transform): take the source's spelling."""
-    if not text or lab != lab.upper() or lab == lab.lower():
+    plain = lab.replace('\\n', '\n')         # upper() turns the escape backslash-n into backslash-N
+    if not text or plain != plain.upper() or plain == plain.lower():
         return lab
     pat = r'\\n'.join(re.escape(p) for p in lab.split('\\n'))
     # the label follows a colon (`services: Services`); a bare match could be the lowercase KEY
@@ -2062,7 +2105,7 @@ def dump(g, src=None):
         cl = set(n['classes'])
         if seq and '.' not in k and k not in g['lifelines_norm']:
             attrs.append('group')
-        if typ in ('flowchart', 'state') and k not in parents:
+        if typ in ('flowchart', 'state', 'swimlane') and k not in parents:
             if 'dot' in cl or ('terminal' in cl and not ins[k] and exits(k)):
                 attrs.append('start')
             elif 'terminal' in cl and not exits(k):

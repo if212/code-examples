@@ -1,0 +1,8 @@
+# After: the Snowflake twin the message names (focal -> sf-primary).
+...@snowflake-brand
+direction: down
+app: Streamlit app {class: sf-node}
+wh: Warehouse {class: sf-primary}
+db: ANALYTICS {class: sf-datastore}
+app -> wh: SQL {class: sf-flow}
+wh -> db: reads {class: sf-edge}

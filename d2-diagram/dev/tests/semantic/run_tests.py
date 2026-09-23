@@ -100,6 +100,7 @@ CODESETS = [
     ('cls.brief', 'cls_import.d2', set()),      # classes via a nested import and `classes: {...@f}`
     ('cls.brief', 'cls_sf.d2', {'S-src-class'}),
     ('cls_column.brief', 'cls_column.d2', {'S-src-class'}),
+    ('cls_column.brief', 'cls_column_quoted.d2', set()),     # the fix: a quoted "class" is a column name
     # invisible balancing children (opacity 0, by class or inline) are not part of the graph (B21)
     ('ghost.brief', 'ghost.d2', set()),
     # a note under a sequence actor does not make the actor a group (B28)
@@ -111,6 +112,15 @@ CODESETS = [
     # (drawn with one-number V commands) keeps its real x, so declared order stays in order
     ('cls.brief', 'cls_multiline.d2', set()),
     ('seq_cyl.inv', 'seq_cyl.d2', set()),
+    # integration: a hidden grid slot is proven by the node drawn inside it; an empty slot or a hidden
+    # listed node is still missing; compare panels repeat parts; swimlanes get the flowchart checks
+    ('slot.brief', 'slot_good.d2', set()),
+    ('slot.brief', 'slot_empty.d2', {'S-missing-node'}),
+    ('slot.brief', 'slot_leaf.d2', {'S-missing-node'}),
+    ('cmp.brief', 'cmp_twins.d2', set()),
+    ('cmp_arch.brief', 'cmp_twins.d2', {'S-duplicate-label'}),
+    ('swim.brief', 'swim_good.d2', set()),
+    ('swim.brief', 'swim_bad.d2', {'S-decision', 'S-edge-label'}),
 ]
 
 # (name, argv, expected exit, substrings that must appear, substrings that must not)
@@ -134,6 +144,8 @@ RUNS = [
     ('brief header: --field focus', ['--field', 'focus', 'focus.brief'], 0,
      ['api.orders, web -> api.gw -> api.orders'], []),
     ('brief header: --field type normalises aliases', ['--field', 'type', 'alias.brief'], 0, ['flowchart'], []),
+    ('brief header: catalog aliases (gantt = roadmap)', ['--field', 'type', 'alias_catalog.brief'], 0, ['roadmap'],
+     []),
     ('brief header: request continues on indented # lines only', ['--json', 'reqcont.brief', 'engine_import.d2'], 0,
      ['"request": "Alpha calls Beta over gRPC; Beta answers."'], ['arrows = request direction"']),
     ('brief header: missing field exits 1', ['--field', 'reader', 'engine.brief'], 1, [], []),
@@ -237,6 +249,15 @@ RUNS = [
     ('dump: a steps file is type steps', ['--dump', 'steps_good.d2'], 0, ['type: steps'], []),
     ('dump: an upper-cased zone title takes the label case, not the key', ['--dump', 'dump_zone.d2'], 0,
      ['services: Services'], ['services: services', 'SERVICES']),
+    ('dump: a two-line zone title keeps the source case of both lines', ['--dump', 'dump_zone2.d2'], 0,
+     ['pub: Public 1a\\n10.0.1.0/24'], ['PUBLIC 1A']),
+    ('--lint: a neutral shape role in a Snowflake file names the shape, not the neutral import',
+     ['--lint', 'cls_sf_shape.d2'], 1,
+     ["'decision' is a neutral-theme class with no snowflake-brand twin", 'shape: diamond',
+      "'success' is a neutral-theme class with no snowflake-brand twin: drop it"], ['@neutral-theme']),
+    ('--lint: a Snowflake-only class in a neutral file asks for a role class, not the Snowflake import',
+     ['--lint', 'cls_neutral_accent.d2'], 1,
+     ["'sf-accent-orange' is a snowflake-brand class with no neutral-theme twin"], ['@snowflake-brand']),
 ]
 
 # d2 files that fail to compile -> text that --hint must print for d2's real error message

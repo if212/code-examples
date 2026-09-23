@@ -32,7 +32,7 @@ column and shrinks (`display:` shows scale < 1).
 Fix: make the canvas narrower, not the font bigger: `direction: down` (tiers
 side by side instead of ranks in a row), wrap labels near 22 characters with
 `\n` (`"Order management\nservice"`). Past about 15 nodes, split into `steps`
-boards (playbooks/flowchart.md rule 8). Sequence: playbooks/sequence.md rule 8.
+boards (playbooks/change.md section 3). Sequence: playbooks/sequence.md rule 8.
 
 ### W-small-text
 Seen: text displays at 10-12px. At scale < 1 it is the E-small-text case,
@@ -131,7 +131,10 @@ Seen: an edge is drawn across a label, usually a container title: d2's centred
 title (container without a zone class), or a long one-line `zone` title that
 reaches the middle of the box where the edge enters.
 Fix: give the container its zone class (title top-left); wrap a long title
-so each line stays under about 75px: `"Shop\nplatform\nservices"`.
+so each line stays under about 75px: `"Shop\nplatform\nservices"`. A line that
+cannot wrap (a CIDR): widen the first child, since its edge enters 50px plus
+half its width from the zone's left edge (136px cleared `10.40.11.0/24`;
+subnets: playbooks/infrastructure.md rule 2).
 
 ### W-edge-through-container
 Seen: an edge cuts through a container that holds neither of its ends: a grid
@@ -158,7 +161,8 @@ edges that cross borders bare.
 Seen: an edge runs diagonally or visibly leans: in a grid, a node-to-node
 edge whose ends sit in different rows and columns.
 Fix: declare the cells so every edge joins neighbours in one row or one
-column (row 1: web, cache; row 2: api, db).
+column (row 1: web, cache; row 2: api, db). Gitflow cut and merge lines are
+diagonal by design: leave them (playbooks/change.md section 6).
 
 ### W-curved-edge
 Seen: curved spline edges: dagre drew them, because the file pins no engine
@@ -254,8 +258,9 @@ honest shape of the graph.
 ### S-missing-node
 Seen: a node of the brief is not drawn (error), or (INFO) the request names a
 term that no brief label, key or `out:` entry covers.
-Fix: draw it with the brief's key (and its edges). INFO: add the term to the
-brief, or to `out:` when it is left out on purpose.
+Fix: draw it with the brief's key (and its edges); a node hidden with
+`style.opacity: 0` is not drawn. A hidden grid slot is fine: list the node in it (`t1.x`).
+INFO: add the term to the brief, or to `out:` when it is left out on purpose.
 
 ### S-extra-node
 Seen: a node that is not in the brief: often a typo in an edge end
@@ -314,7 +319,8 @@ the reverse.
 Fix: the role class that draws it: `async` (dashed) or `dep`/`flow` (solid).
 
 ### S-duplicate-label
-Seen: two different nodes show the same text, so they read as one thing.
+Seen: two different nodes show the same text, so they read as one thing (the
+same part in both panels of `type: compare` is not flagged).
 Fix: give each node its own brief label (or merge them if they are one).
 
 ### S-missing-column
@@ -427,9 +433,17 @@ edited file that keeps its own look (no restyle asked): `vars: {d2-config:
 {layout-engine: elk}}`, and say so under Assumed.
 
 ### S-src-class
-Seen: a class name that no theme or local `classes:` block defines (a typo
-such as `datastor`): d2 compiles it silently and draws a default box.
-Fix: use a class the theme defines (reference/design-system.md section 2).
+Seen: a class that no theme or local `classes:` block defines: d2 compiles it
+silently and draws a default box. The message says which case it is.
+Fix: by the message. `did you mean 'datastore'?`: use that name (the theme's
+classes: reference/design-system.md section 2). `a neutral-theme class; this
+file uses snowflake-brand`: write the twin it names (`focal` -> `sf-primary`,
+and back). `put ...@neutral-theme on line 1`: add the import and copy the
+theme next to the file. `one name, not a list`: `class: [service; focal]`.
+`the row vanishes`: a table column named `class`; quote it, `"class": varchar`.
+`no snowflake-brand twin`: keep an `sf-*` class and set the shape it names on
+the object (`shape: diamond`), or drop a colour-only class
+(reference/brand-snowflake.md section 3).
 
 ## Class traps
 
@@ -491,4 +505,4 @@ reproduced with d2 0.7.1.
 | `fmt: reformatted ... Read it again` | d2 fmt rewrote the file: Read it before the next Edit. |
 | `warning: '-l' overrides the file's vars.d2-config` | Drop the flag after `--`; the engine and theme belong in `vars.d2-config`. |
 | `warning: ignored d2 settings from the environment` | Nothing to do for d2check, which already ignores them. Raw `d2` calls read them: `unset` them in the same command (reference/export.md). |
-| a raw `d2` call that never returns | `D2_WATCH` is set, or `-w` was passed: stop it, and clear the variable in the same command as each raw `d2` call (reference/export.md, top); watch mode only in the background (section 9). d2check ignores `D2_WATCH`. |
+| a raw `d2` call that never returns | `D2_WATCH` is set, or `-w` was passed: stop it, and clear the variable in the same command as each raw `d2` call (reference/export.md, top); watch mode only in the background (export.md section 9). d2check ignores `D2_WATCH`. |

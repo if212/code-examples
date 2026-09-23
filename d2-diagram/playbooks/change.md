@@ -4,7 +4,7 @@
 
 | Type | The reader asks | Holds at 800px |
 |---|---|---|
-| walkthrough | Which path does ONE request take through the parts? | 6 hops, 8 nodes |
+| walkthrough | Which path does ONE request take through the parts? | 6 hops, 9 nodes |
 | compare | What changes between A and B? | 2 boxes per row per panel |
 | steps | How does the picture change from one step to the next? | 5 boards, 8 nodes |
 | timeline | What happened when, in what order? | 8 events |
@@ -132,10 +132,10 @@ mitigate: "Mitigate: 14:14-14:38, 24 min" {
 - Rows: hidden period ticks (`caption`), a `zone` per stream (title = stream), the
   status key; no edges. Same gaps in every row, so a bar over n periods is n x 168 +
   (n - 1) x 12 px (168, 348, 528, 708) and ends on a tick; an empty period is a hidden
-  spacer. 8 week columns: 78px each, labels of 8 characters or fewer.
+  spacer. A 168px bar holds ~17 characters a line; 8 week columns: 78px, 8 characters.
 - Status is the class: done `success`, in progress `service`, planned `muted`, at risk
   `danger`, shown as key chips (a `d2-legend` swatch cannot tell `service` from `muted`).
-  The item the plan hinges on is `focal`, its milestone date inside the bar.
+  The item the plan hinges on is `focal`: its date and status go in its label.
 
 ## 6. Gitflow
 

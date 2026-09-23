@@ -60,6 +60,14 @@ e=$(printf '%s\n' "$o" | grep -n 'reserved keywords' | head -1 | cut -d: -f1)
 h=$(printf '%s\n' "$o" | grep -n '^hint: ' | head -1 | cut -d: -f1)
 [ "$rc" = 1 ] && [ -n "$e" ] && [ -n "$h" ] && [ "$e" -lt "$h" ] && ok "left -> right: exit 1, d2 error then hint:" || bad "compile error (exit $rc)" "$o"
 has "$o" ': kw.d2:1:1: reserved keywords are prohibited' && ! has "$o" "$T/kw.d2:1" && ok "d2 errors shown without the input's absolute folder" || bad "d2 error path" "$o"
+o=$(cd /dev && sh "$CHECK" "$T/kw.d2" "$T/kw.svg" 2>&1)
+! has "$o" '\.\.kw\.d2' && has "$o" ': kw.d2:1:1: reserved keywords are prohibited' && ok "d2 errors: the ../../ spelling of the folder is dropped too" || bad "d2 error path from another cwd" "$o"
+# a deep folder: paths are shortened BEFORE the line is cut, so d2's own advice survives (B37)
+deep="$T/a-very-long-folder-name-that-pushes-the-error-line-past-its-cut-aaaaaaaaaaaaaaaaaaaa/and-one-more-level-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+mkdir -p "$deep" && cp "$SKILL/templates/neutral-theme.d2" "$deep/"
+printf '...@neutral-theme\napi: Orders API {class: [service, focal]}\n' > "$deep/cc.d2"
+o=$(sh "$CHECK" --no-raster "$deep/cc.d2" 2>&1); rc=$?
+[ "$rc" = 1 ] && has "$o" 'Did you mean to use ";" to separate array items' && ok "deep folder: d2's advice is not cut off (B37)" || bad "deep folder error line (exit $rc)" "$o"
 [ "$before" = "$(cksum < "$T/kw.svg")" ] && ok "failed render leaves the existing OUT untouched" || bad "failed render changed OUT"
 printf 'a -> b: "unterminated\n' > "$T/syn.d2"
 o=$(sh "$CHECK" "$T/syn.d2" "$T/syn.svg" 2>&1); rc=$?
@@ -116,6 +124,16 @@ if [ -f "$SKILL/scripts/semcheck.py" ]; then
   mkdir -p "$D2_WORK/brief_case" && cp "$HERE/d2check/brief_case.brief" "$D2_WORK/brief_case/brief_case.brief"
   o=$(sh "$CHECK" --no-raster "$T/brief_case.d2" 2>&1)
   has "$o" 'S-missing-edge' && ok "brief found in D2W/<name>.brief without --brief" || bad "D2W brief lookup" "$o"
+  # without a brief the source checks still run: a class nothing defines is not "clean" (B36)
+  cp "$SKILL/templates/neutral-theme.d2" "$T/"
+  printf '...@neutral-theme\napi: API {class: service}\ndb: DB {class: datastor}\napi -> db: {class: dep}\n' > "$T/nobrief.d2"
+  o=$(sh "$CHECK" --no-raster "$T/nobrief.d2" 2>&1); rc=$?
+  [ "$rc" = 2 ] && has "$o" '^semantic: source checks only - no brief' && has "$o" '^S-src-class x1 -> workflows/review-and-fix.md#s-src-class' &&
+    ok "no brief: semcheck --lint runs, a class typo exits 2 (B36)" || bad "no-brief source checks (exit $rc)" "$o"
+  printf 'a -> b\n' > "$T/unpinned.d2"
+  o=$(sh "$CHECK" --no-raster "$T/unpinned.d2" 2>&1); rc=$?
+  [ "$rc" = 2 ] && has "$o" '^S-src-cli-engine x1 -> ' && ok "no brief: an unpinned engine is S-src-cli-engine, as with a brief" ||
+    bad "no-brief S-src-cli-engine (exit $rc)" "$o"
 else
   printf 'skip  brief checks (scripts/semcheck.py missing)\n'
 fi
@@ -134,6 +152,14 @@ printf -- '--font-regular=%s/%s/Regular.ttf --font-bold "%s/%s/Bold.ttf"\n--font
 EOF
   o=$(sh "$fake/d2check.sh" --no-raster "$T/ok_flowchart.d2" "$T/out/f.svg" 2>&1); rc=$?
   has "$o" '^fonts: default (assets/fonts/default)' && has "$o" "'--font-italic=/" && grep -q 'd2-[0-9]*-font-italic' "$T/out/f.svg" && ok "font-flags.sh: default family applied (spaces in paths)" || bad "font flags (exit $rc)" "$o"
+  # the re-render line runs as printed (quoted font paths, no $(...) under a path with spaces) and
+  # gives the shipped SVG minus d2check's text-rendering style (B38)
+  cp "$T/out/f.svg" "$T/out/f.shipped.svg"
+  rr=$(printf '%s\n' "$o" | sed -n 's/^re-render: //p')
+  if sh -c "$rr" > /dev/null 2>&1 &&
+    [ "$(sed 's/\.d2-svg text{text-rendering:geometricPrecision}//' "$T/out/f.shipped.svg" | cksum)" = "$(cksum < "$T/out/f.svg")" ]; then
+    ok "re-render: runs as printed from a path with spaces, same SVG (B38)"
+  else bad "re-render line under a path with spaces" "$rr"; fi
   printf '...@snowflake-brand\na -> b\n' > "$T/sf.d2"
   printf 'vars: {d2-config: {layout-engine: elk}}\n' > "$T/snowflake-brand.d2"
   o=$(sh "$fake/d2check.sh" --no-raster "$T/sf.d2" 2>&1)
@@ -157,6 +183,10 @@ vb() { grep -o 'viewBox="[^"]*"' "$1" | head -1; }
 [ "$rc" = 3 ] && has "$o" '^warning: ignored d2 settings from the environment: D2_LAYOUT=dagre D2_PAD=100 D2_WATCH=true SCALE=2' &&
   [ -n "$(vb "$T/out/env.svg")" ] && [ "$(vb "$T/out/env.svg")" = "$(vb "$T/out/clean.svg")" ] && ok "D2_WATCH/D2_LAYOUT/D2_PAD/SCALE ignored with a warning, no hang (B3)" ||
   bad "hostile environment (exit $rc)" "$o"
+# a TMPDIR that no longer exists (a deleted temp folder) must not cost the faithful review
+r1=$(sh "$CHECK" "$T/ok_flowchart.d2" "$T/out/tmpdir.svg" 2>&1 | grep '^reviewed:')
+r2=$(TMPDIR="$T/no-such-tmp" sh "$CHECK" "$T/ok_flowchart.d2" "$T/out/tmpdir.svg" 2>&1 | grep '^reviewed:')
+[ -n "$r1" ] && [ "$r1" = "$r2" ] && ok "TMPDIR that does not exist: the same review ($r2)" || bad "missing TMPDIR" "$r1 / $r2"
 # an explicit D2_FONT_FAMILY beats the snowflake-brand detection
 if [ -f "$SKILL/scripts/font-flags.sh" ]; then
   mkdir -p "$T/sfd" && printf '...@snowflake-brand\na -> b\n' > "$T/sfd/sf.d2" && cp "$SKILL/templates/snowflake-brand.d2" "$T/sfd/"
@@ -217,14 +247,15 @@ printf 'left -> right\n' > "$T/kwj.d2"
 o=$(sh "$CHECK" --no-raster --json "$T/kwj.d2" 2>&1); rc=$?
 j=$(printf '%s' "$o" | python3 -c 'import json,sys; d=json.load(sys.stdin); t="\n".join(d["text"]); print(d["exit"], "reserved keywords" in t, "hint:" in t)' 2>&1)
 [ "$rc" = 1 ] && [ "$j" = "1 True True" ] && ok "--json on exit 1: text holds d2's error and the hint" || bad "--json compile error (exit $rc: $j)" "$o"
-# exit 2 names its real cause: the tripwire, or an unformatted file under --check-fmt (no E-/S- findings)
-printf 'a: Caf\303\251\n' > "$T/trip.d2"
+# exit 2 names its real cause: the tripwire, or an unformatted file under --check-fmt (no E-/S- findings:
+# the engine is pinned, else S-src-cli-engine would be one)
+printf 'vars: {d2-config: {layout-engine: elk}}\na: Caf\303\251\n' > "$T/trip.d2"
 o=$(sh "$CHECK" --no-raster "$T/trip.d2" 2>&1); rc=$?
 [ "$rc" = 2 ] && has "$o" '^result: exit 2 - replace the non-ASCII' && ! has "$o" '^result: .*E-/S-' &&
   ok "exit 2 from the tripwire says so" || bad "tripwire result line (exit $rc)" "$o"
-printf 'a->b\n' > "$T/unf.d2"
+printf 'vars: {d2-config: {layout-engine: elk}}\na->b\n' > "$T/unf.d2"
 o=$(sh "$CHECK" --no-raster --check-fmt "$T/unf.d2" 2>&1); rc=$?
-[ "$rc" = 2 ] && has "$o" '^result: exit 2 - format the source' && [ "$(cat "$T/unf.d2")" = 'a->b' ] &&
+[ "$rc" = 2 ] && has "$o" '^result: exit 2 - format the source' && [ "$(sed -n 2p "$T/unf.d2")" = 'a->b' ] &&
   ok "--check-fmt: exit 2 names the formatting, file untouched" || bad "--check-fmt result line (exit $rc)" "$o"
 # a theme file draws nothing: d2 writes no SVG; d2check says why and ends with a result: line
 cp "$SKILL/templates/neutral-theme.d2" "$T/theme-only.d2"

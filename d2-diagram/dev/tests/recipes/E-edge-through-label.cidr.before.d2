@@ -1,0 +1,15 @@
+# Before: a subnet title line that cannot wrap (a 13-character CIDR) reaches past the
+# point where the edge enters the first node: 50px plus half of its 104px width.
+...@neutral-theme
+direction: down
+classes: {n: {width: 104; height: 56}}
+lb: Load balancer {class: service; width: 300}
+app: "Private 1a\n10.40.11.0/24" {
+  class: zone
+  api: "orders-api\n1a" {class: [service; n]}
+  worker: "worker\n1a" {class: [service; n]}
+}
+db: "Orders DB\nPostgres" {class: datastore; width: 300}
+lb -> app.api: ":8443" {class: flow}
+app.api -> db: ":5432" {class: dep}
+app.worker -> db: ":5432" {class: dep}

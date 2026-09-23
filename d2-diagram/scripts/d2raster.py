@@ -129,9 +129,12 @@ def route_playwright(jobs):
     fd, jf = tempfile.mkstemp(suffix=".json")
     with os.fdopen(fd, "w") as fh:
         json.dump(jobs, fh)
+    # Playwright makes its scratch folders under $TMPDIR and fails (ENOENT mkdtemp) when that folder is
+    # gone; python has already picked a usable temp folder (TMPDIR if it works, else /tmp, ...)
+    env = dict(os.environ, TMPDIR=tempfile.gettempdir())
     try:
         for attempt in (1, 2):  # a browser launch can fail transiently on a loaded machine: retry once
-            code, log = run(["node", os.path.join(HERE, "raster.cjs"), "--jobs", jf, "--quiet"])
+            code, log = run(["node", os.path.join(HERE, "raster.cjs"), "--jobs", jf, "--quiet"], env=env)
             if code == 0 or code == 64 or "module not found" in log:
                 break
     finally:

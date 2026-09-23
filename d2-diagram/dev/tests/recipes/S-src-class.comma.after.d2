@@ -1,0 +1,6 @@
+# After: a list, separated with `;`, base role first.
+...@neutral-theme
+direction: down
+api: Orders API {class: [service; focal]}
+db: "Orders DB\nPostgres" {class: datastore}
+api -> db: SQL {class: flow}

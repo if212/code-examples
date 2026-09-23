@@ -60,6 +60,26 @@ class wins): `{class: [sf-datastore; sf-primary]}` is a blue cylinder. Only
 `sf-*` classes exist here: a neutral one (`focal`, `flow`) is silently ignored,
 and semcheck names its twin (`S-src-class`: write `sf-primary`, `sf-flow`).
 
+The brand has no shape roles. In a flowchart, state machine or grid template,
+keep an `sf-*` class and set the shape on the object: a decision `shape:
+diamond`, a start or end pill `style.border-radius: 99`, an initial state
+`shape: circle; width: 20; height: 20`, a queue `shape: queue`, a note `shape:
+page`, a grid header `shape: text`. Outcomes have no colour here: name them,
+`sf-muted` for a cancelled end, `sf-failure` for the path into a failure.
+
+```d2
+# cwd: ../templates
+...@snowflake-brand
+direction: down
+placed: Order placed {class: sf-node; style.border-radius: 99}
+paid: Payment taken? {class: [sf-node; sf-primary]; shape: diamond}
+shipped: Shipped {class: sf-node; style.border-radius: 99}
+cancelled: Cancelled {class: [sf-node; sf-muted]; style.border-radius: 99}
+placed -> paid: {class: sf-flow}
+paid -> shipped: yes {class: sf-flow}
+paid -> cancelled: no {class: sf-failure}
+```
+
 ## 4. Brand rules in diagrams
 
 - Signature presence ("about 80% of materials carry the signature blue"):

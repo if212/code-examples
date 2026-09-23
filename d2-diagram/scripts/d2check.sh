@@ -4,7 +4,8 @@
 #
 # usage: sh d2check.sh [options] IN.d2 [OUT.svg] [-- extra d2 flags]
 #   --column N     doc column width in px, 200..10000 (default: the brief's width, else 800)
-#   --brief F      brief for the semantic check (default: D2W/<name>.brief when it exists)
+#   --brief F      brief for the semantic check (default: D2W/<name>.brief when it exists;
+#                  with no brief, semcheck --lint runs the source checks alone)
 #   --out OUT.svg  the deliverable, same as the OUT.svg argument (default: IN with .svg)
 #   --check-fmt    only report formatting; do not rewrite IN.d2
 #   --strict       warnings fail too (exit 2)
@@ -233,8 +234,21 @@ main() {
 
   # --- source location + fix hint for a d2 error message --------------------------------------------
   indir=$(CDPATH='' cd -- "$(dirname -- "$in")" && pwd)
-  strip_dir() {  # d2 prints absolute paths; drop IN's folder so the message itself fits on the line
-    awk -v d="$indir/" '{ while (d != "/" && (i = index($0, d)) > 0) $0 = substr($0, 1, i - 1) substr($0, i + length(d)); print }'
+  # d2 names IN twice: relative to the cwd (../../w3/x/in.d2) and absolute; both shrink to in.d2 BEFORE a
+  # line is cut, so d2's own advice at the end of a long line survives a deep folder
+  from=$PWD relin=""
+  while [ "$from" != / ]; do
+    case $indir/ in "$from"/*) break ;; esac
+    from=$(dirname -- "$from") relin="../$relin"
+  done
+  rest=${indir#"$from"}
+  relin=$relin${rest#/}
+  inbase=$(basename -- "$in")
+  strip_dir() {
+    # the longer spelling goes first: ../../../tmp/x/in.d2 holds /tmp/x/, and /tmp/x/in.d2 holds x/in.d2
+    awk -v d="$indir/" -v r="${relin:+${relin%/}/}$inbase" -v b="$inbase" '
+      function cut(s, p, w,   i) { while (p != w && p != "/" && (i = index(s, p)) > 0) s = substr(s, 1, i - 1) w substr(s, i + length(p)); return s }
+      { if (length(r) > length(d) + length(b)) $0 = cut(cut($0, r, b), d, ""); else $0 = cut(cut($0, d, ""), r, b); print }'
   }
   explain_error() {
     loc=$(printf '%s\n' "$1" | grep -o '[^ :]*\.d2:[0-9][0-9]*:[0-9][0-9]*' | tail -1)
@@ -371,17 +385,26 @@ main() {
     exit 3
   fi
 
-  # --- 4. semantic check against the brief (root board) --------------------------------------------
+  # --- 4. semantic check against the brief (root board); without one, the source checks alone --------
   semjson=""
+  target=$out
+  [ -f "$out" ] || target=${out%.svg}
   if [ "$animated" = 1 ]; then  # every frame in one SVG: the brief is checked on the normal (board) render
     info "semantic: skipped for an animated SVG - run d2check without --animate-interval to check the boards"
-  elif [ -z "$brief" ]; then
-    info "semantic: skipped - no brief (write $D2W/$name.brief, format: workflows/brief.md)"
   elif [ ! -f "$HERE/semcheck.py" ]; then
     say "semantic: skipped - scripts/semcheck.py not found"
+  elif [ -z "$brief" ]; then
+    # classes nothing defines, `#`/`;` slips, mixed icon families, no pinned engine: the brief is not needed
+    "$PY" "$HERE/semcheck.py" --lint "$in" --svg "$target" --json > "$D2W/$name.sem.json" 2> "$D2W/$name.sem.err"
+    src=$?
+    if [ "$src" -le 1 ] && "$PY" -c 'import json,sys; json.load(open(sys.argv[1]))' "$D2W/$name.sem.json" 2> /dev/null; then
+      semjson="$D2W/$name.sem.json"
+      info "semantic: source checks only - no brief (write $D2W/$name.brief, format: workflows/brief.md)"
+    else
+      say "semantic: source checks FAILED to run (semcheck --lint exit $src): python3 $(quote "$HERE/semcheck.py") --lint $(quote "$in")"
+      { cat "$D2W/$name.sem.err"; cat "$D2W/$name.sem.json"; } | grep -v '^[[:space:]]*$' | tail -3 | cut -c1-200 | sed 's/^/  /'
+    fi
   else
-    target=$out
-    [ -f "$out" ] || target=${out%.svg}
     "$PY" "$HERE/semcheck.py" "$brief" "$in" --svg "$target" --json > "$D2W/$name.sem.json" 2> "$D2W/$name.sem.err"
     src=$?
     if [ "$src" -le 1 ] && "$PY" -c 'import json,sys; json.load(open(sys.argv[1]))' "$D2W/$name.sem.json" 2> /dev/null; then

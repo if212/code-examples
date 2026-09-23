@@ -1,0 +1,10 @@
+# a node the brief lists but the drawing hides (opacity 0) is missing, slot or not
+...@mini-theme
+grid-rows: 2
+grid-columns: 2
+classes: {slot: {label: ""; grid-rows: 1; style.opacity: 0}}
+t1: {class: slot; x: "09:12" {class: service}}
+e1: Alarm fires {class: service}
+t2: {class: slot; x: "09:20" {class: service; style.opacity: 0}}
+e2: Failover starts {class: service}
+e1 -> e2: {class: dep}

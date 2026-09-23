@@ -88,9 +88,16 @@ font styles.
 text); every team as its own tree node, 8 teams under 3 leads = 1150px (11px).
 
 **2. `horizontal-gap` is also a grid's side padding:** 12 in the group class;
-the default left 60px margins and a 1230px canvas.
+the default left 60px margins and a 1230px canvas. `grid-rows` = the lead plus
+the members: a bigger group sets its own (`grid-rows: 5`); under the shared 4,
+its 5 cards folded into 2 columns (11.7px text).
 
-**3. Module trees and containment** (folders; account > database > schema >
+**3. The root is a little wider than the two inner groups together**
+(`width: 440` beside 388px; 420-520 all work): their lines drop straight, the
+outer two turn once at one height and all four land on their group's centre;
+at 200 the four lines left four ports and turned at two heights.
+
+**4. Module trees and containment** (folders; account > database > schema >
 table) grow `direction: right`: leaves stack vertically, so they add height.
 One size per level (7 leaves: 536x450px).
 
@@ -115,14 +122,15 @@ internal -- orders: {class: dep}
 internal -- billing: {class: dep}
 ```
 
-**4. Mind maps: `direction: right`, root in the middle.** Right branches are
+**5. Mind maps: `direction: right`, root in the middle.** Right branches are
 `root -- topic`; left ones `topic -- root`, since the key written first goes
 left. Keep 2 sides x 3 topics x 3 ideas: the result is wide and short
 (W-aspect is expected). A radial mind map is impossible with ELK.
 
 ## 4. Layer stack
 
-- Root `grid-rows: 1`: an untitled `zone` holding the bands (`grid-rows: N`),
+- Root `grid-rows: 1`: an untitled `zone` holding the bands (`grid-rows: N`,
+  N = the band count: 5 bands under 4 wrapped into 2 columns, 8.4px text),
   then one `[zone; bar]` per cross-cutting concern (`label.near:
   center-center`). Cells of a row share its height, so each bar spans the stack.
 - A band is `[zone; layer]`, class `layer: {grid-rows: 1; horizontal-gap: 12;
@@ -135,5 +143,4 @@ left. Keep 2 sides x 3 topics x 3 ideas: the result is wide and short
 - One `focal` part; its band `zone-blue`, every other band and bar `zone`.
 - Bar titles of about 10 characters: MONITORING took 98 of 112px, SECURITY AND
   IAM overflowed a 104px bar (E-label-overflow).
-- The bands' frame is a visible untitled zone: a hidden helper (`style.opacity:
-  0`) lays the bands out too, but semcheck reports it missing (S-missing-node).
+- The bands sit in one untitled `zone`: it groups them as one stack.

@@ -14,15 +14,16 @@ Two rows fit: two diagrams; ask which (section 4), or draw one, offer the other.
 | The reader asks | type | Playbook |
 |---|---|---|
 | What are the parts and how do they talk? | architecture | playbooks/architecture.md |
-| Where does each part run (cloud, cluster, pod)? | deployment | playbooks/architecture.md |
-| What is the system context or container view? | c4 | playbooks/architecture.md |
+| Where does each part run (cloud, cluster, pod)? | deployment | playbooks/infrastructure.md |
+| Who uses the system, and what does it depend on? (C4 context) | context | playbooks/architecture.md |
+| Which containers make up the system? (C4 container) | c4 | playbooks/architecture.md |
 | How does data move through stages? | pipeline | playbooks/pipeline.md |
 | Who calls whom, in what order? | sequence | playbooks/sequence.md |
 | Which tables exist and how do they join? | erd | playbooks/erd.md |
 | Which types exist and how do they relate? | class | playbooks/erd.md |
 | What happens next, on which condition? (process, CI/CD) | flowchart | playbooks/flowchart.md |
 | Which states can X be in, and what moves it? | state | playbooks/state.md |
-| How does the picture change, step by step? | steps | playbooks/flowchart.md rule 8 |
+| How does the picture change, step by step? | steps | playbooks/change.md |
 
 ## 2. reader, width, direction
 
@@ -168,7 +169,7 @@ Same keys as the brief, role classes only, `focal` last and on the focus alone:
 
 ## 8. Commands
 
-d2check runs the check whenever `D2W/<name>.brief` exists or `--brief` is given.
+d2check runs the check when `D2W/<name>.brief` exists or `--brief` is given, else `--lint` only.
 By hand (exit 0 ok, 1 S- errors, 2 brief or compile problem):
 
 ```sh

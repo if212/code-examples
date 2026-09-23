@@ -37,6 +37,10 @@ import d2lint  # noqa: E402
 import pngstats  # noqa: E402
 
 OUT = os.path.join(os.environ.get("TMPDIR", "/tmp"), "d2lint-tests")
+# d2 reads these from the environment (D2_WATCH turns a render into a server that never exits)
+for _k in ("D2_LAYOUT", "D2_THEME", "D2_DARK_THEME", "D2_PAD", "D2_SKETCH", "D2_CENTER", "D2_WATCH", "SCALE",
+           "D2_BUNDLE", "D2_FORCE_APPENDIX", "D2_ANIMATE_INTERVAL"):
+    os.environ.pop(_k, None)
 # cases that must not live in the repo as files (every shipped or dev file stays pure ASCII)
 GENERATED = {
     "bad_nonascii": "# expect: W-non-ascii\nvars: {d2-config: {layout-engine: elk; pad: 24}}\n"

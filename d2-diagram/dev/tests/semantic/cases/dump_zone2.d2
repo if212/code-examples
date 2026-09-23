@@ -1,0 +1,8 @@
+...@mini-theme
+# a two-line zone title (AZ and CIDR): the dump keeps the source case of both lines
+pub: "Public 1a\n10.0.1.0/24" {
+  class: zone
+  alb: ALB {class: service}
+}
+db: Orders DB {class: datastore}
+pub.alb -> db: writes {class: dep}

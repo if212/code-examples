@@ -7,11 +7,13 @@
 # wider) and needs an ELK flag.
 direction: down
 
-# One width for every node, so every subnet is 328px and the AZ columns
-# line up (natural cylinders made the data subnets 327 and 334px).
+# One size for every node, so every subnet is 328px and the AZ columns line
+# up. Subnet title lines of 12 characters at most (13: n width 120 and a 600px
+# gateway; playbooks/infrastructure.md rule 2). pin hides the edge that stacks
+# the two data services.
 classes: {
   n: {width: 104; height: 56}
-  w: {width: 104}
+  pin: {style.opacity: 0}
 }
 
 users: Internet users {class: actor}
@@ -42,17 +44,13 @@ vpc: "VPC 10.0.0.0/16, us-east-1" {
     worker: "worker\nFargate 1b" {class: [service; n]}
     api: "orders-api\nFargate 1b" {class: [service; n]}
   }
-  # No cross-AZ edge (replication drawn as one: 1572px tall): say it in the labels.
-  data_a: "Data 1a\n10.0.21.0/24" {
-    class: zone
-    db: "Postgres\nprimary" {class: [datastore; w]}
-    cache: "Redis\nprimary" {class: [datastore; w]}
-  }
-  data_b: "Data 1b\n10.0.22.0/24" {
-    class: zone
-    cache: "Redis\nreplica" {class: [datastore; w]}
-    db: "Postgres\nstandby" {class: [datastore; w]}
-  }
+  # Managed Multi-AZ services are ONE node below both AZs (one endpoint;
+  # the standby takes no connections), their subnets in the label. Each is
+  # as wide as the columns it serves, the cache narrower than the database,
+  # so all four edges drop straight past it (a copy per AZ drew the 1b app
+  # talking to the standby; a Data zone around them jogged 2 edges).
+  cache: "Redis\nElastiCache, Multi-AZ" {class: datastore; width: 300}
+  db: "Orders DB\nRDS Postgres, Multi-AZ\ndata subnets 10.0.21.0/24, 10.0.22.0/24" {class: datastore; width: 560}
 }
 
 # Ingress = the focus path (flow); data access dep; egress secondary, written
@@ -62,11 +60,12 @@ vpc.igw -> vpc.pub_a.alb: ":443" {class: flow}
 vpc.igw -> vpc.pub_b.alb: ":443" {class: flow}
 vpc.pub_a.alb -> vpc.app_a.api: ":8080" {class: flow}
 vpc.pub_b.alb -> vpc.app_b.api: ":8080" {class: flow}
-vpc.app_a.api -> vpc.data_a.db: ":5432" {class: dep}
-vpc.app_b.api -> vpc.data_b.db: ":5432" {class: dep}
-vpc.app_a.worker -> vpc.data_a.cache: ":6379" {class: dep}
-vpc.app_b.worker -> vpc.data_b.cache: ":6379" {class: dep}
+vpc.app_a.api -> vpc.db: ":5432" {class: dep}
+vpc.app_b.api -> vpc.db: ":5432" {class: dep}
+vpc.app_a.worker -> vpc.cache: ":6379" {class: dep}
+vpc.app_b.worker -> vpc.cache: ":6379" {class: dep}
 vpc.pub_a.nat <- vpc.app_a.worker: egress {class: secondary}
 vpc.pub_b.nat <- vpc.app_b.worker: egress {class: secondary}
 vpc.igw <- vpc.pub_a.nat: egress {class: secondary}
 vpc.igw <- vpc.pub_b.nat: egress {class: secondary}
+vpc.cache -> vpc.db: {class: pin}

@@ -21,7 +21,7 @@ point: [../SKILL.md](../SKILL.md).
 | `assets/icons/`, `assets/fonts/` | offline Lucide pack (ISC), bundled fonts (OFL) | embedded |
 | `dev/run_all_tests.sh` | every suite, one summary table | - |
 | `dev/package.sh` | builds `dev/dist/d2-diagram.zip` | - |
-| `dev/tests/` | `lint/` (d2lint, rasterizers, d2check end to end), `semantic/`, `style/`, `templates/` (briefs), `refs/` (doc snippets, export, icon names), `recipes/` (before/after proofs), `structure/`, `routing/` (blind eval of route.md) | - |
+| `dev/tests/` | `lint/` (d2lint, rasterizers, d2check end to end, doctor), `semantic/`, `style/`, `templates/` (briefs), `refs/` (doc snippets, export, icon names), `recipes/` (before/after proofs), `structure/`, `routing/` (blind eval of route.md) | - |
 | `dev/CHANGELOG.md` | release notes | - |
 
 Conventions: every file is printable ASCII (no tabs, no emoji). Docs call
@@ -47,15 +47,16 @@ Logs go to `${TMPDIR:-/tmp}/d2-diagram-tests/<suite>.log` (each run clears
 that folder: run one at a time). For a failed suite, its FAIL lines with their
 details and the end of its log are printed. Exit 0 means every suite that ran
 passed (skipped suites are listed as SKIP with the reason); the full run takes
-about 9 minutes, `--quick` about 2. The suites need d2 and python3;
+about 10 minutes, `--quick` about 2. The suites need d2 and python3;
 the faithful-render cases need Chromium (Node Playwright or a Chrome binary);
 `check_export.sh --native` (not run by default) downloads d2's own driver.
 
 | Suite | Command | Proves |
 |---|---|---|
-| structure | `sh dev/tests/structure/check.sh` | the checks (a)-(l): frontmatter, paths and anchors (and no link from a shipped file into `dev/`), reachability, a heading per code, ASCII, size, deleted paths, junk, class lists, script syntax, allowed-tools, templates fmt + routed |
+| structure | `sh dev/tests/structure/check.sh` | the checks (a)-(l): frontmatter, paths, anchors and `section N` / `rule N` references (and no link from a shipped file into `dev/`), reachability, a heading per code, ASCII, size, deleted paths, junk, class lists, script syntax, allowed-tools, templates fmt + routed |
 | lint | `python3 dev/tests/lint/run_tests.py` | every d2lint code fires on its case, ok cases stay clean, rasterizer checks |
 | d2check | `sh dev/tests/lint/test_d2check.sh` | exit codes, summary lines, file modes, routes, multi-board |
+| doctor | `sh dev/tests/lint/test_doctor.sh` | doctor.sh on simulated machines (one dependency taken away at a time) prints the right verdict and fix; every script's `--help` and usage exit |
 | semantic | `python3 dev/tests/semantic/run_tests.py` | semcheck codes, brief parsing, `--hint` on real d2 errors, dump/compare |
 | style | `sh dev/tests/style/run.sh` | theme contrast, fmt, class coverage, brand rules, a before/after sheet |
 | templates | `sh dev/run_all_tests.sh --only templates` | every template: d2check exit 0 against its brief at 800px |
@@ -97,6 +98,8 @@ a draft build only). To check an unpacked zip by hand:
    never rewrite the shipped template.)
 4. Route it: a row in `workflows/route.md` (and the playbook section it
    points to). The structure check fails for a template the router does not name.
+   Add it to the catalog table in `README.md` and to the type list in the
+   SKILL.md `description:`, then re-run the routing gate (`--llm`).
 5. `sh dev/run_all_tests.sh --only structure,templates,snippets`.
 
 ## Add a finding code
@@ -143,7 +146,7 @@ layouts: rerun the recipes after any of them.
 2. Look at the pictures: the col.png of every template (the templates suite
    leaves them in its log folder) and `dev/tests/style/run.sh`'s sheet.
 3. `sh scripts/doctor.sh` on a machine without Chromium says DEGRADED with a
-   working fix; with it, READY.
+   working fix; with it, READY (the doctor suite simulates the missing parts).
 4. Update `dev/CHANGELOG.md` (version, date, what changed for users).
 5. Commit, then `SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) sh dev/package.sh`;
    record the sha256 it prints.
@@ -164,6 +167,6 @@ layouts: rerun the recipes after any of them.
 | crow's feet at the source end render only on `<->`; `style.stroke` paints a sql_table's body | playbooks/erd.md rules 1 and 4 |
 | an edge label is measured with the italic face even when `italic: false` | assets/fonts/README.md (Regular passed as italic) |
 | nested `direction` is ignored except in grid cells; `grid-columns` alone fills column-major | reference/layout.md section 7 |
-| a later class wins; a class list on a node that already has a class is ignored in steps | workflows/review-and-fix.md#last-class-wins; reference/export.md section 6 |
+| a later class wins; a class list on a node that already has a class is ignored in steps | workflows/review-and-fix.md#last-class-wins; reference/syntax.md section 7 |
 | keywords are case-sensitive; `Shape: x` at the root silently draws nothing | reference/syntax.md section 16 |
 | markdown labels clip in Chromium; theme 303 draws white text on white | reference/syntax.md; reference/design-system.md section 10 |

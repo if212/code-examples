@@ -1,9 +1,9 @@
 # Pipeline playbook: data pipelines and stage flows
 
 Use for data that moves through stages: sources, ingestion, warehouse layers,
-consumers (ETL/ELT, CDC, streaming). Control flow with decisions is a
-flowchart (`${CLAUDE_SKILL_DIR}/playbooks/flowchart.md`). Start from
-`${CLAUDE_SKILL_DIR}/templates/pipeline.d2`. Grid mechanics:
+consumers (ETL/ELT, CDC, streaming, RAG indexing: rule 9). Control flow with
+decisions is a flowchart (`${CLAUDE_SKILL_DIR}/playbooks/flowchart.md`). Start
+from `${CLAUDE_SKILL_DIR}/templates/pipeline.d2`. Grid mechanics:
 `${CLAUDE_SKILL_DIR}/reference/layout.md` section 7.
 
 ## 1. Pick the layout by where it is read
@@ -119,6 +119,16 @@ src.events -> fivetran: {class: dep}
 fivetran -> wh.raw: {class: flow}
 wh.raw -> wh.marts: dbt {class: flow}
 ```
+
+**9. RAG indexing: one row that ends at the vector index.** Row 1 `Index
+(nightly)`, `direction: right`: the source docs, chunk, embed and the index
+`[datastore; focal]` at its right end. How a question is answered is a second
+diagram (workflows/route.md, SPLIT); when the user wants both in one picture,
+Row 2 `Answer (per question)`, `direction: left`: retrieve, rerank, build
+prompt, then `"LLM\nClaude API"` `[service; external]`, so the edge from the
+index into retrieve is the vertical turn (rule 4). Four boxes a row, one local
+class `{width: 150; height: 77}` on every box: 800x438, 13.7px, clean. The app
+around the model (tools, memory): `${CLAUDE_SKILL_DIR}/templates/llm-app.d2`.
 
 ## 4. The template
 

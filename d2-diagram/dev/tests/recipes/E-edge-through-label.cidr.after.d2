@@ -1,0 +1,14 @@
+# After: the first child widened to 136px: its edge enters past the end of the line.
+...@neutral-theme
+direction: down
+classes: {n: {width: 136; height: 56}}
+lb: Load balancer {class: service; width: 300}
+app: "Private 1a\n10.40.11.0/24" {
+  class: zone
+  api: "orders-api\n1a" {class: [service; n]}
+  worker: "worker\n1a" {class: [service; n]}
+}
+db: "Orders DB\nPostgres" {class: datastore; width: 300}
+lb -> app.api: ":8443" {class: flow}
+app.api -> db: ":5432" {class: dep}
+app.worker -> db: ":5432" {class: dep}

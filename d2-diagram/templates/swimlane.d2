@@ -20,11 +20,14 @@ classes: {
 
 # Staircase: inside a lane the next step takes the next column; a handoff
 # goes straight up or down in the same column. Empty cells are hidden.
-# Never skip a lane: route the handoff through the lane between.
+# Never skip a lane: route the handoff through the lane between. A step hands
+# work only to the lane above or below it; a process that needs more: a
+# flowchart, the role first in each label (playbooks/flowchart.md rule 8).
+# The start and the outcomes are terminal pills, as in a flowchart.
 cust: {
   class: [zone; lane]
   h: {class: head; t: Customer {class: caption}}
-  request: "Request\nrefund" {class: [service; cell]}
+  request: "Refund\nrequested" {class: [terminal; cell]}
   declined: "Refund\ndeclined" {class: [danger; terminal; cell]}
   s3: "" {class: cell; style.opacity: 0}
   received: "Refund\nreceived" {class: [success; terminal; cell]}

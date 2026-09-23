@@ -11,7 +11,7 @@ focus: fin.issue
 out: partial refunds, chargebacks, refunds over the approval limit
 nodes:
   cust.h.t: Customer {note}
-  cust.request: Request\nrefund {start}
+  cust.request: Refund\nrequested {start}
   cust.declined: Refund\ndeclined {end}
   cust.received: Refund\nreceived {end}
   support.h.t: Support {note}

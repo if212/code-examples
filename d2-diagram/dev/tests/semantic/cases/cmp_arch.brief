@@ -1,0 +1,16 @@
+# request: "Before and after: the web app moves from the monolith to the new API."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: after.api
+nodes:
+  before: Before
+  before.web: Web app
+  before.mono: Monolith
+  after: After
+  after.web: Web app
+  after.api: API
+edges:
+  before.web -> before.mono
+  after.web -> after.api

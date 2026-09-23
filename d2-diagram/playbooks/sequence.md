@@ -8,6 +8,9 @@ logic (`playbooks/flowchart.md`).
 Template: `templates/sequence.d2` (4 participants, 9 numbered messages, one
 note, one `alt` with two operands). Syntax of spans, notes and groups:
 `reference/syntax.md` section 13.
+Variants: an agent's tool calls (a `loop` group: model -> app `tool_use`, app ->
+tool, app -> model `tool_result`; the app calls tools, never the model), a saga (an
+`alt` whose failure operand runs the compensations in reverse), a race (both workers).
 
 ## Skeleton
 
@@ -28,7 +31,7 @@ note, one `alt` with two operands). Syntax of spans, notes and groups:
   groups, 12 messages fit.
 - A participant column is 150-200px; a label wider than the gap widens it.
   Four or five participants with 40-character labels fill 800px.
-- Longer protocols: two diagrams, or `steps` boards (`playbooks/flowchart.md`).
+- Longer protocols: two diagrams, or `steps` boards (`playbooks/change.md`).
 
 ## Notation checklist
 

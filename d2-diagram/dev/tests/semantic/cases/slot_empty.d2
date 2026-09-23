@@ -1,0 +1,10 @@
+# a hidden slot with nothing drawn inside is missing, and so is the node it should hold
+...@mini-theme
+grid-rows: 2
+grid-columns: 2
+classes: {slot: {label: ""; grid-rows: 1; style.opacity: 0}}
+t1: {class: slot; x: "09:12" {class: service}}
+e1: Alarm fires {class: service}
+t2: {class: slot}
+e2: Failover starts {class: service}
+e1 -> e2: {class: dep}

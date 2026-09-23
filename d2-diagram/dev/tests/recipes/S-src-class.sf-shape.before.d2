@@ -1,0 +1,8 @@
+# Before: a neutral shape role in a Snowflake file: d2 ignores `decision`, the gate is a box.
+...@snowflake-brand
+direction: down
+placed: Order placed {class: sf-node}
+paid: Payment taken? {class: [decision; sf-primary]}
+shipped: Shipped {class: sf-node}
+placed -> paid: {class: sf-flow}
+paid -> shipped: yes {class: sf-flow}

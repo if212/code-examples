@@ -1,0 +1,13 @@
+# request: "Two events: 09:12 the alarm fires, 09:20 the failover starts."
+type: timeline
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  t1.x: 09:12
+  e1: Alarm fires
+  t2.x: 09:20
+  e2: Failover starts
+edges:
+  e1 -> e2

@@ -2,7 +2,7 @@
 # Copy it next to the diagram and make `...@neutral-theme` the first line there.
 # It sets ELK, pad 24 and theme 0 below: never pass -l or -t on the command line.
 # Give every node, container and styled edge a ROLE class, never a color:
-#   base      service actor datastore queue decision state terminal note dot
+#   base      service actor datastore queue decision state terminal note dot caption
 #   modifier  focal focal-solid muted external danger success
 #   container zone zone-blue zone-green zone-amber zone-violet boundary
 #   edge      flow dep secondary async failure ok
@@ -97,7 +97,7 @@ classes: {
   danger: {style: {fill: ${danger-50}; stroke: ${danger-600}; stroke-width: 1; font-color: ${danger-800}; border-radius: 8}}
   success: {style: {fill: ${success-50}; stroke: ${success-600}; stroke-width: 1; font-color: ${success-800}; border-radius: 8}}
 
-  # caption: lane/row/tick/timestamp headers in grid templates (swimlane, roadmap, timeline)
+  # caption: lane/row/tick/time headers in grids (swimlane, roadmap, timeline), depgraph's key line
   caption: {shape: text; style: {font-size: 15; bold: true; text-transform: uppercase; font-color: ${ink-600}}}
 
   # ---- containers: tinted panel, 15px bold uppercase title at top-left ----

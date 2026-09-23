@@ -32,9 +32,9 @@ stays at 12px or more and the height within 1.6x the width.
 
 | Part | What it gives you |
 |---|---|
-| Templates | Finished starting diagrams per type; the catalog and the routing from request to template are in [workflows/route.md](workflows/route.md) |
+| Templates | 23 finished starting diagrams, one per question a reader asks ([the catalog](#templates)); [workflows/route.md](workflows/route.md) routes a request to one |
 | Design system | [templates/neutral-theme.d2](templates/neutral-theme.d2): role classes (`service`, `datastore`, `focal`, `zone`, `flow`, ...), light-only, contrast-checked; plus a Snowflake brand theme |
-| Playbooks | Per-type rules that make the difference: [playbooks/](playbooks/) |
+| Playbooks | Nine sets of per-type rules that make the difference: [playbooks/](playbooks/) |
 | d2check | One command: format, ASCII check, render, lint, semantic check, faithful PNGs, a clear summary with exit codes |
 | Recipes | [workflows/review-and-fix.md](workflows/review-and-fix.md): one proven fix for every finding code, plus d2's compile errors |
 | Icons | A resolver backed by 250 verified icon names ([workflows/icons.md](workflows/icons.md)) and an offline pack of 40 Lucide icons |
@@ -110,8 +110,11 @@ fonts, the icon API and the work directory, and prints the fix for every gap:
 
 ```
   PASS  d2          v0.7.1 at /usr/local/bin/d2
+  PASS  fonts       bundled fonts present (IBM Plex Sans, Geist Mono, Lato; 1352 KB)
   PASS  render      a test diagram renders with ELK and the bundled fonts
+  ...
   PASS  chromium    Chromium 141.0.7390.37 (installed by Playwright)
+  ...
   PASS  raster      faithful PNG of the test diagram via playwright
   ...
 verdict: READY - d2check renders and gives a faithful visual review (exit 0)
@@ -151,17 +154,18 @@ sh "$SK"/scripts/d2check.sh /tmp/demo/architecture.d2
 ```
 fonts: default (assets/fonts/ibm-plex-sans)
 render: ok /tmp/demo/architecture.svg (elk)
-semantic: skipped - no brief (write /tmp/d2work/architecture/architecture.brief, format: workflows/brief.md)
+semantic: source checks only - no brief (write /tmp/d2work/architecture/architecture.brief, format: workflows/brief.md)
 display: 800x886 at column 800 (scale 0.99), min text 13.8px
 lint: 0 error(s), 0 warning(s)
 reviewed: faithful (playwright)
 READ: /tmp/d2work/architecture/architecture.col.png /tmp/d2work/architecture/architecture.2x.png
-re-render: d2 '--font-regular=.../IBMPlexSans-Regular.ttf' ... --scale 1 --elk-nodeNodeBetweenLayers 40 ... /tmp/demo/architecture.d2 /tmp/demo/architecture.svg
+re-render: d2 $(sh /home/me/.claude/skills/d2-diagram/scripts/font-flags.sh default) --scale 1 --elk-nodeNodeBetweenLayers 40 --elk-edgeNodeBetweenLayers 20 --elk-padding '[top=50,left=50,bottom=30,right=50]' /tmp/demo/architecture.d2 /tmp/demo/architecture.svg
 result: exit 0 - clean: read the PNGs and walk the rubric before delivering
 ```
 
-(The `re-render:` line is shortened here: it spells out every font path.)
-The SVG lands next to the source; review PNGs and other working files go to
+(Under a skill path with spaces, `re-render:` spells out each font path.)
+Without a brief, d2check still runs the source checks (a misspelled class, an
+unpinned layout engine, mixed icon families). The SVG lands next to the source; review PNGs and other working files go to
 `${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>/`, never next to your files. Useful
 options: `--column 1600` (slides), `--brief FILE` (semantic check),
 `--check-fmt`, `--strict`, `--json`; `sh "$SK"/scripts/d2check.sh --help`
@@ -176,22 +180,41 @@ lists them all.
 
 ## Templates
 
-[workflows/route.md](workflows/route.md) routes a request to its template and
-playbook. The core set:
+Every template is a finished diagram that renders clean through d2check at an
+800px column; Claude copies the one that answers the reader's question and
+swaps in your content. [workflows/route.md](workflows/route.md) does the
+routing, from the question a request asks rather than the word it uses (a
+"flowchart of how our services talk" is an architecture diagram).
 
-| Template | For |
-|---|---|
-| `architecture.d2` | services, stores, queues and externals in tiers |
-| `deployment.d2` | cloud > cluster > namespace, replicas, data stores |
-| `c4.d2` | C4 container view on the neutral theme |
-| `pipeline.d2` | data pipelines: sources, ingest, warehouse, consumers |
-| `sequence.d2` | who calls whom, in order, with an alt group |
-| `erd.d2`, `class.d2` | database schemas with crow's feet; UML classes |
-| `flowchart.d2` | processes and CI/CD with decisions and failure lanes |
-| `state.d2` | state machines with an initial dot and final states |
-| `steps.d2` | one layout shown step by step (a folder of boards) |
+| Template | The question it answers | Example request |
+|---|---|---|
+| `architecture.d2` | What are the parts, and which talks to which at runtime? | "Architecture of our checkout for the README; highlight the orders service." |
+| `context.d2` | Who uses this system, and what does it depend on? | "C4 context diagram of the billing system for new joiners." |
+| `c4.d2` | Which deployable containers make up one system, with which tech? | "C4 container view of the booking service, with the tech of each part." |
+| `llm-app.d2` | Which parts does a request to the model touch? | "Our RAG chatbot: the Slack bot, the agent, Claude, its tools and the vector store." |
+| `deployment.d2` | Where does each part run, and how many copies? | "Kubernetes view of the shop: namespaces, replicas, the RDS database." |
+| `network.d2` | What can reach what, through which gateway or rule? | "Our prod VPC: two AZs, public and private subnets, ALB, NAT, RDS." |
+| `threat-model.d2` | Where does sensitive data cross a trust boundary, and what crosses? | "Data-flow diagram of card data through checkout for the PCI review." |
+| `pipeline.d2` | Where does data come from, what happens at each stage, where does it land? | "Our ELT: Fivetran into raw, dbt staging and marts, Looker on top." |
+| `depgraph.d2` | What depends on what, and where are the cycles? | "Graph of which of our Go modules import which, cycles in red." |
+| `tree.d2` | How does the whole break down, one parent each? | "Org chart of the data department: the head, three leads, their teams." |
+| `stack.d2` | What sits on top of what? | "Our platform as layers, from the web UI down to storage." |
+| `sequence.d2` | Who calls whom, in what order, and what comes back? | "Sequence diagram of the OAuth login with PKCE." |
+| `walkthrough.d2` | Which path does ONE request take through the parts, in order? | "Number the hops of one upload, from the browser through the CDN to S3." |
+| `erd.d2` | Which tables exist, and how do their keys join? | "ERD of the orders schema with the foreign keys." |
+| `class.d2` | Which types exist, and how do they inherit or compose? | "UML class diagram of the notification senders and their interface." |
+| `flowchart.d2` | What happens next, and under which condition? | "Our release process from merge to production, with the approval gate." |
+| `swimlane.d2` | Who does each step, and where does work change hands? | "Expense approval: employee, manager and finance, who does what." |
+| `state.d2` | Which states can one thing be in, and what moves it? | "State machine of a subscription: trial, active, past due, cancelled." |
+| `compare.d2` | What changes between A and B? | "Before and after we put a cache in front of the pricing service." |
+| `steps.d2` | How does the picture change from one step to the next? | "One slide per step of a blue-green deployment." |
+| `timeline.d2` | What happened when, in what order? | "Timeline for the postmortem: 09:02 deploy, 09:05 alerts, 09:31 rollback." |
+| `roadmap.d2` | What ships when, per stream? | "Roadmap slide: these items per quarter for the web and data teams." |
+| `gitflow.d2` | Which branch is cut from where, and where does it merge back? | "Our branching model: main, develop, release and hotfix branches." |
 
-Every template renders clean through d2check at an 800px column.
+Past a template's budget (about 15 boxes at 800px), Claude splits the
+picture into an overview and a detail, or into step boards. Two questions in
+one request become two diagrams.
 
 ## Fonts and themes
 
