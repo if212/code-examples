@@ -1,0 +1,17 @@
+# expect: W-unclassed
+# expect-clean: E-
+# four nodes carry a role class, one was forgotten
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+classes: {
+  service: {style.fill: "#F8FAFC"}
+  datastore: {shape: cylinder}
+}
+web: Web {class: service}
+api: API {class: service}
+jobs: Jobs {class: service}
+db: Orders DB {class: datastore}
+kafka: Kafka
+web -> api
+api -> db
+api -> kafka
+kafka -> jobs

@@ -1,0 +1,9 @@
+# expect: E-label-overlap W-edge-crossing
+grid-columns: 2
+grid-gap: 40
+a: Client
+b: Server
+c: Cache
+d: Queue
+a -> d: "a very long edge label that crosses things"
+b -> c: "another long label crossing"

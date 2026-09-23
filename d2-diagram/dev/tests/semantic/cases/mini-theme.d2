@@ -1,0 +1,17 @@
+# minimal stand-in for neutral-theme.d2: pins ELK and defines the class names semcheck reads
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+classes: {
+  service: {style: {fill: "#FFFFFF"; stroke: "#64748B"}}
+  focal: {style: {fill: "#EFF6FF"; stroke: "#1D4ED8"; stroke-width: 3; bold: true}}
+  datastore: {shape: cylinder}
+  zone: {label.near: top-left; style: {fill: "#F1F5F9"; stroke: "#CBD5E1"; text-transform: uppercase}}
+  actor: {style: {fill: "#F1F5F9"}}
+  flow: {style: {stroke: "#1D4ED8"; stroke-width: 3}}
+  dep: {style: {stroke: "#64748B"}}
+  failure: {style: {stroke: "#DC2626"; stroke-dash: 4}}
+  decision: {shape: diamond}
+  terminal: {style.border-radius: 99}
+  dot: {shape: circle; width: 20; height: 20; style: {fill: "#334155"}}
+  zone-blue: {label.near: top-left; style: {fill: "#EFF6FF"; stroke: "#BFDBFE"; text-transform: uppercase}}
+  boundary: {label.near: top-left; style: {fill: transparent; stroke-dash: 5; text-transform: uppercase}}
+}

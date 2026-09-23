@@ -1,0 +1,12 @@
+# request: "An API server that stores data in Postgres."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: api
+out: -
+nodes:
+  api: API server
+  db: Postgres
+edges:
+  api -> db: stores

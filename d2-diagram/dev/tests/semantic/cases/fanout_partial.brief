@@ -1,0 +1,12 @@
+type: architecture
+nodes:
+  gw: Gateway
+  svc: Services
+  svc.a: Catalog
+  svc.b: Orders
+  svc.c: Users
+  svc.d: Search
+edges:
+  gw -> svc.a: routes
+  gw -> svc.b: routes
+  gw -> svc.c: routes

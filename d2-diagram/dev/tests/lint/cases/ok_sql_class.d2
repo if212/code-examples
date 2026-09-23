@@ -1,0 +1,18 @@
+# expect-clean: E- W-
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+users: {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  email: varchar
+}
+orders: {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  user_id: uuid {constraint: foreign_key}
+}
+orders.user_id -> users.id
+svc: OrderService {
+  shape: class
+  +place(order Order): Receipt
+  -validate(): bool
+}

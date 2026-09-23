@@ -1,0 +1,15 @@
+shape: sequence_diagram
+browser: Browser
+api: Orders API
+inv: Inventory
+pay: Payments
+
+browser -> api.t: POST /orders
+api.t -> inv: reserve(items)
+inv -> api.t: reserved {style.stroke-dash: 3}
+api.t -> pay: charge(card)
+pay -> api.t: receipt {style.stroke-dash: 3}
+retry: "loop [charge timeout, max 1]" {
+  api.t -> pay: charge(card) retry
+}
+api.t -> browser: 201 Created {style.stroke-dash: 3}

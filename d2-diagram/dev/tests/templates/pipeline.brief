@@ -1,0 +1,33 @@
+# request: "Data pipeline for the analytics README: the Postgres app DB, the Stripe API
+#  and Segment clickstream are loaded by Fivetran into Snowflake RAW; dbt builds
+#  STAGING and then MARTS; MARTS feed Looker dashboards, Feast features and Hightouch
+#  reverse ETL. Highlight MARTS."
+type: pipeline
+reader: analytics README
+width: 800
+direction: down   # serpentine: stage rows stack down, row 1 runs right, row 2 left
+focus: serve.marts
+out: orchestration (Airflow), monitoring, access control
+nodes:
+  load: Extract and load
+  load.stripe: Payments\nStripe API {external}
+  load.pg: App DB\nPostgres {shape: cylinder}
+  load.events: Clickstream\nSegment {external}
+  load.fivetran: Connectors\nFivetran
+  load.raw: RAW\nSnowflake {shape: cylinder}
+  serve: Transform (dbt) and serve
+  serve.stg: STAGING\nSnowflake {shape: cylinder}
+  serve.marts: MARTS\nSnowflake {shape: cylinder}
+  serve.ml: Features\nFeast
+  serve.bi: Dashboards\nLooker
+  serve.retl: Reverse ETL\nHightouch
+edges:
+  load.pg -> load.fivetran
+  load.stripe -> load.fivetran
+  load.events -> load.fivetran
+  load.fivetran -> load.raw
+  load.raw -> serve.stg
+  serve.stg -> serve.marts
+  serve.marts -> serve.bi
+  serve.marts -> serve.ml
+  serve.marts -> serve.retl

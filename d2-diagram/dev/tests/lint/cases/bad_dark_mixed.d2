@@ -1,0 +1,6 @@
+# flags: --dark-theme 200
+# expect: E-contrast-dark
+# explicit light fills keep their colour in dark mode while theme text turns light
+a: Payments {style.fill: "#FFF4D6"}
+b: Ledger {style.fill: "#E8F5E9"}
+a -> b: posts

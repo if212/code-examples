@@ -1,0 +1,36 @@
+# Flowchart template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+direction: down
+
+# Terminals are pills, decisions diamonds, steps service boxes.
+placed: Order placed {class: terminal}
+# Parallel steps share one zone: one edge in, one edge out.
+checks: Checks run in parallel {
+  class: zone
+  stock: Reserve stock {class: service}
+  card: Authorize card {class: service}
+  fraud: Fraud screen {class: service}
+}
+gate: All checks pass? {class: [decision; focal]}
+# "Any failure in these steps" = a boundary with ONE failure edge out.
+fulfil: "Fulfilment: any failure cancels" {
+  class: boundary
+  pick: Pick items {class: service}
+  pack: Pack parcel {class: service}
+  ship: Hand to carrier {class: service}
+}
+shipped: Shipped {class: [success; terminal]}
+cancelled: Order cancelled {class: [danger; terminal]}
+
+# Happy path first, as flow. Only decision branches carry labels.
+placed -> checks: {class: flow}
+checks -> gate: {class: flow}
+gate -> fulfil: all pass {class: flow}
+fulfil.pick -> fulfil.pack: {class: flow}
+fulfil.pack -> fulfil.ship: {class: flow}
+fulfil -> shipped: {class: ok}
+
+# One side lane: a single failure end collects every failure, so the long
+# first edge of the lane is intended.
+gate -> cancelled: any fails {class: failure}
+fulfil -> cancelled: {class: failure}

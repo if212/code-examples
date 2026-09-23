@@ -1,0 +1,14 @@
+...@mini-theme
+vars: {
+  d2-legend: {
+    f: Focus {class: focal}
+    h1: {style.opacity: 0}
+    h2: {style.opacity: 0}
+    h1 -> h2: main path {class: flow}
+  }
+}
+app: App {class: focal}
+db: Orders DB {class: datastore}
+spacer: {style.opacity: 0}
+app -> db: writes {class: dep}
+spacer -> db: {style.opacity: 0}

@@ -1,0 +1,9 @@
+# expect: E-icon-collision
+# expect-text: set height
+# The skill's documented pitfall: leaf-node icon + 2-line label at font-size 18, no reserved height.
+db: "Orders\nDatabase" {
+  icon: ./database.svg
+  style.font-size: 18
+}
+api: API
+api -> db

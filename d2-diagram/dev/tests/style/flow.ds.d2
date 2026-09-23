@@ -1,0 +1,27 @@
+# CI/CD flowchart sample for the neutral theme. Focus: the manual approval gate.
+...@../../../templates/neutral-theme
+direction: down
+
+start: Commit pushed {class: terminal}
+build: Build and unit tests {class: service}
+ok1: Tests pass? {class: decision}
+stage: Deploy to staging {class: service}
+ok2: Smoke tests OK? {class: decision}
+approve: Manual approval {class: focal}
+prod: Deploy to production {class: service}
+done: Released {class: [success; terminal]}
+rollback: Roll back staging {class: [service; danger]}
+notify: Notify author {class: service}
+fail: Pipeline failed {class: [danger; terminal]}
+
+start -> build: {class: flow}
+build -> ok1: {class: flow}
+ok1 -> stage: yes {class: flow}
+stage -> ok2: {class: flow}
+ok2 -> approve: yes {class: flow}
+approve -> prod: {class: flow}
+prod -> done: {class: ok}
+ok1 -> notify: no {class: failure}
+ok2 -> rollback: no {class: failure}
+rollback -> notify: {class: failure}
+notify -> fail: {class: failure}

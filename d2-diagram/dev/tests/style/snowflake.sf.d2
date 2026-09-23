@@ -1,0 +1,32 @@
+# Snowflake brand sample: a realistic diagram with one accent (every class:
+# snowflake-guide.sf.d2). Focus: MARTS, the served product.
+...@../../../templates/snowflake-brand
+direction: down
+
+sources: Sources {
+  class: sf-container
+  app: "App DB\nPostgres" {class: sf-datastore}
+  clicks: "Clickstream\nKafka" {class: sf-external}
+  legacy: "Nightly CSV\nexport" {class: sf-muted}
+}
+snowflake: Snowflake {
+  class: sf-container
+  raw: RAW {class: sf-node}
+  staging: STAGING {class: sf-node}
+  marts: MARTS {class: sf-primary}
+}
+consumers: Consumers {
+  class: sf-container
+  bi: Tableau {class: sf-node}
+  ml: Snowpark ML {class: sf-node}
+}
+alert: Freshness alert {class: sf-accent-orange}
+
+sources.clicks -> snowflake.raw: Snowpipe {class: sf-flow}
+sources.app -> snowflake.raw: CDC {class: sf-edge}
+sources.legacy -> snowflake.raw: retiring {class: sf-edge}
+snowflake.raw -> snowflake.staging: dbt {class: sf-flow}
+snowflake.staging -> snowflake.marts: dbt {class: sf-flow}
+snowflake.marts -> consumers.bi: serve {class: sf-flow}
+snowflake.marts -> consumers.ml: features {class: sf-edge}
+snowflake.staging -> alert: stale over 1 h {class: sf-failure}

@@ -1,0 +1,5 @@
+vars: {d2-config: {layout-engine: elk}}
+vpc: VPC {
+  orders: Order service
+  orders -> db: writes
+}

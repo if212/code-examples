@@ -1,0 +1,6 @@
+...@mini-theme
+checkout: Checkout service {class: focal}
+catalog: Catalog {class: service}
+stripe: Stripe {class: service}
+checkout -> catalog: reads prices {class: dep}
+checkout -> stripe: pays {class: dep}

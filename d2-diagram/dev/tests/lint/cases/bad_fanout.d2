@@ -1,0 +1,20 @@
+# expect: W-fanout
+# expect-clean: E-
+# one gateway wired to five services: a stair-stepped fan-out
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+gw: API Gateway
+svc: Services {
+  label.near: top-left
+  style.font-size: 16
+  auth: Auth
+  cart: Cart
+  catalog: Catalog
+  orders: Orders
+  pay: Payments
+}
+gw -> svc.auth
+gw -> svc.cart
+gw -> svc.catalog
+gw -> svc.orders
+gw -> svc.pay

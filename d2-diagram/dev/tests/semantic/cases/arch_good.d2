@@ -1,0 +1,20 @@
+vars: {d2-config: {layout-engine: elk}}
+direction: right
+classes: {
+  focus: {style: {fill: "#FFF4E5"; stroke: "#C2410C"; stroke-width: 3}}
+}
+users: Users {shape: person}
+aws: AWS VPC {
+  gw: API Gateway
+  orders: Order Service {class: focus}
+  db: Postgres {shape: cylinder}
+  kafka: Kafka {shape: queue}
+  billing: Billing Worker
+  gw -> orders: REST
+  orders -> db: SQL
+  orders -> kafka: order.created {style.stroke-dash: 3}
+  kafka -> billing: consume {style.stroke-dash: 3}
+}
+stripe: Stripe {style.stroke-dash: 3}
+users -> aws.gw: HTTPS
+aws.billing -> stripe: "charge (port 443)"

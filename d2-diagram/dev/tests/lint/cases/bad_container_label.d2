@@ -1,0 +1,16 @@
+# expect: E-edge-through-label
+# dagre routes the 'uses' edges straight through the container title
+customer: Customer {shape: person}
+system: Banking System {
+  web: Web App
+  mobile: Mobile App
+  api: API
+  db: Database {shape: cylinder}
+  web -> api
+  mobile -> api
+  api -> db
+}
+mail: Email System
+customer -> system.web: uses
+customer -> system.mobile: uses
+system.api -> mail: sends email

@@ -1,0 +1,14 @@
+FAIL fixtures/snippets.md:103 code
+FAIL fixtures/snippets.md:14 [d2]
+FAIL fixtures/snippets.md:27 [d2-bad]
+FAIL fixtures/snippets.md:33 [d2-bad]
+FAIL fixtures/snippets.md:55 [d2]
+ok fixtures/snippets.md:20 [d2-bad]
+ok fixtures/snippets.md:48 [d2]
+ok fixtures/snippets.md:62 [d2]
+ok fixtures/snippets.md:69 [d2]
+ok fixtures/snippets.md:8 [d2]
+ok fixtures/snippets.md:87 [d2]
+ok fixtures/snippets.md:97 [d2]
+skip fixtures/snippets.md:40 [d2]
+snippets: 6 render,

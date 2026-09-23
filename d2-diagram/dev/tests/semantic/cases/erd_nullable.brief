@@ -1,0 +1,13 @@
+# request: "Tasks may be assigned to one user (assignee_id is nullable); a user
+#   can have many tasks."
+type: erd
+reader: test
+width: 800
+direction: right
+focus: none
+out: -
+nodes:
+  users: users {cols: id email}
+  tasks: tasks {cols: id assignee_id title}
+relationships:
+  tasks.assignee_id <-> users.id: assigned to {src: cf-many, dst: cf-one}

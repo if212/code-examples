@@ -1,0 +1,20 @@
+direction: down
+start: Start {shape: oval}
+submit: Submit credentials
+valid: Credentials valid? {shape: diamond}
+mfa: MFA enabled? {shape: diamond}
+code: Enter MFA code
+code_ok: Code correct? {shape: diamond}
+session: Grant session
+err: Show error
+done: End {shape: oval}
+start -> submit -> valid
+valid -> mfa: "Yes"
+valid -> err
+mfa -> code: "Yes"
+mfa -> session: "No"
+code -> code_ok
+code_ok -> session: "Yes"
+session -> done
+audit: Write audit log
+session -> audit

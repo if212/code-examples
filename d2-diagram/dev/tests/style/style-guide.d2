@@ -1,0 +1,75 @@
+# Style guide for templates/neutral-theme.d2: every contract class, rendered.
+# Render: sh scripts/d2check.sh dev/tests/style/style-guide.d2 OUT.svg
+# All style samples and the before/after sheet: sh dev/tests/style/run.sh
+...@../../../templates/neutral-theme
+direction: down
+grid-columns: 1
+grid-gap: 24
+
+base: Base roles {
+  class: zone
+  service: service {class: service}
+  actor: actor {class: actor}
+  state: state {class: state}
+  terminal: terminal {class: terminal}
+}
+
+shaped: Shaped roles {
+  class: zone
+  datastore: datastore {class: datastore}
+  queue: queue {class: queue}
+  decision: decision {class: decision}
+  note: note {class: note}
+  dot: "" {class: dot}
+}
+
+mods: Modifiers {
+  class: zone
+  focal: focal {class: focal}
+  solid: focal-solid {class: focal-solid}
+  muted: muted {class: muted}
+  external: external {class: external}
+}
+
+combos: Combined classes {
+  class: zone
+  bad: "service\n+ danger" {class: [service; danger]}
+  good: "success\n+ terminal" {class: [success; terminal]}
+  store: "datastore\n+ focal" {class: [datastore; focal]}
+  dlq: "queue\n+ danger" {class: [queue; danger]}
+}
+
+edges: Edge roles {
+  class: zone
+  a1: A {class: service}
+  b1: B {class: service}
+  a2: A {class: service}
+  b2: B {class: service}
+  a3: A {class: service}
+  b3: B {class: service}
+  a4: A {class: service}
+  b4: B {class: service}
+  a5: A {class: service}
+  b5: B {class: service}
+  a6: A {class: service}
+  b6: B {class: service}
+  a1 -> b1: flow {class: flow}
+  a2 -> b2: dep {class: dep}
+  a3 -> b3: secondary {class: secondary}
+  a4 -> b4: async {class: async}
+  a5 -> b5: failure {class: failure}
+  a6 -> b6: ok {class: ok}
+}
+
+zones: Containers {
+  class: boundary
+  grid-rows: 2
+  grid-columns: 3
+  grid-gap: 24
+  z1: zone {class: zone; n: service {class: service}}
+  z2: zone-blue {class: zone-blue; n: service {class: service}}
+  z3: zone-green {class: zone-green; n: service {class: service}}
+  z4: zone-amber {class: zone-amber; n: service {class: service}}
+  z5: zone-violet {class: zone-violet; n: service {class: service}}
+  z6: boundary {class: boundary; n: service {class: service}}
+}

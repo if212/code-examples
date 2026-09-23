@@ -1,0 +1,22 @@
+vars: {
+  d2-config: {theme-id: 303; layout-engine: elk}
+  d2-legend: {
+    p: Person {shape: c4-person}
+    c: Container
+    x: External system {style.fill: "#999999"}
+    a -> b: Relationship
+  }
+}
+direction: down
+customer: "Customer\n[Person]\nBuys things online" {shape: c4-person}
+shop: "Shop System [Software System]" {
+  style.stroke-dash: 4
+  web: "Web App\n[Container: React]\nServes the storefront"
+  api: "API\n[Container: Go]"
+  db: "Database\n[Container: Postgres]" {shape: cylinder}
+  web -> api: "Calls\n[JSON/HTTPS]"
+  api -> db: "Reads/writes\n[SQL/TCP]"
+}
+mail: "Email System\n[Software System]" {style.fill: "#999999"}
+customer -> shop.web: "Uses\n[HTTPS]"
+shop.api -> mail: "Sends email\n[SMTP]"

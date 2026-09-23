@@ -1,0 +1,3 @@
+nodes:
+  a: Postgres
+  b.a: Postgres

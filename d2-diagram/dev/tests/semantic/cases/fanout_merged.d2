@@ -1,0 +1,8 @@
+vars: {d2-config: {layout-engine: elk}}
+gw: Gateway
+svc: Services {
+  a: Catalog
+  b: Orders
+  c: Users
+}
+gw -> svc: routes

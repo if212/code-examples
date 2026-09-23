@@ -1,0 +1,17 @@
+# expect: W-edge-jog
+# expect-clean: E-
+# ELK leaves a ~9px kink in web -> mail right under Web (found by a random-graph search; d2 draws it as a tiny S-curve)
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+api: Api service
+cdn: Cdn
+queue: Queue
+web: Web
+logs: Logs service
+mail: Mail
+logs -> web
+cdn -> logs: yes
+mail -> logs: no
+cdn -> api
+web -> mail: writes
+web -> queue

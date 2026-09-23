@@ -1,0 +1,10 @@
+vars: {d2-config: {layout-engine: elk}}
+direction: up
+Animal: {shape: class; +name: string}
+Dog: {shape: class; +breed: string}
+Car: {shape: class; +vin: string}
+Wheel: {shape: class; +size: int}
+Fleet: {shape: class; +name: string}
+Dog -> Animal: {target-arrowhead.shape: triangle}
+Wheel -> Car: {target-arrowhead: {shape: diamond; style.filled: true}}
+Car -> Fleet: {target-arrowhead: {shape: diamond; style.filled: true}}

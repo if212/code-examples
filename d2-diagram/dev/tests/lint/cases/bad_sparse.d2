@@ -1,0 +1,11 @@
+# expect: I-sparse
+# expect-clean: E-
+# a tall chain beside a wide, shallow group leaves a large empty block under the group
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+s1 -> s2 -> s3 -> s4 -> s5 -> s6 -> s7 -> s8
+hub: Hub
+hub -> a
+hub -> b
+hub -> c
+hub -> d

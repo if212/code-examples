@@ -1,0 +1,16 @@
+# expect-clean: E- W-
+shape: sequence_diagram
+client
+gateway
+service
+db
+client -> gateway: request
+gateway -> service: validate
+service -> db: query
+db -> service: result
+service."cache miss"
+service -> gateway: response
+g: retry block {
+  gateway -> service: retry
+}
+gateway -> client: ok

@@ -1,0 +1,21 @@
+# Sequence sample for the neutral theme: participants use `actor`, returns `secondary`.
+...@../../../templates/neutral-theme
+shape: sequence_diagram
+
+spa: Browser SPA {class: actor}
+api: API gateway {class: actor}
+auth: Auth server {class: actor}
+db: Users DB {class: actor}
+
+spa -> api: POST /login {class: flow}
+api -> auth: verify(credentials) {class: flow}
+auth -> db: SELECT user by email {class: dep}
+db -> auth: user row {class: secondary}
+auth."bcrypt compare, 15 min JWT": {class: note}
+auth -> api: signed JWT {class: secondary}
+refresh: "alt: token expired" {
+  class: zone
+  spa -> api: POST /refresh {class: dep}
+  api -> spa: 401 Unauthorized {class: failure}
+}
+api -> spa: 200 OK + token {class: flow}

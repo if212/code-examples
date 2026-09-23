@@ -1,0 +1,36 @@
+vars: {d2-config: {layout-engine: elk}}
+direction: right
+customers: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  email: varchar {constraint: unique}
+}
+orders: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  customer_id: int {constraint: foreign_key}
+  placed_at: timestamptz
+}
+line_items: {
+  shape: sql_table
+  order_id: int {constraint: [primary_key; foreign_key]}
+  product_id: int {constraint: [primary_key; foreign_key]}
+  qty: int
+}
+products: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  sku: varchar {constraint: unique}
+}
+orders.customer_id <-> customers.id: placed by {
+  source-arrowhead.shape: cf-many
+  target-arrowhead.shape: cf-one-required
+}
+line_items.order_id <-> orders.id: belongs to {
+  source-arrowhead.shape: cf-many-required
+  target-arrowhead.shape: cf-one-required
+}
+line_items.product_id <-> products.id: references {
+  source-arrowhead.shape: cf-many
+  target-arrowhead.shape: cf-one-required
+}

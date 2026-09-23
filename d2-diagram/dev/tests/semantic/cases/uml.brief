@@ -1,0 +1,17 @@
+# request: "Dog is an Animal; a Car is composed of Wheels; a Fleet aggregates Cars."
+type: class
+reader: test
+width: 800
+direction: up
+focus: none
+out: -
+nodes:
+  Animal
+  Dog
+  Car
+  Wheel
+  Fleet
+edges:
+  Dog -> Animal {dst: triangle-hollow}
+  Wheel -> Car {dst: diamond-filled}
+  Car -> Fleet {dst: diamond}

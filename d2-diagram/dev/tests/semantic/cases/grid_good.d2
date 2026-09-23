@@ -1,0 +1,16 @@
+vars: {d2-config: {layout-engine: elk}}
+grid-rows: 1
+horizontal-gap: 120
+ingest: Ingestion {
+  grid-rows: 2
+  pipe: Snowpipe
+  fivetran: Fivetran
+}
+sf: Snowflake {
+  grid-rows: 2
+  raw: RAW
+  staging: STAGING
+}
+ingest.pipe -> sf.raw: loads
+ingest.fivetran -> sf.raw: loads
+sf.raw -> sf.staging: dbt

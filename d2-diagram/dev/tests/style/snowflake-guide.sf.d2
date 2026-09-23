@@ -1,0 +1,37 @@
+# Style guide for templates/snowflake-brand.d2: every sf-* class, rendered.
+# A real diagram uses at most ONE sf-accent-*; this sheet shows all four.
+# Render: sh scripts/d2check.sh dev/tests/style/snowflake-guide.sf.d2 OUT.svg
+...@../../../templates/snowflake-brand
+direction: down
+grid-columns: 1
+grid-gap: 24
+
+nodes: Node roles {
+  class: sf-container
+  node: sf-node {class: sf-node}
+  primary: sf-primary {class: sf-primary}
+  store: sf-datastore {class: sf-datastore}
+  ext: sf-external {class: sf-external}
+  muted: sf-muted {class: sf-muted}
+}
+
+accents: Accents (one per diagram) {
+  class: sf-container
+  orange: sf-accent-orange {class: sf-accent-orange}
+  star: sf-accent-star {class: sf-accent-star}
+  pink: sf-accent-pink {class: sf-accent-pink}
+  purple: sf-accent-purple {class: sf-accent-purple}
+}
+
+edges: Edge roles {
+  class: sf-container
+  a1: A {class: sf-node}
+  b1: B {class: sf-node}
+  a2: A {class: sf-node}
+  b2: B {class: sf-node}
+  a3: A {class: sf-node}
+  b3: B {class: sf-node}
+  a1 -> b1: sf-edge {class: sf-edge}
+  a2 -> b2: sf-flow {class: sf-flow}
+  a3 -> b3: sf-failure {class: sf-failure}
+}

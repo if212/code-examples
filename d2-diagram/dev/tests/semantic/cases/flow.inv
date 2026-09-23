@@ -1,0 +1,27 @@
+# request: "Login flow: user submits credentials; if valid and MFA enabled, ask
+#  for the code, then (code ok) grant the session; invalid credentials or a bad
+#  code show an error and go back to the form."
+type: flowchart
+direction: down
+nodes:
+  start: Start {start}
+  submit: Submit credentials
+  valid: Credentials valid? {decision}
+  mfa: MFA enabled? {decision}
+  code: Enter MFA code
+  code_ok: Code correct? {decision}
+  session: Grant session
+  err: Show error
+  done: End {end}
+edges:
+  start -> submit
+  submit -> valid
+  valid -> mfa: "Yes"
+  valid -> err: "No"
+  mfa -> code: "Yes"
+  mfa -> session: "No"
+  code -> code_ok
+  code_ok -> session: "Yes"
+  code_ok -> err: "No"
+  err -> submit: retry
+  session -> done

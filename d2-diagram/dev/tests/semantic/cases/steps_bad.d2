@@ -1,0 +1,15 @@
+vars: {d2-config: {layout-engine: elk}}
+direction: right
+user: User
+api: API
+user -> api: request
+steps: {
+  s1: {
+    db: Database
+    api -> db: query
+  }
+  s2: {
+    cache: Cache
+    api -> cahce: lookup
+  }
+}

@@ -1,0 +1,15 @@
+# flags: -l dagre
+# expect: W-aspect E-small-text
+# a 10-step horizontal chain is ~1500px wide: in an 800px column its text shrinks below 10px
+direction: right
+s1: Ingest
+s2: Validate
+s3: Normalize
+s4: Enrich
+s5: Deduplicate
+s6: Score
+s7: Route
+s8: Persist
+s9: Notify
+s10: Archive
+s1 -> s2 -> s3 -> s4 -> s5 -> s6 -> s7 -> s8 -> s9 -> s10

@@ -1,0 +1,4 @@
+type: architecture
+a: A
+edges:
+  a -> b

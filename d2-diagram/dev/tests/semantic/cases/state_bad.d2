@@ -1,0 +1,13 @@
+direction: right
+init: Start {shape: circle}
+pending: Pending
+paid: Paid
+shipped: Shipped
+cancelled: Cancelled
+final: End {shape: circle}
+init -> pending
+pending -> paid: payment_ok
+pending -> pending: payment_failed
+paid -> shipped: ship
+shipped -> final
+final -> pending: reopen

@@ -1,0 +1,8 @@
+# request: "The order service in the VPC writes to the shared Postgres outside it."
+type: architecture
+nodes:
+  vpc: VPC
+  vpc.orders: Order service
+  db: Postgres
+edges:
+  vpc.orders -> db: writes

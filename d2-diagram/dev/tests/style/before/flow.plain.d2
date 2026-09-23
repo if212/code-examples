@@ -1,0 +1,27 @@
+# Same graph as ../flow.ds.d2 with no design system (built-in theme look).
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+
+start: Commit pushed {shape: oval}
+build: Build and unit tests
+ok1: Tests pass? {shape: diamond}
+stage: Deploy to staging
+ok2: Smoke tests OK? {shape: diamond}
+approve: Manual approval
+prod: Deploy to production
+done: Released {shape: oval}
+rollback: Roll back staging
+notify: Notify author
+fail: Pipeline failed {shape: oval}
+
+start -> build
+build -> ok1
+ok1 -> stage: yes
+stage -> ok2
+ok2 -> approve: yes
+approve -> prod
+prod -> done
+ok1 -> notify: no
+ok2 -> rollback: no
+rollback -> notify
+notify -> fail

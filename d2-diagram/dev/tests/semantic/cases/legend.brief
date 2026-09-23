@@ -1,0 +1,6 @@
+type: architecture
+nodes:
+  app: App
+  db: Orders DB
+edges:
+  app -> db: writes

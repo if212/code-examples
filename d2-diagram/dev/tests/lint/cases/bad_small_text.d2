@@ -1,0 +1,6 @@
+# expect: E-small-text
+# 9px node and 8px edge labels display below 10px even at scale 1
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+a: Tiny label {style.font-size: 9}
+b: Normal
+a -> b: tiny edge label {style.font-size: 8}

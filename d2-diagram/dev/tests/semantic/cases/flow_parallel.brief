@@ -1,0 +1,27 @@
+# request: "Order handling: checks run in parallel, then a go/no-go decision;
+#   fulfilment picks and ships; any failure cancels the order."
+type: flowchart
+reader: test
+width: 800
+direction: down
+focus: gate
+out: -
+nodes:
+  placed: Order placed {start}
+  checks: Checks run in parallel
+  checks.stock: Reserve stock
+  checks.card: Authorize card
+  gate: All checks pass? {decision}
+  fulfil: Fulfilment
+  fulfil.pick: Pick items
+  fulfil.ship: Hand to carrier
+  shipped: Shipped {end}
+  cancelled: Cancelled {end}
+edges:
+  placed -> checks
+  checks -> gate
+  gate -> fulfil: all pass
+  fulfil.pick -> fulfil.ship
+  fulfil -> shipped
+  gate -> cancelled: any fails
+  fulfil -> cancelled: fails

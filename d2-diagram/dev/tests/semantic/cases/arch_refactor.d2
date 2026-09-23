@@ -1,0 +1,20 @@
+# same diagram, restructured: vars + classes, edges moved to root with full paths
+direction: right
+classes: {
+  focus: {style: {fill: "#FFF4E5"; stroke: "#C2410C"; stroke-width: 3}}
+  async: {style.stroke-dash: 3}
+}
+users: Users {shape: person}
+aws: AWS VPC
+aws.gw: API Gateway
+aws.orders: Order Service {class: focus}
+aws.db: Postgres {shape: cylinder}
+aws.kafka: Kafka {shape: queue}
+aws.billing: Billing Worker
+stripe: Stripe {style.stroke-dash: 3}
+users -> aws.gw: HTTPS
+aws.gw -> aws.orders: REST
+aws.orders -> aws.db: SQL
+aws.orders -> aws.kafka: order.created {class: async}
+aws.kafka -> aws.billing: consumes {class: async}
+aws.billing -> stripe: "charge (port 443)"

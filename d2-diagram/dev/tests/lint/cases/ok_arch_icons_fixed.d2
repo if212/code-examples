@@ -1,0 +1,28 @@
+# flags: -l elk --pad 24
+# expect-clean: E-
+# fix for bad_elk_container_titles: move container titles off the entry point
+direction: down
+users: Users {shape: person}
+edge: Edge {
+  label.near: top-left
+  cdn: CDN {icon: ./cloud.svg}
+  waf: WAF {icon: ./lock.svg}
+  cdn -> waf
+}
+app: Application {
+  label.near: top-left
+  api: API Gateway {icon: ./server.svg}
+  auth: Auth Service
+  orders: Orders Service
+  api -> auth: verify token
+  api -> orders: REST
+}
+data: Data {
+  label.near: top-left
+  pg: Postgres {shape: cylinder; icon: ./database.svg}
+  cache: Redis {shape: cylinder}
+}
+users -> edge.cdn: HTTPS
+edge.waf -> app.api
+app.orders -> data.pg: SQL
+app.orders -> data.cache: read-through

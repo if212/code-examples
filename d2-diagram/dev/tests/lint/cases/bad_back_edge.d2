@@ -1,0 +1,14 @@
+# expect: W-long-edge
+# expect-clean: E-
+# expect-text: back-edge detour
+# the resubmit loop runs back up the whole chain
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+submit: Submit form
+validate: Validate
+enrich: Enrich
+score: Score
+review: Manual review
+done: Done
+submit -> validate -> enrich -> score -> review -> done
+review -> submit: resubmit

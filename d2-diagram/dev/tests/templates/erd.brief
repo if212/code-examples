@@ -1,0 +1,21 @@
+# request: "ER diagram of the ticketing schema for the backend README. An event
+#  has one or more sessions and any number of tickets; every session and every
+#  ticket belongs to exactly one event. A ticket is sold to at most one
+#  attendee (attendee_id is NULL while unsold); an attendee can hold many
+#  tickets. Show ticket_status values: available, sold, refunded."
+type: erd
+reader: backend engineers reading the repo README
+width: 800
+direction: right
+focus: events
+out: payments, venues, seating
+nodes:
+  events: events {cols: id name starts_at}
+  attendees: attendees {cols: id email}
+  sessions: sessions {cols: id event_id title}
+  tickets: tickets {cols: id event_id attendee_id status}
+  status_values: "ticket_status values: available, sold, refunded" {note}
+relationships:
+  events.id <-> sessions.event_id {src: cf-one-required, dst: cf-many-required}
+  events.id <-> tickets.event_id {src: cf-one-required, dst: cf-many}
+  attendees.id <-> tickets.attendee_id {src: cf-one, dst: cf-many}

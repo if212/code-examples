@@ -1,0 +1,22 @@
+# Snowflake-branded classes defined inline (a stand-in for snowflake-brand.d2)
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+classes: {
+  sf-node: {style: {fill: "#FFFFFF"; stroke: "#11567F"}}
+  sf-primary: {style: {fill: "#29B5E8"; stroke: "#11567F"; bold: true}}
+  sf-container: {label.near: top-left; style: {fill: "#F4FAFD"; stroke: "#BCE3F7"}}
+  sf-edge: {style: {stroke: "#11567F"}}
+}
+direction: right
+ingest: Ingestion {
+  class: sf-container
+  pipe: Snowpipe {class: sf-node}
+  fivetran: Fivetran {class: sf-node}
+}
+sf: Snowflake {
+  class: sf-container
+  raw: RAW {class: sf-primary}
+  staging: STAGING {class: sf-node}
+}
+ingest.pipe -> sf.raw: loads {class: sf-edge}
+ingest.fivetran -> sf.raw: loads {class: sf-edge}
+sf.raw -> sf.staging: dbt {class: sf-edge}

@@ -1,0 +1,19 @@
+# request: "Step-by-step walkthrough for the onboarding guide, one board per
+#  hop: the browser sends GET /orders to the API gateway, the gateway forwards
+#  it once the token is valid, and the Orders API selects the open orders from
+#  the Orders DB. Keep every board in the same layout. Highlight the Orders API."
+type: steps
+reader: new engineers reading the onboarding guide (one image per step)
+width: 800
+direction: down
+focus: api
+out: response path, caching, retries
+nodes:
+  browser: Browser
+  gateway: API gateway
+  api: Orders API
+  db: Orders DB {shape: cylinder}
+edges:
+  browser -> gateway: 1. GET /orders
+  gateway -> api: "2. forward, token valid"
+  api -> db: 3. SELECT open orders

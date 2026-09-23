@@ -1,0 +1,12 @@
+# expect-clean: E- W-
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+start: Start {shape: oval}
+check: Valid input? {shape: diamond}
+fix: Show error
+proc: Process order
+done: Done {shape: oval}
+start -> check
+check -> proc: yes
+proc -> done
+check -> fix: no
+fix -> start: retry

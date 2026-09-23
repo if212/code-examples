@@ -1,0 +1,10 @@
+...@mini-theme
+classes: {
+  slim: {source-arrowhead.shape: arrow; target-arrowhead.shape: arrow}
+}
+p: Producer {class: service}
+q: Queue {class: service}
+w: Worker {class: service}
+p -> q: publishes {class: slim}
+w <- q: consumes {class: slim}
+p -> w: pings {class: slim}

@@ -1,0 +1,60 @@
+# UML class template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+# Down, with parents and wholes on top: `Parent <- Child` keeps the parent above.
+direction: down
+
+# Class shapes take no node class (stroke paints the body): the globs at the end
+# style them. Quote any member holding ":" or "#": "+pay(m: Method)": Receipt.
+Order: {
+  shape: class
+  class: focal-solid
+  style.stroke: ${paper}
+  +id: UUID
+  +total(): Money
+  "+checkout(m: PaymentMethod)": Receipt
+}
+LineItem: {
+  shape: class
+  +sku: string
+  +qty: int
+}
+PaymentMethod: "<<interface>>\nPaymentMethod" {
+  shape: class
+  "+charge(amount: Money)": Receipt
+}
+CardPayment: {
+  shape: class
+  -token: string
+  "+charge(amount: Money)": Receipt
+}
+Wallet: {
+  shape: class
+  -balance: Money
+  "+charge(amount: Money)": Receipt
+}
+
+# Composition: filled diamond on the whole. Multiplicity: arrowhead label, on
+# a named edge only (an unnamed one is 40px long: the label sits by both ends).
+Order <- LineItem: contains {
+  class: dep
+  source-arrowhead: {shape: diamond; style.filled: true}
+  target-arrowhead.label: "1..*"
+}
+Order -> PaymentMethod: pays with {
+  class: dep
+  target-arrowhead.label: "0..1"
+}
+# Realization: dashed line, hollow triangle (solid line = inheritance).
+PaymentMethod <- CardPayment: {
+  class: dep
+  style.stroke-dash: 4
+  source-arrowhead: {shape: triangle; style.filled: false}
+}
+PaymentMethod <- Wallet: {
+  class: dep
+  style.stroke-dash: 4
+  source-arrowhead: {shape: triangle; style.filled: false}
+}
+
+*: {&shape: class; style: {font-size: 16; stroke-width: 1; border-radius: 0}}
+*: {&shape: class; !&class: focal-solid; style.fill: ${ink-600}}

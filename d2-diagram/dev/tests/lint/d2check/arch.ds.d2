@@ -1,0 +1,36 @@
+...@neutral-theme
+direction: right
+
+web: Web app {class: actor}
+mobile: Mobile app {class: actor}
+cdn: CDN {class: external}
+
+vpc: Production VPC {
+  class: zone
+  gw: API Gateway {class: focal}
+  auth: Auth service {class: service}
+  orders: Order service {class: service}
+  pay: Payment service {class: service}
+  worker: Fulfillment worker {class: service}
+  db: Orders DB {class: datastore}
+  cache: Session cache {class: datastore}
+  bus: order-events {class: queue}
+}
+
+stripe: Stripe API {class: external}
+erp: Legacy ERP {class: muted}
+dlq: Dead-letter queue {class: danger; shape: queue}
+
+web -> cdn: {class: flow}
+cdn -> vpc.gw: {class: flow}
+mobile -> vpc.gw: {class: dep}
+vpc.gw -> vpc.auth: verify token {class: dep}
+vpc.auth -> vpc.cache: {class: secondary}
+vpc.gw -> vpc.orders: place order {class: flow}
+vpc.orders -> vpc.db: write {class: dep}
+vpc.orders -> vpc.pay: charge {class: flow}
+vpc.pay -> stripe: HTTPS {class: flow}
+vpc.orders -> vpc.bus: OrderPlaced {class: async}
+vpc.bus -> vpc.worker: {class: async}
+vpc.worker -> erp: nightly sync {class: secondary}
+vpc.pay -> dlq: on failure {class: failure}

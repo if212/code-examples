@@ -1,0 +1,32 @@
+# ERD sample for the neutral theme, styled as playbooks/erd.md says: tables take
+# no role class (stroke paints the body); the globs at the end give 16px rows,
+# 1px rules and slate headers; the focus table is focal-solid, body reset to white.
+...@../../../templates/neutral-theme
+direction: right
+
+orgs: organizations {
+  shape: sql_table
+  class: focal-solid
+  style.stroke: ${paper}
+  id: uuid {constraint: primary_key}
+  slug: varchar(64) {constraint: unique}
+  name: text
+}
+users: users {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  email: varchar(255) {constraint: unique}
+  created_at: timestamptz
+}
+members: memberships {
+  shape: sql_table
+  org_id: uuid {constraint: [primary_key; foreign_key]}
+  user_id: uuid {constraint: [primary_key; foreign_key]}
+  role: member_role
+}
+orgs.id <-> members.org_id: {class: dep; source-arrowhead.shape: cf-one-required; target-arrowhead.shape: cf-many}
+users.id <-> members.user_id: {class: dep; source-arrowhead.shape: cf-one-required; target-arrowhead.shape: cf-many}
+
+# Filtered globs go after the tables they style.
+*: {&shape: sql_table; style: {font-size: 16; stroke-width: 1}}
+*: {&shape: sql_table; !&class: focal-solid; style.fill: ${ink-600}}

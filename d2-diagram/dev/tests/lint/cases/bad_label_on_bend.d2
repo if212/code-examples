@@ -1,0 +1,10 @@
+# expect: W-label-on-bend
+# expect-clean: E-
+# two labelled branches leave one node; each label lands next to its elbow
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+pending: Pending {width: 140}
+cancelled: Cancelled {width: 140}
+paid: Paid {width: 140}
+pending -> cancelled: cancel
+pending -> paid: pay

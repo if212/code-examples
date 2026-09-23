@@ -1,0 +1,6 @@
+# expect: E-edge-through-node W-edge-through-container
+grid-columns: 3
+west: West {x: X}
+mid: Middle zone {y: Y; z: Z}
+east: East {w: W}
+west.x -> east.w: crosses middle

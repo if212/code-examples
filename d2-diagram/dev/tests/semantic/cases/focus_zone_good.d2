@@ -1,0 +1,15 @@
+...@mini-theme
+direction: right
+ingest: Ingestion {
+  class: zone
+  pipe: Snowpipe {class: service}
+  fivetran: Fivetran {class: service}
+}
+sf: Snowflake {
+  class: zone-blue
+  raw: RAW {class: service}
+  staging: STAGING {class: service}
+}
+ingest.pipe -> sf.raw: loads {class: dep}
+ingest.fivetran -> sf.raw: loads {class: dep}
+sf.raw -> sf.staging: dbt {class: flow}

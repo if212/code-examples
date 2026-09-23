@@ -1,0 +1,23 @@
+...@mini-theme
+direction: down
+placed: Order placed {class: terminal}
+checks: Checks run in parallel {
+  class: zone
+  stock: Reserve stock {class: service}
+  card: Authorize card {class: service}
+}
+gate: All checks pass? {class: [decision; focal]}
+fulfil: Fulfilment {
+  class: boundary
+  pick: Pick items {class: service}
+  ship: Hand to carrier {class: service}
+}
+shipped: Shipped {class: terminal}
+cancelled: Cancelled {class: terminal}
+placed -> checks: {class: flow}
+checks -> gate: {class: flow}
+gate -> fulfil: all pass {class: flow}
+fulfil.pick -> fulfil.ship: {class: flow}
+fulfil -> shipped: {class: flow}
+gate -> cancelled: any fails {class: failure}
+fulfil -> cancelled: fails {class: failure}

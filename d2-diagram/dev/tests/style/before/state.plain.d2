@@ -1,0 +1,19 @@
+# Same graph as ../state.ds.d2 with no design system (built-in theme look).
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+
+init: "" {shape: circle; width: 20; height: 20}
+pending: Pending
+paid: Paid
+shipped: Shipped
+delivered: Delivered {style.double-border: true}
+cancelled: Cancelled {style.double-border: true}
+refunded: Refunded {style.double-border: true}
+
+init -> pending
+pending -> paid: payment ok
+paid -> shipped: ship
+shipped -> delivered: deliver
+pending -> cancelled: payment failed
+paid -> refunded: refund
+delivered -> refunded: return

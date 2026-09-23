@@ -1,0 +1,52 @@
+# Pipeline template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Doc column: a serpentine. Each stage row is a grid cell with its own
+# `direction` (honored in grid cells, ignored on plain containers).
+# Merges and fan-outs stay inside one row, where ELK routes them.
+grid-columns: 1
+vertical-gap: 60
+
+load: Extract and load {
+  class: zone
+  direction: right
+  # One width per row lines up the turn. The database sits in the middle,
+  # so its lane runs straight into the connector hub.
+  stripe: "Payments\nStripe API" {class: [service; external]; width: 150}
+  pg: "App DB\nPostgres" {class: datastore; width: 150}
+  events: "Clickstream\nSegment" {class: [service; external]; width: 150}
+  fivetran: "Connectors\nFivetran" {class: service; width: 150}
+  raw: "RAW\nSnowflake" {class: datastore; width: 150}
+  pg -> fivetran: {class: flow}
+  stripe -> fivetran: {class: dep}
+  events -> fivetran: {class: dep}
+  fivetran -> raw: {class: flow}
+}
+
+# Row 2 runs right to left, so its first node sits under row 1's last.
+# The transformer (dbt) is named in the title, not drawn as a lane.
+serve: Transform (dbt) and serve {
+  class: zone
+  direction: left
+  stg: "STAGING\nSnowflake" {class: datastore; width: 150}
+  marts: "MARTS\nSnowflake" {class: [datastore; focal]; width: 150}
+  ml: "Features\nFeast" {class: service; width: 150}
+  bi: "Dashboards\nLooker" {class: service; width: 150}
+  retl: "Reverse ETL\nHightouch" {class: service; width: 150}
+  stg -> marts: {class: flow}
+  marts -> bi: {class: flow}
+  marts -> ml: {class: dep}
+  marts -> retl: {class: dep}
+}
+
+# The one edge between rows: node to node (never row to row). It is
+# vertical only while both rows are equally wide: no labels on horizontal
+# hops (a label widens its row by its width + ~37px), merges and fan-outs
+# of 3 at most (a 4th node adds a 50px routing track). d2lint misses tilts
+# under 12 degrees: check this edge in the col.png after every edit.
+load.raw -> serve.stg: {class: flow}
+
+# Slides (1600px column): delete `grid-columns`/`vertical-gap` and both
+# `direction`s, add `direction: right` at the top, and regroup the nodes
+# into stage zones (Sources, Snowflake, Consumers) with `dbt` edge labels:
+# one row of about 1400px, clean at --column 1600 (8px text at 800).

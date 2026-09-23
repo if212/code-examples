@@ -1,0 +1,23 @@
+# request: "Users hit an API gateway in our AWS VPC. The gateway calls the order
+#  service (REST). Orders are stored in Postgres and order events go to Kafka,
+#  consumed by the billing worker. Stripe is external; billing charges it. Highlight the order service."
+type: architecture
+direction: right
+
+nodes:
+  users: Users {shape: person}
+  aws: AWS VPC
+  aws.gw: API Gateway
+  aws.orders: Order Service {emphasis}
+  aws.db: Postgres {shape: cylinder}
+  aws.kafka: Kafka {shape: queue}
+  aws.billing: Billing Worker
+  stripe: Stripe {external}
+
+edges:
+  users -> aws.gw: HTTPS
+  aws.gw -> aws.orders: REST
+  aws.orders -> aws.db: SQL
+  aws.orders -> aws.kafka: "order.created" {dashed}
+  aws.kafka -> aws.billing: consume {dashed}
+  aws.billing -> stripe: "charge (port 443)"

@@ -1,0 +1,17 @@
+# request: "Step through a request: the user calls the API; then the API queries
+#   the database; then it also looks the result up in the cache."
+type: steps
+reader: slides
+width: 800
+direction: right
+focus: none
+out: -
+nodes:
+  user: User
+  api: API
+  db: Database
+  cache: Cache
+edges:
+  user -> api: request
+  api -> db: query
+  api -> cache: lookup

@@ -1,0 +1,16 @@
+# request: "A customer places zero or more orders; every order belongs to exactly
+#  one customer. An order has one or more line items; each line item belongs to
+#  exactly one order and references exactly one product (a product can appear on
+#  many line items, or none)."
+type: erd
+layout: elk
+nodes:
+  customers: customers {cols: id email}
+  orders: orders {cols: id customer_id placed_at}
+  line_items: line_items {cols: order_id product_id qty}
+  products: products {cols: id sku}
+
+relationships:
+  orders.customer_id <-> customers.id: placed by {src: cf-many, dst: cf-one-required}
+  line_items.order_id <-> orders.id: belongs to {src: cf-many-required, dst: cf-one-required}
+  line_items.product_id <-> products.id: references {src: cf-many, dst: cf-one-required}

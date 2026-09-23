@@ -1,0 +1,8 @@
+...@mini-theme
+aws: AWS {
+  class: zone
+  billing: Billing {class: service}
+  orders: Orders {class: service}
+}
+stripe: Stripe {class: service}
+aws.orders -> stripe: charges {class: dep}

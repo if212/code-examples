@@ -1,0 +1,15 @@
+# expect: W-long-edge
+# expect-clean: E-
+# expect-text: hangs off this one edge
+# Postgres hangs off one edge from the top of the cluster, so ELK places it below the whole cluster (the k8s baseline defect)
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+cluster: Cluster {
+  web: Web
+  api: API
+  worker: Worker
+  jobs: Jobs
+  web -> api -> worker -> jobs
+}
+pg: Postgres {shape: cylinder}
+cluster.web -> pg: SQL

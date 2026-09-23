@@ -1,0 +1,403 @@
+# Neutral technical design system for D2 (light, brand-free).
+#
+# Usage: copy this file next to your .d2, then as the FIRST line:
+#   ...@neutral-theme
+# Un-classed elements already look right (theme-overrides below).
+# Tag elements by ROLE, never by color:   db: Orders DB {class: datastore}
+# Combine roles with modifiers:           x {class: [service; focal]}
+#
+# Contrast (WCAG 2.x, computed with tools/contrast.py):
+#   body text  #0F172A on #FFFFFF 17.85 | on zone #F1F5F9 16.3
+#   edge label #475569 on #FFFFFF  7.58 | on zone #F1F5F9  6.92
+#   strokes    #64748B on #FFFFFF  4.76 (>= 3.0 for UI graphics)
+#   header     #FFFFFF on #1E293B 14.63 (sql_table / class headers)
+#
+# Known D2 behaviors this file is built around (verified on d2 v0.7.1):
+#   - Globs in an imported file do NOT reach objects of the importing file;
+#     vars (incl. d2-config theme-overrides) and classes DO. So: tag every
+#     container with a zone* / boundary class, or its title stays 28px.
+#   - Glob styles beat class styles, and `&shape` filters see objects before
+#     their shape is set - do not add node/container globs to "fix" defaults.
+#     A `**` node glob (without `&leaf: true`) plus any vars.d2-config fails
+#     at render ("style needs a value") while `d2 validate` passes.
+#   - Safe optional one-liner in the diagram file, for un-classed edges:
+#       (** -> **)[*]: {style.italic: false; style.font-size: 14}
+#   - stroke-width must be an integer; theme codes (B1, N2...) are not
+#     accepted as style values; a class named `link` crashes the compiler.
+#   - label.near on containers: top-left hugs the border and
+#     outside-top-left bends ELK edges, so zones keep the default (top-center).
+#   - Hex styles do not follow --dark-theme; this system is light-only.
+
+vars: {
+  # ---- palette (single source of truth; classes below reference these) ----
+  ink-900: "#0F172A" # primary text
+  ink-700: "#334155" # strong strokes, primary-flow edges
+  ink-600: "#475569" # secondary text, edge labels, zone titles
+  ink-500: "#64748B" # default strokes / edges (4.76:1)
+  ink-400: "#7F8DA1" # quiet strokes: legacy, boundaries, secondary edges (3.37:1, 3.08:1 on zone)
+  ink-300: "#CBD5E1" # zone borders
+  ink-200: "#E2E8F0"
+  ink-100: "#F1F5F9" # zone tint
+  ink-50: "#F8FAFC" # external / 3rd-party fill
+  paper: "#FFFFFF"
+
+  primary-700: "#1D4ED8" # focal stroke, primary-flow edge (6.70:1)
+  primary-600: "#2563EB" # solid focal fill (white text 5.17:1)
+  primary-200: "#BFDBFE" # blue zone border
+  primary-50: "#EFF6FF" # focal / blue zone tint
+
+  success-700: "#15803D"
+  success-800: "#166534"
+  success-200: "#BBF7D0"
+  success-50: "#F0FDF4"
+  danger-600: "#DC2626"
+  danger-800: "#991B1B"
+  danger-200: "#FECACA"
+  danger-50: "#FEF2F2"
+  warn-700: "#B45309"
+  warn-800: "#92400E"
+  warn-200: "#FDE68A"
+  warn-50: "#FFFBEB"
+  async-600: "#7C3AED"
+  async-800: "#5B21B6"
+  async-200: "#DDD6FE"
+  async-50: "#F5F3FF"
+
+  # ---- defaults for UN-classed elements (D2 theme color codes) ----
+  d2-config: {
+    theme-overrides: {
+      N1: "#0F172A" # all label text
+      N2: "#475569" # edge labels, sql constraint text
+      N3: "#64748B"
+      N4: "#E2E8F0" # diamond fill
+      N5: "#F1F5F9" # queue / hexagon / parallelogram fill
+      N6: "#F8FAFC"
+      N7: "#FFFFFF" # canvas, deep leaves, sql header text
+      B1: "#64748B" # every default stroke and edge
+      B2: "#1E293B" # sql_table / class header fill
+      B3: "#F1F5F9" # person fill
+      B4: "#F1F5F9" # level-1 container fill
+      B5: "#F8FAFC" # level-2 container + nodes inside a level-1 container
+      B6: "#FFFFFF" # top-level nodes, level-3 containers
+      AA2: "#1D4ED8" # sql column types
+      AA4: "#F8FAFC" # cylinder / package / stored_data fill
+      AA5: "#FFFFFF"
+      AB4: "#F8FAFC" # page / document / step fill
+      AB5: "#FFFFFF"
+    }
+  }
+}
+
+classes: {
+  # =================== NODES (role) ===================
+  # Base service / component. The workhorse: most nodes.
+  service: {
+    style: {
+      fill: ${paper}
+      stroke: ${ink-500}
+      stroke-width: 2
+      font-color: ${ink-900}
+      font-size: 16
+      border-radius: 6
+    }
+  }
+  # A person or calling system at the edge of the diagram.
+  actor: {
+    style: {
+      fill: ${ink-100}
+      stroke: ${ink-500}
+      stroke-width: 2
+      font-color: ${ink-900}
+      font-size: 16
+      border-radius: 18
+    }
+  }
+  # Databases, caches, buckets. Pair with shape: cylinder.
+  datastore: {
+    shape: cylinder
+    style: {
+      fill: ${ink-50}
+      stroke: ${ink-500}
+      stroke-width: 2
+      font-color: ${ink-900}
+      font-size: 16
+    }
+  }
+  # Queues, topics, streams - shares the async hue with async edges.
+  queue: {
+    shape: queue
+    style: {
+      fill: ${async-50}
+      stroke: ${async-600}
+      stroke-width: 2
+      font-color: ${async-800}
+      font-size: 16
+    }
+  }
+  # Things you do not own: SaaS, partner APIs.
+  external: {
+    style: {
+      fill: ${ink-50}
+      stroke: ${ink-500}
+      stroke-width: 2
+      stroke-dash: 4
+      font-color: ${ink-600}
+      font-size: 16
+      border-radius: 6
+    }
+  }
+  # The ONE thing the eye must find. Use once or twice per diagram.
+  focal: {
+    style: {
+      fill: ${primary-50}
+      stroke: ${primary-700}
+      stroke-width: 3
+      font-color: ${ink-900}
+      font-size: 16
+      bold: true
+      border-radius: 6
+    }
+  }
+  # Solid variant for a single hero node on a busy canvas.
+  focal-solid: {
+    style: {
+      fill: ${primary-600}
+      stroke: ${primary-700}
+      stroke-width: 2
+      font-color: ${paper}
+      font-size: 16
+      bold: true
+      border-radius: 6
+    }
+  }
+  # Deprecated / legacy / out of scope.
+  muted: {
+    style: {
+      fill: ${paper}
+      stroke: ${ink-400}
+      stroke-width: 2
+      stroke-dash: 3
+      font-color: ${ink-600}
+      font-size: 16
+      bold: false
+      border-radius: 6
+    }
+  }
+  # Free-floating annotation. Keep to one short sentence.
+  note: {
+    shape: page
+    style: {
+      fill: ${warn-50}
+      stroke: ${warn-200}
+      stroke-width: 1
+      font-color: ${warn-800}
+      font-size: 14
+      bold: false
+    }
+  }
+  danger: {
+    style: {
+      fill: ${danger-50}
+      stroke: ${danger-600}
+      stroke-width: 2
+      font-color: ${danger-800}
+      font-size: 16
+      border-radius: 6
+    }
+  }
+  success: {
+    style: {
+      fill: ${success-50}
+      stroke: ${success-700}
+      stroke-width: 2
+      font-color: ${success-800}
+      font-size: 16
+      border-radius: 6
+    }
+  }
+  # Flowchart decision. Keep the label a short question.
+  decision: {
+    shape: diamond
+    style: {
+      fill: ${ink-100}
+      stroke: ${ink-500}
+      stroke-width: 2
+      font-color: ${ink-900}
+      font-size: 15
+    }
+  }
+  # Start / end terminals for flows and state machines.
+  terminal: {
+    shape: oval
+    style: {
+      fill: ${ink-700}
+      stroke: ${ink-700}
+      font-color: ${paper}
+      font-size: 15
+      bold: true
+    }
+  }
+  # Filled dot for state-machine initial / final pseudo-states. Label it "".
+  dot: {
+    shape: circle
+    width: 20
+    height: 20
+    style: {
+      fill: ${ink-700}
+      stroke: ${ink-700}
+    }
+  }
+  # State in a state machine.
+  state: {
+    style: {
+      fill: ${paper}
+      stroke: ${ink-500}
+      stroke-width: 2
+      font-color: ${ink-900}
+      font-size: 16
+      border-radius: 14
+    }
+  }
+
+  # =================== CONTAINERS ===================
+  # Default grouping: tinted, small uppercase title top-left.
+  zone: {
+    style: {
+      fill: ${ink-100}
+      stroke: ${ink-300}
+      stroke-width: 1
+      font-color: ${ink-600}
+      font-size: 15
+      bold: true
+      text-transform: uppercase
+      border-radius: 10
+    }
+  }
+  zone-blue: {
+    style: {
+      fill: ${primary-50}
+      stroke: ${primary-200}
+      stroke-width: 1
+      font-color: ${primary-700}
+      font-size: 15
+      bold: true
+      text-transform: uppercase
+      border-radius: 10
+    }
+  }
+  zone-green: {
+    style: {
+      fill: ${success-50}
+      stroke: ${success-200}
+      stroke-width: 1
+      font-color: ${success-800}
+      font-size: 15
+      bold: true
+      text-transform: uppercase
+      border-radius: 10
+    }
+  }
+  zone-amber: {
+    style: {
+      fill: ${warn-50}
+      stroke: ${warn-200}
+      stroke-width: 1
+      font-color: ${warn-800}
+      font-size: 15
+      bold: true
+      text-transform: uppercase
+      border-radius: 10
+    }
+  }
+  zone-violet: {
+    style: {
+      fill: ${async-50}
+      stroke: ${async-200}
+      stroke-width: 1
+      font-color: ${async-800}
+      font-size: 15
+      bold: true
+      text-transform: uppercase
+      border-radius: 10
+    }
+  }
+  # Trust boundary / network edge: no fill, dashed outline.
+  boundary: {
+    style: {
+      fill: transparent
+      stroke: ${ink-400}
+      stroke-width: 2
+      stroke-dash: 5
+      font-color: ${ink-600}
+      font-size: 15
+      bold: true
+      text-transform: uppercase
+      border-radius: 10
+    }
+  }
+
+  # =================== EDGES ===================
+  # The main path the reader should follow.
+  flow: {
+    style: {
+      stroke: ${primary-700}
+      stroke-width: 3
+      font-color: ${primary-700}
+      font-size: 14
+      italic: false
+      bold: true
+    }
+  }
+  # Ordinary dependency (same look as un-classed edges, lighter weight).
+  dep: {
+    style: {
+      stroke: ${ink-500}
+      stroke-width: 2
+      font-color: ${ink-600}
+      font-size: 14
+      italic: false
+    }
+  }
+  # Background / optional / reads.
+  secondary: {
+    style: {
+      stroke: ${ink-400}
+      stroke-width: 1
+      font-color: ${ink-600}
+      font-size: 14
+      italic: false
+    }
+  }
+  # Fire-and-forget: events, pub/sub, callbacks.
+  async: {
+    style: {
+      stroke: ${async-600}
+      stroke-width: 2
+      stroke-dash: 4
+      font-color: ${async-800}
+      font-size: 14
+      italic: false
+    }
+  }
+  # Error / retry / fallback path.
+  failure: {
+    style: {
+      stroke: ${danger-600}
+      stroke-width: 2
+      stroke-dash: 3
+      font-color: ${danger-800}
+      font-size: 14
+      italic: false
+    }
+  }
+  # Happy-path confirmation (flowchart "yes" into a success terminal).
+  ok: {
+    style: {
+      stroke: ${success-700}
+      stroke-width: 2
+      font-color: ${success-800}
+      font-size: 14
+      italic: false
+    }
+  }
+}

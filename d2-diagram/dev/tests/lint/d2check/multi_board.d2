@@ -1,0 +1,24 @@
+# multi-board source (layers, scenarios, steps): d2 writes a directory of SVGs
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+api -> service -> db
+
+layers: {
+  alt: {
+    edge -> queue -> worker
+  }
+}
+
+scenarios: {
+  outage: {
+    service -> cache
+  }
+}
+
+steps: {
+  "1": {
+    user -> api: begin
+  }
+  "2": {
+    api -> service: process
+  }
+}

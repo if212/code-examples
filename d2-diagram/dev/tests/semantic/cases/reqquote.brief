@@ -1,0 +1,14 @@
+# request: "Alpha calls Beta over gRPC;
+# Beta answers once."
+# arrows = request direction
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: none
+out: -
+nodes:
+  a: Alpha
+  b: Beta
+edges:
+  a -> b: calls

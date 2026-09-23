@@ -1,0 +1,12 @@
+# expect: W-sibling-size
+# expect-clean: E-
+# one sibling wraps to two lines, so the row has two heights
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: down
+gw: Gateway
+a: Orders
+b: "Payments\n(PCI zone)"
+c: Search
+gw -> a
+gw -> b
+gw -> c

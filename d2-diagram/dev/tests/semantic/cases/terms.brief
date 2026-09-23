@@ -1,0 +1,15 @@
+# request: "The checkout service reads prices from the catalog and caches them
+#   in Redis. Payments go through Stripe."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: checkout
+out: -
+nodes:
+  checkout: Checkout service
+  catalog: Catalog
+  stripe: Stripe {external}
+edges:
+  checkout -> catalog: reads prices
+  checkout -> stripe: pays

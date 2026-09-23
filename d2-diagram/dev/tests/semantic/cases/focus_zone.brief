@@ -1,0 +1,19 @@
+# request: "Snowpipe and Fivetran load RAW; dbt turns RAW into STAGING. Highlight
+#   Snowflake."
+type: pipeline
+reader: test
+width: 800
+direction: right
+focus: sf
+out: -
+nodes:
+  ingest: Ingestion
+  ingest.pipe: Snowpipe
+  ingest.fivetran: Fivetran
+  sf: Snowflake
+  sf.raw: RAW
+  sf.staging: STAGING
+edges:
+  ingest.pipe -> sf.raw: loads
+  ingest.fivetran -> sf.raw: loads
+  sf.raw -> sf.staging: dbt

@@ -1,0 +1,9 @@
+# the reads edge from the brief was forgotten
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+classes: {
+  focal: {style.stroke-width: 3}
+}
+api: API {class: focal}
+db: Orders DB {shape: cylinder}
+cache: Session cache {shape: cylinder}
+api -> db: writes

@@ -1,0 +1,13 @@
+...@mini-theme
+direction: down
+web: Web app {class: actor}
+api: Backend {
+  class: zone
+  gw: API gateway {class: service}
+  # focal written first: the later service class wins and the box renders plain
+  orders: Order service {class: [focal; service]}
+  db: "Orders DB\nPostgres" {class: datastore}
+}
+web -> api.gw: HTTPS {class: [flow; dep]}
+api.gw -> api.orders: forwards {class: flow}
+api.orders -> api.db: stores orders {class: dep}

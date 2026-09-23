@@ -1,0 +1,17 @@
+vars: {d2-config: {layout-engine: elk}}
+direction: right
+users: {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  email: text {constraint: unique}
+}
+tasks: {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  assignee_id: uuid {constraint: foreign_key}
+  title: text
+}
+tasks.assignee_id <-> users.id: assigned to {
+  source-arrowhead.shape: cf-many
+  target-arrowhead.shape: cf-one
+}

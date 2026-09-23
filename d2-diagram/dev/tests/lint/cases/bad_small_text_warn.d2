@@ -1,0 +1,7 @@
+# expect: W-small-text
+# expect-clean: E-small-text
+# 11px labels display at 11px: legible but under the 12px floor
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+a: Small label {style.font-size: 11}
+b: Normal
+a -> b

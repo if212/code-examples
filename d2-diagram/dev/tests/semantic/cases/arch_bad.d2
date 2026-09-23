@@ -1,0 +1,18 @@
+direction: right
+users: Users {shape: person}
+aws: AWS VPC {
+  gw: API Gateway
+  orders: Order Service
+  kafka: Kafka {shape: queue}
+  billing: Billing Worker
+  gw -> orders: REST
+  orders -> db: SQL
+  orders -> kafka: order.created
+  billing -> kafka: consume {style.stroke-dash: 3}
+  billing -> redis: cache; lookups
+}
+db: Postgres {shape: cylinder}
+stripe: Stripe
+users -> aws.gatway: HTTPS
+aws.billing -> stripe: charge #443
+aws.gw -> aws.orders: REST

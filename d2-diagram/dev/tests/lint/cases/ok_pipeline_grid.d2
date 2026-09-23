@@ -1,0 +1,27 @@
+# expect-clean: E- W-
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+classes: {
+  stage: {label.near: top-left; style.font-size: 16}
+}
+direction: down
+src: Sources {
+  class: stage
+  grid-columns: 3
+  kafka: Kafka
+  s3: S3 landing
+  api: Partner API
+}
+proc: Processing {
+  class: stage
+  grid-columns: 2
+  spark: Spark jobs
+  dq: Data quality
+}
+wh: Warehouse {
+  class: stage
+  grid-columns: 2
+  raw: Raw
+  mart: Marts
+}
+src -> proc: ingest
+proc -> wh: load

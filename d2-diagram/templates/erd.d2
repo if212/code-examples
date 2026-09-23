@@ -1,0 +1,60 @@
+# ERD template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+direction: right
+# Crow's-foot key, one symbol per line. The key draws at half scale, so 4px
+# shows at the 2px of the relationships. It costs ~160px of width and its text
+# is fixed at 14px: keep the whole SVG under ~930px wide at an 800px column.
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: exactly one {style.stroke-width: 4; target-arrowhead.shape: cf-one-required}
+    a -> b: zero or one {style.stroke-width: 4; target-arrowhead.shape: cf-one}
+    a -> b: one or many {style.stroke-width: 4; target-arrowhead.shape: cf-many-required}
+    a -> b: zero or many {style.stroke-width: 4; target-arrowhead.shape: cf-many}
+  }
+}
+
+# Tables take no node class (on sql_table, stroke paints the body); the
+# globs at the end style them. Only the focus table gets focal-solid, with its
+# body reset to white.
+events: {
+  shape: sql_table
+  class: focal-solid
+  style.stroke: ${paper}
+  id: uuid {constraint: primary_key}
+  name: text
+  starts_at: timestamptz
+}
+attendees: {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  email: text {constraint: unique}
+}
+sessions: {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  event_id: uuid {constraint: foreign_key}
+  title: text
+}
+tickets: {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  event_id: uuid {constraint: foreign_key}
+  attendee_id: uuid {constraint: [foreign_key; nullable]}
+  status: ticket_status
+}
+status_values: "ticket_status values:\navailable, sold, refunded" {class: note}
+
+# Parent PK first (parents land on the left). <-> draws both ends.
+# NOT NULL FK: cf-one-required at the parent; nullable FK: cf-one.
+events.id <-> sessions.event_id: {source-arrowhead.shape: cf-one-required; target-arrowhead.shape: cf-many-required}
+events.id <-> tickets.event_id: {source-arrowhead.shape: cf-one-required; target-arrowhead.shape: cf-many}
+attendees.id <-> tickets.attendee_id: {source-arrowhead.shape: cf-one; target-arrowhead.shape: cf-many}
+
+# Globs come after what they style: 16px rows, 1px rules, square corners,
+# slate headers except the focus table; relationships dep at 2px (crow's feet
+# thin to hairlines at 1px).
+*: {&shape: sql_table; style: {font-size: 16; stroke-width: 1; border-radius: 0}}
+*: {&shape: sql_table; !&class: focal-solid; style.fill: ${ink-600}}
+(** <-> **)[*]: {class: dep; style.stroke-width: 2}

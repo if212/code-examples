@@ -1,0 +1,22 @@
+# request: "UML class diagram of the checkout domain for the payments design
+#  doc. An Order (id, total(), checkout()) is composed of one or more LineItems
+#  (sku, qty) and pays with at most one PaymentMethod. PaymentMethod is an
+#  interface with charge(amount); CardPayment and Wallet implement it.
+#  Focus on Order."
+type: class
+reader: engineers reading the payments design doc
+width: 800
+direction: down
+focus: Order
+out: refunds, currency conversion
+nodes:
+  Order: Order {fields: id total()}
+  LineItem: LineItem {fields: sku qty}
+  PaymentMethod: "<<interface>> PaymentMethod"
+  CardPayment: CardPayment {fields: token}
+  Wallet: Wallet {fields: balance}
+edges:
+  LineItem -> Order: "1..*" {dst: diamond-filled}
+  Order -> PaymentMethod: pays with
+  CardPayment -> PaymentMethod {dst: triangle-hollow, dashed}
+  Wallet -> PaymentMethod {dst: triangle-hollow, dashed}

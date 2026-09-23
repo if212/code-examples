@@ -1,0 +1,8 @@
+# expect: W-curved-edge
+# expect-clean: E-
+# no layout-engine in the file: d2 falls back to dagre, which draws every edge as a spline
+api: API
+db: Database {shape: cylinder}
+cache: Cache
+api -> db
+api -> cache

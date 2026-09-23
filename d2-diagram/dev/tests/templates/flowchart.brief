@@ -1,0 +1,33 @@
+# request: "Flowchart of order handling for the ops runbook. When an order is
+#  placed we reserve stock, authorize the card and run a fraud screen in
+#  parallel. If all checks pass, fulfilment picks, packs and hands the parcel to
+#  the carrier, and the order is shipped. If any check fails, or any fulfilment
+#  step fails, the order is cancelled. Highlight the go/no-go decision."
+type: flowchart
+reader: on-call engineers reading the ops runbook
+width: 800
+direction: down
+focus: gate
+out: returns, partial shipments, notifications
+nodes:
+  placed: Order placed {start}
+  checks: Checks run in parallel
+  checks.stock: Reserve stock
+  checks.card: Authorize card
+  checks.fraud: Fraud screen
+  gate: All checks pass? {decision}
+  fulfil: "Fulfilment: any failure cancels"
+  fulfil.pick: Pick items
+  fulfil.pack: Pack parcel
+  fulfil.ship: Hand to carrier
+  shipped: Shipped {end}
+  cancelled: Order cancelled {end}
+edges:
+  placed -> checks
+  checks -> gate
+  gate -> fulfil: all pass
+  fulfil.pick -> fulfil.pack
+  fulfil.pack -> fulfil.ship
+  fulfil -> shipped
+  gate -> cancelled: any fails
+  fulfil -> cancelled

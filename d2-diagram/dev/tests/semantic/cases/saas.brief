@@ -1,0 +1,12 @@
+# request: "Our SaaS billing: Alpha calls Beta over gRPC."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: none
+out: -
+nodes:
+  a: Alpha
+  b: Beta
+edges:
+  a -> b: calls

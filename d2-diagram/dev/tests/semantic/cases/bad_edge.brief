@@ -1,0 +1,5 @@
+type: architecture
+nodes:
+  a: A
+edges:
+  a => b

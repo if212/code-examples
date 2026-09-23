@@ -1,0 +1,19 @@
+# Order lifecycle state machine sample for the neutral theme. Focus: Delivered.
+...@../../../templates/neutral-theme
+direction: down
+
+init: "" {class: dot}
+pending: Pending {class: state}
+paid: Paid {class: state}
+shipped: Shipped {class: state}
+delivered: Delivered {class: [success; terminal]; style.double-border: true}
+cancelled: Cancelled {class: [danger; terminal]; style.double-border: true}
+refunded: Refunded {class: [muted; terminal]; style.double-border: true}
+
+init -> pending: {class: flow}
+pending -> paid: payment ok {class: flow}
+paid -> shipped: ship {class: flow}
+shipped -> delivered: deliver {class: flow}
+pending -> cancelled: payment failed {class: failure}
+paid -> refunded: refund {class: secondary}
+delivered -> refunded: return {class: secondary}

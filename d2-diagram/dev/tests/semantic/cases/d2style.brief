@@ -1,0 +1,6 @@
+type: architecture
+nodes:
+  a: A
+  b: B
+edges:
+  a -> b: calls {style.stroke-dash: 3}

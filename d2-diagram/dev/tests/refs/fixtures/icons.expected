@@ -1,0 +1,15 @@
+https://api.iconify.design/lucide/server.svg?color=%23475569 200 fixtures/icons.md:24
+k8s:pod 200 fixtures/icons.md:3
+logos:kafka-icon 200 fixtures/icons.md:10
+logos:postgresql 200 fixtures/icons.md:3
+logos:redis 200 fixtures/icons.md:15
+lucide:alert-triangle 200 fixtures/icons.md:4
+lucide:api 404 fixtures/icons.md:5
+lucide:database 200 fixtures/icons.md:3
+lucide:database-zap 200 fixtures/icons.md:9
+lucide:layers 200 fixtures/icons.md:10
+lucide:list-ordered 200 fixtures/icons.md:10
+lucide:plug 200 fixtures/icons.md:5
+lucide:server 200 fixtures/icons.md:15
+lucide:webhook 200 fixtures/icons.md:11
+lucide:zap 200 fixtures/icons.md:9

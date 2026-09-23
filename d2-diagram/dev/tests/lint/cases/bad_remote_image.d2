@@ -1,0 +1,8 @@
+# flags: --bundle=false
+# expect: W-remote-image
+# expect-clean: E-
+# without bundling the icon stays a URL, which <img> embeds (README, docs) will not load
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+api: API {icon: https://icons.example.invalid/server.svg}
+db: DB
+api -> db

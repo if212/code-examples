@@ -1,0 +1,16 @@
+# expect: W-seq-group-ragged
+# expect-clean: E-
+# phase groups span different actors, so their bands start and end at different x
+shape: sequence_diagram
+user: User
+app: App
+auth: Auth server
+api: API
+login: Login {
+  user -> app: open app
+  app -> auth: authorize
+}
+fetch: Fetch data {
+  app -> api: GET /items
+  api -> app: items
+}

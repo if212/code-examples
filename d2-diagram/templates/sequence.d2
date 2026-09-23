@@ -1,0 +1,39 @@
+# Sequence template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+shape: sequence_diagram
+
+# Actors first, in reading order: declaration order = column order. All are actor
+# boxes; the one the diagram is about adds focal (blue box and lifeline).
+browser: Browser {class: actor}
+api: Orders API {class: [actor; focal]}
+psp: Payment provider {class: [actor; external]}
+db: Orders DB {class: actor}
+
+# One message per line, numbered, 40 characters at most. Messages to api.t draw
+# the activation bar. Parameters and self-calls become a note on the actor.
+browser -> api.t: "1. POST /orders" {class: dep}
+api.idem: Idempotency-Key makes a retry safe {class: note}
+api.t -> db: "2. INSERT order (pending)" {class: dep}
+api.t -> psp: "3. POST /charges" {class: dep}
+
+# Groups only for alt / loop / opt, holding declared actors only. Every group
+# is a zone: its opaque title hides the lifelines behind it. A title holding a
+# guard stays as written, in regular weight (d2 sizes group titles for regular
+# text). Returns: secondary + dash; error returns: failure.
+alt: "alt" {
+  class: zone
+  ok: "[approved]" {
+    class: zone
+    style: {text-transform: none; bold: false}
+    psp -> api.t: "4. 201 charge_id" {class: secondary; style.stroke-dash: 3}
+    api.t -> db: "5. UPDATE order (paid)" {class: dep}
+    api.t -> browser: "6. 201 Created" {class: secondary; style.stroke-dash: 3}
+  }
+  declined: "[declined]" {
+    class: zone
+    style: {text-transform: none; bold: false}
+    psp -> api.t: "4. 402 card_declined" {class: failure}
+    api.t -> db: "5. UPDATE order (failed)" {class: dep}
+    api.t -> browser: "6. 402 Payment Required" {class: failure}
+  }
+}

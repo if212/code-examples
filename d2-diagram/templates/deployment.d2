@@ -1,0 +1,44 @@
+# Deployment template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Doc column: top-down. Nesting = real containment: cloud > cluster > namespace.
+# Each level adds ~50px of padding per side: three levels is the most that fits 800px.
+direction: down
+
+users: Shoppers {class: actor}
+
+aws: AWS us-east-1 {
+  class: boundary
+  alb: "Load balancer\nAWS ALB" {class: service}
+
+  eks: EKS cluster prod {
+    class: zone
+    # Short zone titles: the edge into the first child struck a 15-character
+    # title here (12 were clear).
+    shop: "ns: shop" {
+      class: zone-blue
+      # Replicas: one card with style.multiple, count in the label.
+      web: "storefront\n3 pods" {class: service; style.multiple: true}
+      api: "orders-api\n3 pods" {class: [service; focal]; style.multiple: true}
+      search: "search-api\n2 pods" {class: service; style.multiple: true}
+    }
+  }
+
+  # Sinks in one row, each straight below the workload that uses it.
+  data: Data {
+    class: zone
+    redis: "Sessions\nElastiCache" {class: datastore}
+    rds: "Orders DB\nRDS Postgres" {class: datastore}
+    os: "Search index\nOpenSearch" {class: datastore}
+  }
+}
+
+# Edges: direction = who opens the connection. Ports on the hops that leave
+# a zone; the ALB-to-pod hops cross two borders, so they stay unlabeled.
+users -> aws.alb: "HTTPS :443" {class: flow}
+aws.alb -> aws.eks.shop.api: {class: flow}
+aws.alb -> aws.eks.shop.web: {class: dep}
+aws.alb -> aws.eks.shop.search: {class: dep}
+aws.eks.shop.api -> aws.data.rds: ":5432" {class: flow}
+aws.eks.shop.web -> aws.data.redis: ":6379" {class: dep}
+aws.eks.shop.search -> aws.data.os: ":443" {class: dep}

@@ -1,0 +1,19 @@
+# request: "Order lifecycle: new orders are Pending; payment_ok moves to Paid,
+#  payment_failed [retries < 3] stays Pending, cancel from Pending -> Cancelled.
+#  Paid -> Shipped on ship. Shipped and Cancelled are final."
+type: state
+nodes:
+  init: "" {start}
+  pending: Pending
+  paid: Paid
+  shipped: Shipped
+  cancelled: Cancelled
+  final: "" {end}
+transitions:
+  init -> pending
+  pending -> paid: payment_ok
+  pending -> pending: "payment_failed [retries < 3]"
+  pending -> cancelled: cancel
+  paid -> shipped: ship
+  shipped -> final
+  cancelled -> final

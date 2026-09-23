@@ -1,0 +1,29 @@
+# request: "C4 container diagram of the online shop for the architecture doc. Customers
+#  use the React web app, staff use the React admin app; both call the Go API over
+#  JSON/HTTPS. The API reads and writes the Postgres database and queues payment and
+#  receipt jobs (AMQP) for a Go worker, which charges cards through Stripe. Focus on
+#  the API."
+type: c4
+reader: architecture doc
+width: 800
+direction: down
+focus: shop.api
+out: context and component levels, deployment details, mobile app
+nodes:
+  customer: Customer\n[Person]\nBuys products online {shape: c4-person}
+  staff: Staff\n[Person]\nManages the catalog {shape: c4-person}
+  shop: Online shop [Software System]
+  shop.web: Web app\n[Container: React]\nStorefront in the browser
+  shop.admin: Admin app\n[Container: React]\nCatalog and orders
+  shop.api: API\n[Container: Go]\nCart, checkout, orders
+  shop.worker: Worker\n[Container: Go]\nPayments, receipts
+  shop.db: Database\n[Container: Postgres]\nProducts, orders {shape: cylinder}
+  stripe: Stripe\n[Software System]\nCard payments {external}
+edges:
+  customer -> shop.web: Uses\n[HTTPS]
+  staff -> shop.admin: Uses\n[HTTPS]
+  shop.web -> shop.api: Calls\n[JSON/HTTPS]
+  shop.admin -> shop.api: Calls\n[JSON/HTTPS]
+  shop.api -> shop.worker: Queues jobs\n[AMQP] {dashed}
+  shop.api -> shop.db: Reads, writes\n[SQL]
+  shop.worker -> stripe: Charges cards\n[HTTPS]

@@ -1,0 +1,9 @@
+# expect: W-short-label
+# expect-clean: E-
+# a one-character path label says nothing at reading size
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+ingress: Ingress
+web: Web service
+api: API service
+ingress -> web: "/"
+ingress -> api: "/api"

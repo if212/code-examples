@@ -1,0 +1,12 @@
+# flags: -l elk --dark-theme 200
+# expect-clean: E-
+start: Start {shape: oval}
+check: Valid input? {shape: diamond}
+fix: Show error
+proc: Process order
+done: Done {shape: oval}
+start -> check
+check -> proc: yes
+check -> fix: no
+fix -> check: retry
+proc -> done

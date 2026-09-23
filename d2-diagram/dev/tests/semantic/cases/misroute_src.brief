@@ -1,0 +1,14 @@
+# request: "Billing in AWS charges Stripe."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: none
+out: -
+nodes:
+  aws: AWS
+  aws.billing: Billing
+  aws.orders: Orders
+  stripe: Stripe
+edges:
+  aws.billing -> stripe: charges

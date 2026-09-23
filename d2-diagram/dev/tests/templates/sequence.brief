@@ -1,0 +1,29 @@
+# request: "Sequence diagram of our checkout for the design doc. The browser posts
+#  the order to the Orders API, which saves it as pending in the Orders DB and
+#  charges the card through our payment provider. Approved: mark the order paid
+#  and return 201. Declined: mark it failed and return 402. Add a note that the
+#  idempotency key header makes a retry safe. Focus on the Orders API."
+type: sequence
+reader: engineers reading a design doc (Markdown)
+width: 800
+direction: down
+focus: api
+out: refunds, 3-D Secure, webhooks
+nodes:
+  browser: Browser
+  api: Orders API
+  psp: Payment provider {external}
+  db: Orders DB
+  alt: alt {group}
+  alt.ok: "[approved]" {group}
+  alt.declined: "[declined]" {group}
+messages:
+  browser -> api: "1. POST /orders"
+  api -> db: "2. INSERT order (pending)"
+  api -> psp: "3. POST /charges"
+  psp -> api: "4. 201 charge_id" {return, in: alt.ok}
+  api -> db: "5. UPDATE order (paid)" {in: alt.ok}
+  api -> browser: "6. 201 Created" {return, in: alt.ok}
+  psp -> api: "4. 402 card_declined" {return, in: alt.declined}
+  api -> db: "5. UPDATE order (failed)" {in: alt.declined}
+  api -> browser: "6. 402 Payment Required" {return, in: alt.declined}

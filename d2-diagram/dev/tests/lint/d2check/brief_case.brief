@@ -1,0 +1,14 @@
+# request: "The API writes orders to Postgres and reads sessions from Redis."
+type: architecture
+reader: test fixture
+width: 800
+direction: down
+focus: api
+out: nothing
+nodes:
+  api: API
+  db: Orders DB {shape: cylinder}
+  cache: Session cache {shape: cylinder}
+edges:
+  api -> db: writes
+  api -> cache: reads

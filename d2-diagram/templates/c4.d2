@@ -1,0 +1,34 @@
+# C4 container template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# One C4 level per diagram (this is the container level). Neutral theme,
+# never theme 303. Labels: "Name\n[Type: Technology]\nDescription".
+direction: down
+
+customer: "Customer\n[Person]\nBuys products online" {shape: c4-person; class: actor}
+staff: "Staff\n[Person]\nManages the catalog" {shape: c4-person; class: actor}
+
+# System boundary: title in the bottom corner that no edge leaves through.
+shop: "Online shop [Software System]" {
+  class: boundary
+  label.near: bottom-right
+  web: "Web app\n[Container: React]\nStorefront in the browser" {class: service}
+  admin: "Admin app\n[Container: React]\nCatalog and orders" {class: service}
+  # Wide enough to sit under both callers: both edges drop in straight.
+  api: "API\n[Container: Go]\nCart, checkout, orders" {class: [service; focal]; width: 300}
+  # The container that calls an external system sits in the last row,
+  # so that edge leaves the boundary without passing another container.
+  worker: "Worker\n[Container: Go]\nPayments, receipts" {class: service}
+  db: "Database\n[Container: Postgres]\nProducts, orders" {class: datastore}
+}
+
+stripe: "Stripe\n[Software System]\nCard payments" {class: [service; external]}
+
+# Relationships: "verb\n[protocol]" - two short lines stay clear of neighbours.
+customer -> shop.web: "Uses\n[HTTPS]" {class: flow}
+staff -> shop.admin: "Uses\n[HTTPS]" {class: dep}
+shop.web -> shop.api: "Calls\n[JSON/HTTPS]" {class: flow}
+shop.admin -> shop.api: "Calls\n[JSON/HTTPS]" {class: dep}
+shop.api -> shop.worker: "Queues jobs\n[AMQP]" {class: async}
+shop.api -> shop.db: "Reads, writes\n[SQL]" {class: dep}
+shop.worker -> stripe: "Charges cards\n[HTTPS]" {class: dep}

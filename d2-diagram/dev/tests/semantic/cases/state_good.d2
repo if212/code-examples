@@ -1,0 +1,20 @@
+vars: {d2-config: {layout-engine: elk}}
+direction: right
+classes: {
+  initial: {label: ""; shape: circle; width: 22; height: 22; style: {fill: "#0A0F25"; stroke: "#0A0F25"}}
+  terminal: {label: ""; shape: circle; width: 26; height: 26; style: {fill: "#0A0F25"; double-border: true}}
+  state: {style.border-radius: 12}
+}
+init.class: initial
+pending: Pending {class: state}
+paid: Paid {class: state}
+shipped: Shipped {class: state}
+cancelled: Cancelled {class: state}
+final.class: terminal
+init -> pending
+pending -> paid: payment_ok
+pending -> pending: "payment_failed [retries < 3]"
+pending -> cancelled: cancel
+paid -> shipped: ship
+shipped -> final
+cancelled -> final

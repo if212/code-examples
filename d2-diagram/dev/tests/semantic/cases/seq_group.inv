@@ -1,0 +1,18 @@
+# request: "Checkout: browser posts the order, the API reserves stock, charges
+#   Payments and retries once inside a loop; returns are dashed."
+type: sequence
+nodes:
+  browser: Browser
+  api: Orders API
+  inv: Inventory
+  pay: Payments
+  retry: "loop [charge timeout, max 1]" {group}
+messages:
+  browser -> api: POST /orders
+  api -> inv: reserve(items)
+  inv -> api: reserved {return}
+  api -> pay: charge(card)
+  pay -> api: receipt {return}
+  api -> pay: charge(card) again {in: retry}
+  api -> pay: charge(card) retry {in: retry}
+  api -> browser: 201 Created {return}

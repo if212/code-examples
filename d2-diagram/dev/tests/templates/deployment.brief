@@ -1,0 +1,32 @@
+# request: "Deployment view of the shop on AWS us-east-1 for the runbook. Shoppers reach an
+#  AWS ALB over HTTPS :443. It routes to three deployments in namespace shop on the EKS
+#  cluster prod: storefront (3 pods), orders-api (3 pods) and search-api (2 pods).
+#  storefront keeps sessions in ElastiCache (:6379), orders-api uses the RDS Postgres
+#  orders DB (:5432), search-api queries OpenSearch (:443). Highlight orders-api."
+type: deployment
+reader: on-call runbook
+width: 800
+direction: down
+focus: aws.eks.shop.api
+out: CI/CD, monitoring, DNS, HPA and ConfigMaps
+nodes:
+  users: Shoppers
+  aws: AWS us-east-1
+  aws.alb: Load balancer\nAWS ALB
+  aws.eks: EKS cluster prod
+  aws.eks.shop: ns: shop
+  aws.eks.shop.web: storefront\n3 pods
+  aws.eks.shop.api: orders-api\n3 pods
+  aws.eks.shop.search: search-api\n2 pods
+  aws.data: Data
+  aws.data.redis: Sessions\nElastiCache {shape: cylinder}
+  aws.data.rds: Orders DB\nRDS Postgres {shape: cylinder}
+  aws.data.os: Search index\nOpenSearch {shape: cylinder}
+edges:
+  users -> aws.alb: "HTTPS :443"
+  aws.alb -> aws.eks.shop.api
+  aws.alb -> aws.eks.shop.web
+  aws.alb -> aws.eks.shop.search
+  aws.eks.shop.api -> aws.data.rds: ":5432"
+  aws.eks.shop.web -> aws.data.redis: ":6379"
+  aws.eks.shop.search -> aws.data.os: ":443"

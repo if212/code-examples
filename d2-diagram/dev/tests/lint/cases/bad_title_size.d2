@@ -1,0 +1,13 @@
+# expect: W-title-size
+# expect-clean: E-
+# a container without a zone class keeps d2's 28px title over 16px nodes
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: right
+client: Client
+svc: Services {
+  label.near: top-left
+  a: Orders
+  b: Billing
+}
+client -> svc.a
+client -> svc.b
