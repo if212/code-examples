@@ -20,21 +20,21 @@ browser -> api.t: "1. POST /orders" {class: dep}
 api.t -> db.a: "2. INSERT order (pending)" {class: dep}
 api.t -> psp.a: "3. POST /charges" {class: dep}
 
-# alt: a zone titled with its question, one nested zone per outcome. Every
-# outcome touches the same participants and restarts at the same number.
-# Guards stay as written: text-transform none, regular weight.
-# Returns: secondary + dash; error returns: failure.
+# alt: a zone titled with its question, one nested zone per outcome: success
+# zone-green, failure zone-amber. Every outcome touches the same participants
+# and restarts at the same number. Guards stay as written: text-transform
+# none, regular weight. Returns: secondary + dash; error returns: failure.
 alt: "alt: charge result" {
   class: zone
   style: {text-transform: none}
   ok: "[approved]" {
-    class: zone
+    class: zone-green
     style: {text-transform: none; bold: false}
     api.t -> db.b: "4. UPDATE order (paid)" {class: dep}
     api.t -> browser: "5. 201 Created" {class: secondary; style.stroke-dash: 3}
   }
   declined: "[declined]" {
-    class: zone
+    class: zone-amber
     style: {text-transform: none; bold: false}
     api.t -> db.c: "4. UPDATE order (failed)" {class: dep}
     api.t -> browser: "5. 402 Payment Required" {class: failure}

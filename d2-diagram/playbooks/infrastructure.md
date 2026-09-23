@@ -31,8 +31,8 @@ Past a budget: one diagram per cluster, VPC or trust zone, plus an overview.
   their verb (`scales`, `reads`, `mounts`); the workload spans its row.
 - Label hops that leave a zone (`":5432"`); a hop crossing two borders put
   its label on a border (W-edge-label-on-border): leave it bare.
-- Icon cards in one diagram share one label line count
-  (`"ConfigMap\napi-config"`); mirrored peers share the widest width.
+- Icon cards in one diagram share one label line count, name first
+  (`"api-config\nConfigMap"`); mirrored peers share the widest width.
 - Icons asked for in a Kubernetes diagram: `k8s` icons for resources, lucide
   for the rest (internet `globe`, load balancer `split`, database `database`
   on a rectangle card), each lucide icon fetched with `--color 326CE5`

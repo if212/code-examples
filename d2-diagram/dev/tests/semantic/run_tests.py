@@ -18,6 +18,8 @@ import sys
 import tempfile
 import time
 
+sys.dont_write_bytecode = True  # keep the skill's scripts/ free of __pycache__ (B57)
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 CHECK = os.path.join(SKILL, 'scripts', 'semcheck.py')
@@ -34,20 +36,6 @@ S-seq-group-actor S-seq-actor-order S-state-start S-unreachable S-end-has-exit S
 S-emphasis S-inferred S-src-hash S-src-semicolon S-src-icon-family S-src-cli-engine S-arrowhead
 S-src-class S-key S-src-direction'''.split())
 # FIXPLAN I1 (round 4): S-key and S-src-direction are new
-
-# cases that must not live in the repo as files (every shipped or dev file stays pure ASCII): written to a
-# temp folder at start, named GEN:<file> in the argv of a run
-GENERATED = {
-    'zh.brief': '# request: "\u7528\u6237\u884c\u4e3a\u65e5\u5fd7 \u4ece Kafka \u7ecf Flink \u843d\u5230 Hive"\n'
-                'type: pipeline\nreader: test\nwidth: 800\ndirection: right\nfocus: none\nnodes:\n'
-                '  logs: User behaviour logs\n  kafka: Kafka\n  flink: Flink\n  hive: Hive\nedges:\n'
-                '  logs -> kafka: publish\n  kafka -> flink: consume\n  flink -> hive: write\n',
-    # "draw a Kubernetes topology with icons: the internet reaches a pod", in Chinese
-    'icons_k8s_zh.brief': '# request: "\u753b\u4e00\u4e2a\u5e26\u56fe\u6807\u7684 Kubernetes \u62d3\u6251\u56fe\uff1a'
-                          '\u4e92\u8054\u7f51\u8bbf\u95ee\u4e00\u4e2a pod"\ntype: deployment\nreader: test\nwidth: 800\n'
-                          'direction: down\nfocus: none\nnodes:\n  inet: Internet\n  pod: Pod\nedges:\n  inet -> pod: HTTPS\n',
-}
-GEN_DIR = tempfile.mkdtemp(prefix='semgen-')
 
 # (brief, diagram, exact set of error+warning codes)
 CODESETS = [
@@ -151,12 +139,17 @@ CODESETS = [
     ('key_chips.brief', 'key_chips_none.d2', {'S-key'}),
     ('c4_title.brief', 'c4_no_title.d2', {'S-key'}),
     ('c4_title.brief', 'c4_with_title.d2', set()),           # the title node is not inventory
+    ('ctx_title.brief', 'ctx_no_title.d2', {'S-key'}),
     # round 4 (D6): k8s + lucide in the k8s blue when the request asks for icons
     ('icons_k8s.brief', 'icons_k8s_lucide.d2', set()),
     ('icons_k8s.brief', 'icons_k8s_pale.d2', {'S-src-icon-family'}),
     ('icons_k8s_plain.brief', 'icons_k8s_lucide.d2', {'S-src-icon-family'}),
     ('slash.brief', 'slash.d2', set()),
     ('cls_sf.brief', 'cls_sf.d2', {'S-src-class'}),
+    # integration (B58): a decision inside a failure scope exits through the scope's ONE failure edge
+    ('flow_scope.brief', 'flow_scope.d2', set()),
+    ('flow_scope.brief', 'flow_scope_bare.d2', {'S-decision', 'S-missing-edge', 'S-unreachable'}),
+    ('flow_scope2.brief', 'flow_scope2.d2', {'S-decision'}),
 ]
 
 # (name, argv, expected exit, substrings that must appear, substrings that must not)
@@ -223,13 +216,12 @@ RUNS = [
      ['async, dep, external, flow carry meaning but there is no key'], []),
     ('key: a key that leaves encodings out', ['key.brief', 'key_partial.d2'], 1,
      ['the key leaves out async, external'], []),
-    ('key: C4 needs a title node', ['c4_title.brief', 'c4_no_title.d2'], 1, ['a C4 diagram names itself'], []),
+    ('key: C4 needs a title node', ['c4_title.brief', 'c4_no_title.d2'], 1,
+     ['a C4 diagram names itself: add title: "Container diagram: <system>"'], []),
+    ('key: a C4 context view is titled System context', ['ctx_title.brief', 'ctx_no_title.d2'], 1,
+     ['add title: "System context: <system>"', 'system in scope, external system'], ['Container diagram']),
     ('icons: k8s + pale lucide asks for the k8s blue', ['icons_k8s.brief', 'icons_k8s_pale.d2'], 1,
      ['--color 326CE5'], []),
-    ('icons: a request that asks for icons in Chinese allows k8s + lucide', ['GEN:icons_k8s_zh.brief',
-     'icons_k8s_lucide.d2'], 0, ['verdict: PASS'], ['S-src-icon-family']),
-    ('request: a non-Latin request is named', ['GEN:zh.brief', 'zh.d2'], 0,
-     ['INFO  S-missing-node', 'the request is not in English'], []),
     ('request: code_verifier/code_challenge are two names', ['slash.brief', 'slash.d2'], 0, [],
      ['code_verifier/code_challenge']),
     ('--lint: a class list over a single class is dropped', ['--lint', 'list_over_single.d2'], 1,
@@ -334,6 +326,22 @@ RUNS = [
      ['--lint', 'cls_sf_shape.d2'], 1,
      ["'decision' is a neutral-theme class with no snowflake-brand twin", 'shape: diamond',
       "'success' is a neutral-theme class with no snowflake-brand twin: drop it"], ['@neutral-theme']),
+    ('decision in a failure scope: the scope\'s one failure edge is its reject exit (B58)',
+     ['flow_scope.brief', 'flow_scope.d2'], 0, ['verdict: PASS'], ['S-decision']),
+    ('decision without a failure scope edge: the hint names the scope rule (B58)',
+     ['flow_scope.brief', 'flow_scope_bare.d2'], 1,
+     ["decision 'release.approval' has 1 exit(s); a decision needs 2 or more (in a failure scope, its one failure "
+      "edge counts)"], []),
+    ('decision in a scope with two failure edges: neither counts (B58)', ['flow_scope2.brief', 'flow_scope2.d2'], 1,
+     ["scope 'release' has 2 failure edges: keep one, it then counts"], []),
+    ('--lint: actor in a Snowflake file names its twin sf-actor (B54)', ['--lint', 'cls_sf_actor.d2'], 1,
+     ["'actor' is a neutral-theme class; this file uses snowflake-brand: write sf-actor"], ['write sf-node']),
+    ('--lint: sf-actor in a neutral file names its twin actor (B54)', ['--lint', 'cls_neutral_sfactor.d2'], 1,
+     ["'sf-actor' is a snowflake-brand class; this file uses neutral-theme: write actor"], []),
+    ('--lint: a dashed neutral edge class in a Snowflake file keeps its dash in the twin', ['--lint',
+     'cls_sf_return.d2'], 1, ["'secondary' is a neutral-theme class; this file uses snowflake-brand: write sf-edge "
+     "plus style.stroke-dash: 5", "'async' is a neutral-theme class; this file uses snowflake-brand: write sf-edge "
+     "plus style.stroke-dash: 5"], []),
     ('--lint: a Snowflake-only class in a neutral file asks for a role class, not the Snowflake import',
      ['--lint', 'cls_neutral_accent.d2'], 1,
      ["'sf-accent-orange' is a snowflake-brand class with no neutral-theme twin"], ['@snowflake-brand']),
@@ -374,7 +382,8 @@ HINTS = [
 # correct diagrams whose --dump must round-trip to a clean check
 DUMPS = ['arch_good.d2', 'seq_good.d2', 'erd_good.d2', 'state_good.d2', 'flow_good.d2', 'c4_good.d2',
          'focus_good.d2', 'steps_good.d2', 'uml_good.d2', 'grid_good.d2', 'legend.d2', 'backedge.d2',
-         'state_dump.d2', 'focus_zone_good.d2', 'uml_ends.d2', 'ghost.d2', 'seq_note.d2', 'dump_zone.d2']
+         'state_dump.d2', 'focus_zone_good.d2', 'uml_ends.d2', 'ghost.d2', 'seq_note.d2', 'dump_zone.d2',
+         'flow_scope.d2']
 
 MSG_MAX = 170       # d2lint --compact (the d2check listing) cuts each finding at 170 characters
 D2_ENV = ('D2_LAYOUT', 'D2_THEME', 'D2_DARK_THEME', 'D2_PAD', 'D2_SKETCH', 'D2_CENTER', 'D2_WATCH', 'SCALE')
@@ -383,7 +392,6 @@ RENDERED = {}       # d2 file -> (svg path or None, stderr): filled once, before
 
 
 def run(argv, cwd=CASES, stdin=None):
-    argv = [os.path.join(GEN_DIR, a[4:]) if a.startswith('GEN:') else a for a in argv]
     p = subprocess.run([sys.executable, CHECK] + argv, cwd=cwd, capture_output=True, text=True, input=stdin)
     return p.returncode, p.stdout + p.stderr
 
@@ -589,13 +597,7 @@ def t_static(_):
 
 
 def main():
-    for name, text in GENERATED.items():
-        with open(os.path.join(GEN_DIR, name), 'w', encoding='utf-8') as fh:
-            fh.write(text)
-    try:
-        return run_all()
-    finally:
-        shutil.rmtree(GEN_DIR, ignore_errors=True)
+    return run_all()
 
 
 def run_all():

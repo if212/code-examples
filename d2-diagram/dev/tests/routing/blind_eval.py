@@ -28,6 +28,8 @@ import subprocess
 import sys
 import tempfile
 
+sys.dont_write_bytecode = True  # keep the skill's scripts/ free of __pycache__ (B57)
+
 PROMPT = """You are the routing step of a diagram skill. Apply the routing document below to each
 request. For each request answer the template name exactly as written in the Template
 column (or EDIT or OUT), and the call: GO (draw now), ASK (one question first), SPLIT

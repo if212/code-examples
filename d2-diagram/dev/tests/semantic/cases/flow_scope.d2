@@ -1,0 +1,24 @@
+# B58: the decision inside the failure scope has one exit of its own; the scope's
+# one failure edge carries its reject exit ("any failure or rejected").
+...@mini-theme
+direction: down
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: next step {class: dep}
+    a -> b: failure {class: failure}
+  }
+}
+release: Release {
+  class: boundary
+  e2e: Run e2e tests {class: [service; terminal]}
+  approval: Approve? {class: decision}
+  canary: Canary 10% {class: service}
+  rollout: Full rollout {class: [success; terminal]}
+  e2e -> approval: {class: dep}
+  approval -> canary: approved {class: dep}
+  canary -> rollout: {class: dep}
+}
+rollback: Roll back {class: terminal}
+release -> rollback: any failure or rejected {class: failure}

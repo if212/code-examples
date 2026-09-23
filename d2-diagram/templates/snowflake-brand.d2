@@ -2,7 +2,7 @@
 # Copy it next to the diagram; `...@snowflake-brand` is the first line of code there.
 # It sets ELK, pad 24 and theme 0; d2check embeds the bundled Lato fonts.
 # Tag every node, container and edge with a class, never a color:
-#   node      sf-node sf-primary sf-datastore sf-external sf-muted
+#   node      sf-node sf-actor sf-primary sf-datastore sf-external sf-muted
 #   accent    sf-accent-orange sf-accent-star sf-accent-pink sf-accent-purple
 #   container sf-container
 #   edge      sf-edge sf-flow sf-failure
@@ -18,7 +18,7 @@ vars: {
   sf-midnight: "#000000" # text on light backgrounds
   sf-gray: "#5B5B5B" # de-emphasis: muted nodes, edge labels, annotations
   sf-tint: "#F4FAFD" # container fill (cylinders stay white so they never blend in)
-  sf-rule: "#BCE3F7" # container outline (decorative)
+  sf-rule: "#BCE3F7" # decorative outlines: containers, the key frame, sf-actor
   sf-star: "#71D3DC" # secondary accents: at most ONE per diagram
   sf-orange: "#FF9F36"
   sf-purple: "#7D44CF"
@@ -61,6 +61,8 @@ classes: {
   sf-external: {style: {fill: "#FFFFFF"; stroke: ${sf-mid-blue}; stroke-width: 1; stroke-dash: 4; font-color: ${sf-midnight}; border-radius: 6}}
   # Legacy / out of scope / inferred: gray, regular weight.
   sf-muted: {style: {fill: "#FFFFFF"; stroke: ${sf-gray}; stroke-width: 1; font-color: ${sf-gray}; bold: false; border-radius: 6}}
+  # People, clients, sequence participants: light chrome, so lifelines stay light and messages carry the ink.
+  sf-actor: {style: {fill: "#FFFFFF"; stroke: ${sf-rule}; stroke-width: 1; font-color: ${sf-midnight}; font-size: 16; bold: true; border-radius: 6}} # decorative: light chrome, the label names it
 
   # ---- secondary accents: pick AT MOST ONE per diagram ----
   sf-accent-orange: {style: {fill: ${sf-orange}; stroke: ${sf-mid-blue}; stroke-width: 1; font-color: ${sf-midnight}; bold: true; border-radius: 6}}
@@ -80,7 +82,7 @@ classes: {
   sf-failure: {source-arrowhead.shape: arrow; target-arrowhead.shape: arrow; style: {stroke: ${sf-mid-blue}; stroke-width: 2; stroke-dash: 3; font-color: ${sf-mid-blue}; font-size: 14; italic: false}}
 
   # ---- geometry: the six of neutral-theme, same sizes, brand colors ----
-  # (only sf-node and sf-datastore set a font size, so [sf-node; chip; sf-muted] stays 14px)
+  # (only the base roles sf-node, sf-actor and sf-datastore set a font size, so [sf-node; chip; sf-muted] stays 14px)
   # compact: a one-line box 48 tall (default 66); chip: a key or status tag
   compact: {height: 48}
   chip: {width: 104; height: 32; style.font-size: 14}

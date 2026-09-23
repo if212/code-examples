@@ -222,9 +222,13 @@ for n, where in (("post_key_right", "right"), ("post_key_below", "below")):
         t = next((x for x in post.texts if x.kind == "legend" and x.content not in ("KEY", "Legend")), None)
         last = max((x.box.y1 for x in post.texts if x.kind == "legend"), default=fb.y1)
         title_top = min((x.box.y0 for x in post.texts if x.kind == "legend"), default=fb.y0)
-        check("post_key_right: at the right, top-aligned, hugging its items; canvas %dx%d -> %dx%d" % (raw.W, raw.H, post.W, post.H),
-              fb.x0 >= cb.x1 and abs(fb.y0 - cb.y0) <= 1 and abs(post.W - raw.W) < 0.5 and post.H <= raw.H and
-              fb.y1 - last <= 40 and fb.y1 <= post.vb.y1, (fb, cb, last, title_top))
+        # ... and d2's pad between the frame and the canvas edge, as around the diagram (d2 leaves half of it)
+        kpad = svgpost.Ctx(psrc, post, "neutral", 800).pad
+        check("post_key_right: at the right, top-aligned, hugging its items, %.0fpx to the edge (pad %g); canvas %dx%d -> %dx%d"
+              % (post.vb.x1 - fb.x1, kpad, raw.W, raw.H, post.W, post.H),
+              fb.x0 >= cb.x1 and abs(fb.y0 - cb.y0) <= 1 and 0 <= post.W - raw.W <= kpad + 0.5 and
+              abs(post.vb.x1 - fb.x1 - kpad) <= 1.5 and post.H <= raw.H and fb.y1 - last <= 40 and
+              fb.y1 <= post.vb.y1, (fb, cb, last, title_top, post.vb))
     else:
         check("post_key_below: under the diagram, 16px gap, left-aligned; canvas %dx%d -> %dx%d" % (raw.W, raw.H, post.W, post.H),
               abs(fb.y0 - cb.y1 - 16) <= 1.5 and abs(fb.x0 - cb.x0) <= 1 and post.W <= raw.W and post.H > raw.H and
@@ -242,7 +246,7 @@ if raw and post:
 
 # after a key or label move the canvas keeps d2's pad on every side (no margin left where the legend or a
 # label used to be)
-for n in ("post_key_below", "post_key_tall", "post_decision", "post_erd", "post_margin"):
+for n in ("post_key_right", "post_key_below", "post_key_tall", "post_decision", "post_erd", "post_margin"):
     post, _ = load(n, "post")
     if not post:
         continue

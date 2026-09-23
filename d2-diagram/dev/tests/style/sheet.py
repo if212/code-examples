@@ -3,6 +3,8 @@
 Images wider than CELLW are scaled down; cells are laid out row by row."""
 import sys
 
+sys.dont_write_bytecode = True  # keep the skill's scripts/ free of __pycache__ (B57)
+
 from PIL import Image, ImageDraw, ImageFont
 
 

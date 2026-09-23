@@ -30,7 +30,7 @@ scope laid out as a row, both ends on the last rank), `templates/swimlane.d2` (r
 
 - [ ] One start; every step reachable (`S-unreachable`); every path ends in a terminal.
 - [ ] Every decision has 2+ labelled exits (`S-decision`); in a failure scope its reject
-      exit is the scope's failure edge (rule 4): list it without `{decision}` in the brief.
+      exit is the scope's one failure edge (rule 4), which S-decision counts.
 - [ ] The success end and the failure end on the last rank; the story ends on success.
 - [ ] Emphasis per the brief (`workflows/brief.md` section 3): `flow` only on the happy
       path the request describes, `focal` only on the node it asks to highlight.
@@ -127,7 +127,7 @@ empty: {label: ""; width: 10; height: 10; style.opacity: 0}
 rollback: Roll back {class: [danger; compact; step; terminal]}
 build -> release: {class: flow}
 release -> rollback: any failure or rejected {class: failure}
-vars: {d2-legend: {a: {class: ghost}; b: {class: ghost}
+vars: {d2-legend: {a: {style.opacity: 0}; b: {style.opacity: 0}
   a -> b: happy path {class: flow}; a -> b: success {class: ok}; a -> b: failure {class: failure}
 }}
 ```

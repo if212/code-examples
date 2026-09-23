@@ -1,0 +1,25 @@
+# Before: the approval sits inside the Release scope with one exit, and no
+# failure edge leaves the scope: a rejection has nowhere to go.
+# expect: S-missing-edge S-unreachable
+...@neutral-theme
+direction: down
+vars: {
+  d2-legend: {
+    a: {class: ghost}
+    b: {class: ghost}
+    a -> b: next step {class: dep}
+    a -> b: success {class: ok}
+  }
+}
+classes: {step: {width: 176}}
+release: Release {
+  class: boundary
+  e2e: Run e2e tests {class: [service; compact; step]}
+  approval: Approve? {class: decision}
+  canary: Canary 10% {class: [service; compact; step]}
+  rollout: Full rollout {class: [success; compact; step; terminal]}
+  e2e -> approval: {class: dep}
+  approval -> canary: approved {class: dep}
+  canary -> rollout: {class: ok}
+}
+rollback: Roll back {class: [danger; compact; step; terminal]}

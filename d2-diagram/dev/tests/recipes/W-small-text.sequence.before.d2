@@ -1,0 +1,16 @@
+# Before: six participants: d2 keeps lifelines at least 150px apart (box + 40
+# past 110px), so the canvas is 970px wide and an 800px column shrinks the text.
+...@neutral-theme
+shape: sequence_diagram
+classes: {box: {width: 120}}
+user: User {class: [actor; box]}
+job: Snowpark job {class: [actor; box]}
+warehouse: Warehouse {class: [actor; box]}
+raw: RAW tables {class: [actor; box]}
+marts: MARTS table {class: [actor; box]}
+slack: Slack {class: [actor; box]}
+user -> job: "1. submit job" {class: dep}
+job -> warehouse: "2. spin up" {class: dep}
+job -> raw: "3. read" {class: dep}
+job -> marts: "4. write" {class: dep}
+job -> slack: "5. notify" {class: dep}

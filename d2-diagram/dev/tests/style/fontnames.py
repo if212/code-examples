@@ -9,6 +9,8 @@ import struct
 import sys
 import zlib
 
+sys.dont_write_bytecode = True  # keep the skill's scripts/ free of __pycache__ (B57)
+
 
 def woff_names(raw):
     if raw[:4] != b'wOFF':

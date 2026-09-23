@@ -1,0 +1,8 @@
+# a C4 context view with no title node
+...@mini-theme
+direction: down
+customer: Customer {class: actor}
+shop: Shop {class: service}
+mail: SendGrid {class: service}
+customer -> shop: Uses {class: dep}
+shop -> mail: Sends e-mail {class: dep}

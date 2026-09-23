@@ -46,6 +46,8 @@ import sys
 import xml.etree.ElementTree as ET
 import zlib
 
+sys.dont_write_bytecode = True  # keep the skill's scripts/ free of __pycache__ (B57)
+
 ANCHOR = "workflows/review-and-fix.md#"
 SMALL_ERR_PX = 10.0      # displayed text below this is an error
 SMALL_WARN_PX = 12.0     # ... below this a warning

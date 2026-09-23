@@ -1,0 +1,14 @@
+# request: "C4 system context of the Shop: a customer uses the shop, which
+#  sends e-mail through SendGrid."
+type: context
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  customer: Customer
+  shop: Shop
+  mail: SendGrid
+edges:
+  customer -> shop: Uses
+  shop -> mail: Sends e-mail

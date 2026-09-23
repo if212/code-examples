@@ -20,6 +20,8 @@ exit: 0 every rule holds | 1 a rule failed | 2 usage or parse error
 import re
 import sys
 
+sys.dont_write_bytecode = True  # keep the skill's scripts/ free of __pycache__ (B57)
+
 GEOMETRY = ('compact', 'chip', 'tech', 'ghost', 'title', 'key')
 PLAIN = ('compact', 'chip', 'tech', 'ghost')
 MODIFIERS = ('focal', 'focal-solid', 'muted', 'external', 'danger', 'success', 'sf-primary', 'sf-external',

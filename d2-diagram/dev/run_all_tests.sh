@@ -13,6 +13,8 @@
 # Suites run one after another, in this order:
 #   structure lint d2check doctor semantic style templates snippets export recipes icons routing
 # Naming a suite is consent to what it needs: --only icons implies --network, --only routing --llm.
+# After the suites, a bytecode check: no __pycache__ or .pyc anywhere in the skill (python entry points
+# set sys.dont_write_bytecode, shell runners export PYTHONDONTWRITEBYTECODE); a hit fails the run.
 # Logs: ${TMPDIR:-/tmp}/d2-diagram-tests/<suite>.log (the tail of a failed suite is printed);
 # the templates suite leaves each template's review PNGs in templates/work/ there.
 # Templates gate (column 800): d2check exit 0 against dev/tests/templates/<name>.brief, displayed height
@@ -248,6 +250,17 @@ for s in $ALL; do
   fi
   printf '%-10s %-6s %5ss  %s\n' "$s" "$res" "$secs" "$LOG/$s.log" >> "$LOG/summary.txt"
 done
+# B57: no suite may leave bytecode behind (scripts/ above all: the zip must not ship it)
+if [ $((pass + fail)) -gt 0 ]; then
+  pyc=$(find "$SKILL" \( -name __pycache__ -o -name '*.pyc' \) -print 2> /dev/null | sed "s|^$SKILL/||" | head -5 | tr '\n' ' ')
+  if [ -n "$pyc" ]; then
+    echo "== bytecode ... FAIL: left in the skill after the suites: $pyc"
+    printf '%-10s %-6s %6s  %s\n' bytecode FAIL - "left behind: $pyc" >> "$LOG/summary.txt"
+    fail=$((fail + 1)) failed="$failed bytecode"
+  else
+    printf '%-10s %-6s %6s  %s\n' bytecode PASS - "no __pycache__ or .pyc in the skill after the suites" >> "$LOG/summary.txt"
+  fi
+fi
 total=$(($(date +%s) - t0))
 echo
 cat "$LOG/summary.txt"

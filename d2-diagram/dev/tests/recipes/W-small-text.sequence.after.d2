@@ -1,0 +1,15 @@
+# After: five participants fit the column: the warehouse spinning up is a state
+# change, so it becomes a note on the job's lifeline (box 110: lifelines 150px apart).
+...@neutral-theme
+shape: sequence_diagram
+classes: {box: {width: 110}}
+user: User {class: [actor; box]}
+job: Snowpark job {class: [actor; box]}
+raw: RAW tables {class: [actor; box]}
+marts: MARTS table {class: [actor; box]}
+slack: Slack {class: [actor; box]}
+user -> job: "1. submit job" {class: dep}
+job.wh: Warehouse spins up {class: [note; compact]}
+job -> raw: "2. read" {class: dep}
+job -> marts: "3. write" {class: dep}
+job -> slack: "4. notify" {class: dep}

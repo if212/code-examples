@@ -10,12 +10,15 @@
 #  4. no sample SVG carries a prefers-color-scheme: dark block (light only)
 #  5. style-guide.d2 uses every neutral-theme class and snowflake-guide.sf.d2
 #     every snowflake-brand class; the Snowflake sample has a 3px #11567F
-#     sf-flow, 16px Mid-Blue titles, white cylinders and (with fonts) Lato
+#     sf-flow, 16px Mid-Blue titles, white cylinders and (with fonts) Lato;
+#     the Snowflake sequence sample draws sf-actor lifelines in light #BCE3F7
 #  6. OUTDIR/style-sheet.png: theme 0 plain (before/*.plain.d2) vs the theme,
 #     column view, for arch, flow and state - look at it
 # exit 0 = all pass, 1 = a check failed
 set -u
 unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE
+PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
+export PYTHONDONTWRITEBYTECODE
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 SKILL=$(CDPATH='' cd -- "$HERE/../../.." && pwd)
 OUT=${1:-${TMPDIR:-/tmp}/d2-style-test}
@@ -96,6 +99,10 @@ grep -q 'fill="#11567F" class="text-bold" style="text-anchor:middle;font-size:16
 # sf-datastore: white cylinders on the #F4FAFD container tint (never a hollow outline)
 grep -q '<path d="M [^"]*C[^"]*" stroke="#11567F" fill="#FFFFFF"' "$sf" ||
   bad "no white sf-datastore cylinder in the Snowflake sample"
+# sf-actor (B54): Snowflake sequence lifelines take the light #BCE3F7 outline, not Mid-Blue
+lifelines=$(grep -o 'stroke="#BCE3F7" fill="none" class="connection" style="stroke-width:2;stroke-dasharray' \
+  "$OUT/sequence.sf.svg" 2> /dev/null | wc -l | tr -d ' ')
+[ "${lifelines:-0}" -ge 2 ] || bad "sequence.sf.svg: sf-actor lifelines are not the light #BCE3F7 (found ${lifelines:-0})"
 if grep -q '^fonts: brand-snowflake' "$OUT/snowflake.sf.log"; then
   faces=$(python3 "$HERE/fontnames.py" "$sf" 2>&1)  # read it all: grep -q would close the pipe early
   case $faces in *' Lato '*) ;; *) bad "Snowflake sample does not embed Lato" ;; esac

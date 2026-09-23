@@ -20,7 +20,7 @@ order: initial dot, a straight main path, one exit per state in a side column, k
 ## Budget at 800px (measured on the template)
 
 A compact state and its labelled transition take about 146px of height: the template
-(dot, 3 states on the spine, 4 finals) is 630 x 598 with its key beside it. About 7
+(dot, 3 states on the spine, 4 finals) is 642 x 598 with its key beside it. About 7
 states on the spine reach 1000px; past that, draw an overview with composite states and
 one diagram per composite.
 

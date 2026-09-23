@@ -8,6 +8,8 @@
 #   round-3 lint report <name>.lint.json beside it (the layout of the round-3 evaluation folder)
 # exit: 0 every row holds | 1 a row fails or a deliverable is missing | 64 usage
 set -u
+PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
+export PYTHONDONTWRITEBYTECODE
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 SKILL=$(CDPATH='' cd -- "$HERE/../../.." && pwd)
 case ${1:-} in

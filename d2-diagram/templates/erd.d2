@@ -7,8 +7,8 @@ direction: right
 # apart, and moves the key under the diagram when it does not fit beside it.
 vars: {
   d2-legend: {
-    a: {class: ghost}
-    b: {class: ghost}
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
     a -> b: exactly one {class: dep; style.stroke-width: 4; target-arrowhead.shape: cf-one-required}
     a -> b: zero or one {class: dep; style.stroke-width: 4; target-arrowhead.shape: cf-one}
     a -> b: one or many {class: dep; style.stroke-width: 4; target-arrowhead.shape: cf-many-required}
@@ -44,7 +44,8 @@ tickets: {
   attendee_id: uuid {constraint: [foreign_key; "null"]}
   status: ticket_status
 }
-status_values: "ticket_status values:\navailable, sold, refunded" {class: [note; compact]}
+# An enum's values: one compact note, centred under the tables.
+status_values: "ticket_status values:\navailable, sold, refunded" {class: [note; compact]; near: bottom-center}
 
 # Parent PK first (parents land on the left). <-> draws both ends.
 # NOT NULL FK: cf-one-required at the parent; nullable FK: cf-one.

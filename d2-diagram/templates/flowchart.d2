@@ -57,8 +57,8 @@ fulfil -> shipped: all done {class: ok}
 # The key: one line per edge class drawn, in the real classes.
 vars: {
   d2-legend: {
-    a: {class: ghost}
-    b: {class: ghost}
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
     a -> b: happy path {class: flow}
     a -> b: success {class: ok}
     a -> b: failure {class: failure}

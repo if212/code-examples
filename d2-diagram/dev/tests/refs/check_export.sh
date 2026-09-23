@@ -27,6 +27,8 @@ DOC=$S/reference/export.md
 [ -f "$DOC" ] || { echo "check_export: $DOC missing" >&2; exit 1; }
 command -v d2 > /dev/null 2>&1 || { echo "check_export: d2 not on PATH - install it: sh $S/scripts/doctor.sh" >&2; exit 1; }
 unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE
+PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
+export PYTHONDONTWRITEBYTECODE
 T=$(mktemp -d "${TMPDIR:-/tmp}/check_export.XXXXXX") || exit 1
 WPID=
 # a watcher killed mid-compile still writes its SVG: give it a second before rm

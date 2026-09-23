@@ -25,6 +25,8 @@ usage() {
   exit 2
 }
 
+PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
+export PYTHONDONTWRITEBYTECODE
 VERBOSE=
 LIST=
 CONFLICTS=

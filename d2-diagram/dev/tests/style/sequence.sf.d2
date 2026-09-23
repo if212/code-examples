@@ -1,0 +1,21 @@
+# Sequence sample for the Snowflake brand (the twin of sequence.ds.d2):
+# participants use sf-actor (white, light-blue outline), so the lifelines stay
+# light and the messages carry the ink; the one sf-primary participant (brand)
+# keeps a Mid-Blue lifeline. Request it stands for: "The Streamlit app uploads
+# orders.csv: it PUTs the file to Snowflake, which stores it in the internal
+# stage and confirms; then the app runs COPY INTO." The upload chain is the flow.
+...@../../../templates/snowflake-brand
+shape: sequence_diagram
+classes: {
+  p: {width: 150}
+}
+
+app: Streamlit app {class: [sf-actor; p]}
+sf: Snowflake {class: [sf-actor; p; sf-primary]}
+stage: Internal stage {class: [sf-actor; p]}
+
+app -> sf: PUT orders.csv {class: sf-flow}
+sf -> stage: store file {class: sf-flow}
+stage -> sf: stored {class: sf-edge; style.stroke-dash: 5}
+sf -> app: 200 OK {class: sf-edge; style.stroke-dash: 5}
+app -> sf: COPY INTO orders {class: sf-edge}

@@ -377,7 +377,7 @@ main() {
   hits=$(LC_ALL=C grep -n '[^ -~]' "$in" 2> /dev/null || true)
   if [ -n "$hits" ]; then
     n=$(printf '%s\n' "$hits" | wc -l | tr -d ' ')
-    say "tripwire: $n line(s) of $in contain non-ASCII bytes or tabs (the whole .d2, comments included, must be plain ASCII; translate non-English text):"
+    say "tripwire: $n line(s) of $in contain non-ASCII bytes or tabs (the whole .d2, comments included, must be plain ASCII):"
     printf '%s\n' "$hits" | head -3 | LC_ALL=C sed -e "s/$CR/<CR>/g" -e "s/$TAB/<TAB>/g" | cut -c1-120 | sed 's/^/  line /'
     fail "replace the non-ASCII characters and tabs on the tripwire lines"
   fi

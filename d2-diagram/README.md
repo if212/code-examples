@@ -114,7 +114,7 @@ fonts, the icon API and the work directory, and prints the fix for every gap:
 
 ```
   PASS  d2          v0.7.1 at /usr/local/bin/d2
-  PASS  fonts       bundled fonts present (IBM Plex Sans, Geist Mono, Lato; 1352 KB)
+  PASS  fonts       bundled fonts present (IBM Plex Sans, Geist, Geist Mono, Lato; 1352 KB)
   PASS  render      a test diagram renders with ELK and the bundled fonts
   ...
   PASS  chromium    Chromium 141.0.7390.37 (installed by Playwright)
@@ -158,12 +158,14 @@ sh "$SK"/scripts/d2check.sh /tmp/demo/architecture.d2
 ```
 fonts: default (assets/fonts/ibm-plex-sans)
 render: ok /tmp/demo/architecture.svg (elk)
-semantic: source checks only - no brief (write /tmp/d2work/architecture/architecture.brief, format: workflows/brief.md)
-display: 800x886 at column 800 (scale 0.99), min text 13.8px
+post: restyled key (below), tech lines
+display: 770x843 at column 800 (scale 1.00), min text 14px
 lint: 0 error(s), 0 warning(s)
+semantic: 0 error(s), 0 warning(s) - source checks only - no brief (write /tmp/d2work/architecture/architecture.brief, format: workflows/brief.md)
+checks: lint 0 error(s) 0 warning(s); semantic 0 error(s) 0 warning(s)
 reviewed: faithful (playwright)
 READ: /tmp/d2work/architecture/architecture.col.png /tmp/d2work/architecture/architecture.2x.png
-re-render: d2 $(sh /home/me/.claude/skills/d2-diagram/scripts/font-flags.sh default) --scale 1 --elk-nodeNodeBetweenLayers 40 --elk-edgeNodeBetweenLayers 20 --elk-padding '[top=50,left=50,bottom=30,right=50]' /tmp/demo/architecture.d2 /tmp/demo/architecture.svg
+re-render: d2 $(sh /home/me/.claude/skills/d2-diagram/scripts/font-flags.sh default) --scale 1 --elk-nodeNodeBetweenLayers 40 --elk-edgeNodeBetweenLayers 20 --elk-padding '[top=50,left=50,bottom=50,right=50]' /tmp/demo/architecture.d2 /tmp/demo/architecture.svg && python3 /home/me/.claude/skills/d2-diagram/scripts/svgpost.py /tmp/demo/architecture.svg
 result: exit 0 - clean: read the PNGs and walk the rubric before delivering
 ```
 
@@ -218,9 +220,8 @@ routing, from the question a request asks rather than the word it uses (a
 
 Past a template's budget (about 15 boxes at 800px), Claude splits the
 picture into an overview and a detail, or into step boards. Two questions in
-one request become two diagrams. Labels are always English: ask in any
-language and the reply comes in yours, with a glossary if you asked for
-labels in another language.
+one request become two diagrams. Requests and labels are English; labels
+are plain ASCII.
 
 ## Fonts and themes
 

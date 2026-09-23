@@ -96,8 +96,7 @@ Experiments: `D2W/<name>-exp.d2` beside a copy of the theme (own PNGs).
 
 Produce only the formats asked for (default: the SVG). PNG, PDF, animated
 SVG, GIF, PPTX, ASCII: `reference/export.md`. Working files stay in D2W.
-Reply in the user's language; field names, codes and d2check's quoted lines
-stay as printed:
+Report with this block; codes and d2check's quoted lines stay as printed:
 
 ```
 Diagram:   <target>.svg or <target>/ (source <target>.d2 + its theme file)
@@ -112,8 +111,6 @@ Re-render: sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh [--column <width>] <target>
 
 - `approximate (rsvg)`: you checked topology and colour, not label fit.
   `NOT visually reviewed`: make no quality claims.
-- Asked for labels in another language: say in one line that labels are
-  English by design, and add a glossary (English = the user's term).
 
 ## Editing an existing .d2
 
@@ -136,9 +133,8 @@ d2check, run `python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig
 4. On the theme, every node, container and edge has a role class (tables and
    UML classes excepted) and no raw colour. An edited file keeps its own look.
 5. Report `reviewed:` as d2check printed it; never claim more.
-6. Labels are plain English ASCII whatever language the user writes in:
-   translate their terms into short English labels, keep product and tech
-   names as written. The whole .d2, comments included, is ASCII. No emoji.
+6. Labels are plain English ASCII; product and tech names stay as written.
+   The whole .d2, comments included, is ASCII. No emoji.
 7. Never run `d2 -w` in the foreground (`reference/export.md` section 9).
 8. Only the requested formats leave D2W. The theme files are imported, never
    rendered on their own.

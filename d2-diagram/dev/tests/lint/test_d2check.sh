@@ -4,6 +4,8 @@
 # usage: sh dev/tests/lint/test_d2check.sh        needs d2, python3; Chromium for the faithful cases
 # exit: 0 all passed, 1 a check failed
 set -u
+PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
+export PYTHONDONTWRITEBYTECODE
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 SKILL=$(CDPATH='' cd -- "$HERE/../../.." && pwd)
 CHECK="$SKILL/scripts/d2check.sh"
@@ -56,6 +58,40 @@ done
 o=$(PATH="$bin" PLAYWRIGHT_BROWSERS_PATH="$T/none" HOME="$T/none" sh "$CHECK" "$T/ok_flowchart.d2" "$T/out/ok.svg" 2>&1); rc=$?
 [ "$rc" = 3 ] && has "$o" '^reviewed: NOT visually reviewed' && ok "no node/chrome/rsvg: NOT visually reviewed, exit 3" || bad "stripped PATH (exit $rc)" "$o"
 
+# B55: 19 S- errors box every participant and both operands; the tinted ann.png is an aid and never turns
+# a faithful review into "NOT visually reviewed" (only the column and detail views decide it)
+mkdir -p "$T/b55" && cp "$SKILL/templates/neutral-theme.d2" "$T/b55/"
+cat > "$T/b55/saga.d2" << 'EOF'
+...@neutral-theme
+shape: sequence_diagram
+classes: {p: {width: 170}}
+order: Order service {class: [actor; p]}
+payment: Payment service {class: [actor; p]}
+inventory: Inventory service {class: [actor; p]}
+order -> payment: "1. Charge card (order PENDING)" {class: dep}
+order -> inventory: "2. Reserve stock" {class: dep}
+alt: "alt" {
+  class: zone
+  ok: "[stock reserved]" {
+    class: zone-green
+    inventory -> order: "3. stock reserved" {class: secondary}
+    order.confirm: Confirms order {class: [note; compact]}
+  }
+  failed: "[reservation fails]" {
+    class: zone-amber
+    inventory -> order: "3. reservation failed" {class: failure}
+    order -> payment: "4. compensate: refund charge" {class: failure}
+    order.cancel: Cancels order {class: [note; compact]}
+  }
+}
+EOF
+o=$(sh "$CHECK" --brief "$SKILL/dev/tests/recipes/seq.brief" "$T/b55/saga.d2" "$T/b55/saga.svg" 2>&1); rc=$?
+if [ "$rc" = 2 ] && has "$o" '^reviewed: faithful' && has "$o" '^READ: .*saga\.ann\.png'; then
+  ok "B55: a finding-heavy ann.png never downgrades a faithful review"
+elif ! has "$o" '^reviewed: faithful' && ! has "$o" 'output rejected'; then
+  ok "B55: skipped (no faithful rasterizer here)"
+else bad "B55: annotated view downgraded the review (exit $rc)" "$o"; fi
+
 # 3. compile error: exit 1, d2's error, then a hint; OUT untouched ------------------------------------
 printf 'left -> right\n' > "$T/kw.d2"
 cp "$T/out/ok.svg" "$T/kw.svg"
@@ -102,8 +138,8 @@ sh "$CHECK" --no-raster "$T/multi_board.d2" "$T/v2/mb.svg" > /dev/null 2>&1
 # 5. tripwire, formatting, strict -----------------------------------------------------------------------
 printf 'a: "Caf\303\251"\na -> b\n' > "$T/nonascii.d2"
 o=$(sh "$CHECK" --no-raster "$T/nonascii.d2" 2>&1); rc=$?
-[ "$rc" = 2 ] && has "$o" '^tripwire: 1 line' && has "$o" '(the whole .d2, comments included, must be plain ASCII; translate non-English text)' &&
-  ok "tripwire: non-ASCII label -> exit 2, says translate (F18)" || bad "tripwire (exit $rc)" "$o"
+[ "$rc" = 2 ] && has "$o" '^tripwire: 1 line' && has "$o" '(the whole .d2, comments included, must be plain ASCII)' &&
+  ok "tripwire: non-ASCII label -> exit 2, names the plain-ASCII rule" || bad "tripwire (exit $rc)" "$o"
 printf 'vars: {d2-config: {layout-engine: elk}}\na->b\n' > "$T/fmt.d2"
 o=$(sh "$CHECK" --no-raster --check-fmt "$T/fmt.d2" 2>&1); rc=$?
 [ "$rc" = 2 ] && has "$o" '^fmt: NOT formatted' && grep -q 'a->b' "$T/fmt.d2" && ok "--check-fmt: reports, leaves the file, exit 2" || bad "--check-fmt (exit $rc)" "$o"

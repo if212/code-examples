@@ -1,0 +1,14 @@
+# B58: no failure edge leaves the scope: the decision still has one exit.
+...@mini-theme
+direction: down
+release: Release {
+  class: boundary
+  e2e: Run e2e tests {class: [service; terminal]}
+  approval: Approve? {class: decision}
+  canary: Canary 10% {class: service}
+  rollout: Full rollout {class: [success; terminal]}
+  e2e -> approval: {class: dep}
+  approval -> canary: approved {class: dep}
+  canary -> rollout: {class: dep}
+}
+rollback: Roll back {class: terminal}

@@ -40,6 +40,8 @@ import tempfile
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict, deque
 
+sys.dont_write_bytecode = True  # keep the skill's scripts/ free of __pycache__ (B57)
+
 NS = '{http://www.w3.org/2000/svg}'
 EDGE_RE = re.compile(r'^(?:(?P<scope>.*)\.)?\((?P<src>.*?) (?P<op><->|->|<-|--) (?P<dst>.*)\)\[(?P<idx>\d+)\]$')
 B64_RE = re.compile(r'^[A-Za-z0-9+/]+=*$')
@@ -510,12 +512,6 @@ def uncovered_request_terms(inv):
         parts = [p for p in t.split('/') if len(p) > 1 and p.lower() not in STOP] if '/' in t else [t]
         out += [p for p in parts if not covered(p) and p not in out]
     return out
-
-
-def non_latin(text):
-    """The request is written (partly) in a non-Latin script: its nouns cannot be matched to English labels."""
-    return bool(re.search(r'[\u0370-\u03ff\u0400-\u04ff\u0590-\u06ff\u0900-\u0dff\u0e00-\u0fff\u1100-\u11ff'
-                          r'\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af\uf900-\ufaff]', text or ''))
 
 
 # ---------------------------------------------------------------------------
@@ -1373,17 +1369,19 @@ def render_hints(d2file):
 
 
 # the same role in the other skill theme: a neutral class in a Snowflake file and back
-SF_TWIN = {'service': 'sf-node', 'actor': 'sf-node', 'focal': 'sf-primary', 'focal-solid': 'sf-primary',
+SF_TWIN = {'service': 'sf-node', 'actor': 'sf-actor', 'focal': 'sf-primary', 'focal-solid': 'sf-primary',
            'datastore': 'sf-datastore', 'external': 'sf-external', 'muted': 'sf-muted', 'zone': 'sf-container',
            'zone-blue': 'sf-container', 'dep': 'sf-edge', 'flow': 'sf-flow', 'failure': 'sf-failure',
            'state': 'sf-node', 'boundary': 'sf-container', 'zone-green': 'sf-container',
            'zone-amber': 'sf-container', 'zone-violet': 'sf-container', 'secondary': 'sf-edge',
            'async': 'sf-edge', 'ok': 'sf-flow'}
+# what the brand adds to a twin to keep the meaning (brand-snowflake.md section 3): a dashed line
+SF_TWIN_MORE = {'secondary': ' plus style.stroke-dash: 5', 'async': ' plus style.stroke-dash: 5'}
 # neutral shape roles the Snowflake theme has no class for: the shape goes on the object, next to an sf-* class
 SF_SHAPE = {'decision': 'shape: diamond', 'terminal': 'style.border-radius: 99', 'dot': 'shape: circle; width: 20; '
             'height: 20', 'note': 'shape: page', 'queue': 'shape: queue', 'caption': 'shape: text'}
-NEUTRAL_TWIN = {'sf-node': 'service', 'sf-primary': 'focal', 'sf-datastore': 'datastore', 'sf-external': 'external',
-                'sf-muted': 'muted', 'sf-container': 'zone', 'sf-edge': 'dep', 'sf-flow': 'flow',
+NEUTRAL_TWIN = {'sf-node': 'service', 'sf-actor': 'actor', 'sf-primary': 'focal', 'sf-datastore': 'datastore',
+                'sf-external': 'external', 'sf-muted': 'muted', 'sf-container': 'zone', 'sf-edge': 'dep', 'sf-flow': 'flow',
                 'sf-failure': 'failure'}
 
 
@@ -1446,7 +1444,8 @@ def class_findings(d2file, notes=None):
         low = name.lower()
         parts = [p.strip() for p in low.split(',')]
         if low in SF_TWIN and sf_file and SF_TWIN[low] in known:
-            fix = f"'{name}' is a neutral-theme class; this file uses snowflake-brand: write {SF_TWIN[low]}"
+            fix = (f"'{name}' is a neutral-theme class; this file uses snowflake-brand: write {SF_TWIN[low]}"
+                   f"{SF_TWIN_MORE.get(low, '')}")
         elif not sf_file and low in NEUTRAL_TWIN and NEUTRAL_TWIN[low] in known:
             fix = f"'{name}' is a snowflake-brand class; this file uses neutral-theme: write {NEUTRAL_TWIN[low]}"
         elif len(parts) > 1 and all(p in known for p in parts):
@@ -1510,10 +1509,8 @@ def icon_family(ref, base):
     return None
 
 
-# a request that asks for icons, in English or in the user's own words (Chinese, Japanese, Korean,
-# French, Spanish, Portuguese); written as escapes: the skill's files stay ASCII
-ICONS_ASKED = re.compile(r'\bicons?\b|\bic[o\u00f4]nes?\b|\b[i\u00ed]conos?\b|\u56fe\u6807|\u5716\u6a19|'
-                         r'\u30a2\u30a4\u30b3\u30f3|\uc544\uc774\ucf58', re.I)
+# a request that asks for icons
+ICONS_ASKED = re.compile(r'\bicons?\b', re.I)
 
 
 def tinted_k8s(ref, base):
@@ -1548,7 +1545,7 @@ def source_structure(lines):
         where = '.'.join(owner)
         out.append((n, 'warn', 'S-src-direction', f"`direction: {unquote(v)}` inside '{where}' is ignored: ELK honours "
                     f"direction only at the root and in grid cells - move it to the root, or make '{where}' a cell of a "
-                    f"grid (reference/layout.md section 1)"))
+                    f"grid (reference/layout.md section 7)"))
     specs = [unquote(sp) for sp, _, _ in src.imports]
     if any('neutral-theme' in x for x in specs) and any('snowflake-brand' in x for x in specs):
         n = min(ln for _, _, ln in src.imports)
@@ -1847,8 +1844,10 @@ def key_rules(typ, g, comp_nodes, rep):
         rep.add('error', 'S-key', "an ERD explains its notation: add the crow's-foot key (vars.d2-legend, four lines) "
                 "or a caption line naming it (playbooks/erd.md)")
     if typ in ('c4', 'context') and not any('title' in n['classes'] for n in nodes.values()):
-        rep.add('error', 'S-key', 'a C4 diagram names itself: add title: "Container diagram: <system>" {class: title}, '
-                'and a key (container, external system, database, relationship)')
+        view, kinds = (('Container diagram', 'container, external system, database, relationship') if typ == 'c4' else
+                       ('System context', 'system in scope, external system, one line per edge class'))
+        rep.add('error', 'S-key', f'a C4 diagram names itself: add title: "{view}: <system>" {{class: title}}, '
+                f'and a key ({kinds})')
 
 
 def diff(inv, g, rep):
@@ -2180,6 +2179,16 @@ def diff(inv, g, rep):
                 adj[d].add(s)
         members = {k: [o for o in comp_nodes if o.startswith(k + '.')] for k in comp_nodes if children.get(k)}
 
+        def tail(e):        # the key an edge leaves from, whichever way it is written (`a <- b` leaves b)
+            return norm_key(e['dst'] if e['op'] == '<-' else e['src']) if e['op'] in ('->', '<-') else None
+
+        def scope_exit(n):  # (the innermost container around n with failure edges out, those edges)
+            for anc in reversed(ancestors(n)):
+                fails = [e for e in g['edges'] if tail(e) == anc and set(e['classes']) & {'failure', 'sf-failure'}]
+                if fails:
+                    return anc, fails
+            return None, []
+
         def exits(n):       # a member also leaves through its containers' edges ("any failure in X")
             res = set(adj.get(n, ()))
             for anc in ancestors(n):
@@ -2219,10 +2228,18 @@ def diff(inv, g, rep):
                 rep.add('warn', 'S-dead-end', f"'{v['key']}' has no outgoing edge and is not marked {{end}}",
                         [v['key']], box(k))
             if v['attrs'].get('decision'):
-                outs = [e for e in g['edges'] if norm_key(e['src']) == k and e['op'] == '->']
+                outs = [e for e in g['edges'] if tail(e) == k]
+                # a decision inside a failure scope (flowchart.md rule 4): the scope's ONE failure edge carries
+                # its reject exit ("any failure or rejected"), so it counts as the decision's second exit
+                scope, fails = scope_exit(k)
+                if len(fails) == 1:
+                    outs.append(fails[0])
                 if len(outs) < 2:
-                    rep.add('error', 'S-decision', f"decision '{v['key']}' has {len(outs)} outgoing edge(s); a "
-                            f"decision needs 2 or more", [v['key']], box(k))
+                    why = (f" (scope '{short(comp_nodes[scope]['id'] if scope in comp_nodes else scope, 30)}' has "
+                           f"{len(fails)} failure edges: keep one, it then counts)" if fails else
+                           " (in a failure scope, its one failure edge counts)" if ancestors(k) else '')
+                    rep.add('error', 'S-decision', f"decision '{v['key']}' has {len(outs)} exit(s); a decision "
+                            f"needs 2 or more{why}", [v['key']], box(k))
                 unl = [e['id'] for e in outs if not (e['label'] or any(e['texts']))]
                 if unl:
                     rep.add('error', 'S-decision', f"decision '{v['key']}': label every branch (Yes / No, or the "
@@ -2760,9 +2777,6 @@ def main(argv):
         if miss:
             rep.add('info', 'S-missing-node', 'the request names ' + ', '.join(repr(t) for t in miss[:8]) +
                     ' but no brief label, key or out: entry mentions it - add it to the brief, or list it under out:')
-        if non_latin(inv['meta'].get('request')):
-            rep.add('info', 'S-missing-node', 'the request is not in English: only its Latin-script names are checked - '
-                    'check each other noun against the brief (English label, the original term as a # comment after it)')
         if a.brief.endswith('.brief') and not inv['has_focus']:
             rep.add('info', 'S-emphasis', 'the brief has no focus: line, so it counts as focus: none '
                     '(workflows/brief.md section 3)')

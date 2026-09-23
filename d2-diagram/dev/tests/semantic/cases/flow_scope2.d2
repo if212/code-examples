@@ -1,0 +1,26 @@
+# B58: two failure edges leave the scope, so neither is the decision's reject
+# exit: S-decision still asks for a second exit.
+...@mini-theme
+direction: down
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: next step {class: dep}
+    a -> b: failure {class: failure}
+  }
+}
+release: Release {
+  class: boundary
+  e2e: Run e2e tests {class: [service; terminal]}
+  approval: Approve? {class: decision}
+  canary: Canary 10% {class: service}
+  rollout: Full rollout {class: [success; terminal]}
+  e2e -> approval: {class: dep}
+  approval -> canary: approved {class: dep}
+  canary -> rollout: {class: dep}
+}
+rollback: Roll back {class: terminal}
+page: Page on-call {class: terminal}
+release -> rollback: any failure {class: failure}
+release -> page: rollout failed {class: failure}

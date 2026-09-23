@@ -15,6 +15,8 @@
 # Install it (delete an older copy first): unzip dev/dist/d2-diagram.zip -d ~/.claude/skills/
 # exit: 0 built and verified | 1 structure check or verification failed | 2 usage error
 set -u
+PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
+export PYTHONDONTWRITEBYTECODE
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 SKILL=$(dirname -- "$HERE")
 out="$HERE/dist/d2-diagram.zip" verify=1 list=0

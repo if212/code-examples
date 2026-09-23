@@ -24,6 +24,8 @@
 # exit: 0 every recipe proven | 1 a pair or a cross-check failed | 2 usage or setup problem
 set -u
 unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE
+PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
+export PYTHONDONTWRITEBYTECODE
 
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 SKILL=$(CDPATH='' cd -- "$HERE/../../.." && pwd)

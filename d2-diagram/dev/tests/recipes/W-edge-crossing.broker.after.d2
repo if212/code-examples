@@ -1,0 +1,39 @@
+# After: the broker in the lower zone, between its producer and its consumer
+# (`consumer <- broker`), each service spanning its store and half the broker
+# (140 + 20 + 103 = 263): every edge drops straight.
+...@neutral-theme
+direction: down
+classes: {
+  tier: {width: 140}
+  svc: {width: 263}
+  lower: {height: 90}
+}
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: call {class: dep}
+    a -> b: event {class: async}
+  }
+}
+users: Users {class: [actor; compact; tier]}
+gateway: API gateway {class: service; width: 546}
+services: Services {
+  class: zone
+  order: Order service {class: [service; compact; svc]}
+  inventory: Inventory service {class: [service; compact; svc]}
+}
+data: Data {
+  class: zone
+  label.near: bottom-left
+  mysql: MySQL {class: [datastore; tier; lower]}
+  mq: "OrderPlaced events\nRocketMQ" {class: [queue; tech; lower]; width: 226}
+  stock: Stock DB {class: [datastore; tier; lower]}
+}
+users -> gateway: {class: dep}
+gateway -> services.order: routes {class: dep}
+gateway -> services.inventory: routes {class: dep}
+services.order -> data.mysql: writes {class: dep}
+services.order -> data.mq: publishes {class: async}
+services.inventory <- data.mq: consumes {class: async}
+services.inventory -> data.stock: decrements {class: dep}

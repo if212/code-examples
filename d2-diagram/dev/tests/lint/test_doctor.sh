@@ -6,6 +6,8 @@
 # usage: sh dev/tests/lint/test_doctor.sh      needs d2, python3, node + Playwright (the full machine)
 # exit: 0 all passed, 1 a check failed
 set -u
+PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
+export PYTHONDONTWRITEBYTECODE
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 SKILL=$(CDPATH='' cd -- "$HERE/../../.." && pwd)
 DOC="$SKILL/scripts/doctor.sh"

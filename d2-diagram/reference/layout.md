@@ -314,7 +314,7 @@ Compaction, by type (d2 v0.7.1, the bundled font, column 800):
 | Type | Lever | Measured |
 |---|---|---|
 | any spine of one-line boxes | the theme class `compact` (48 px tall, not 66) and one width class for the spine | 18 px less per rank |
-| flowchart past 7 ranks | the 2x2 fold: row 1 the build zone and the release boundary (grid cells, each `direction: down`), row 2 a hidden hole and the failure end, `vertical-gap: 80`; one step class `{width: 184; height: 48}`; `-- --elk-padding "[top=44,left=24,bottom=20,right=24]"` (workflows/review-and-fix.md#w-tall) | 10-rank CI/CD: 550x1263 -> 754x657 |
+| flowchart past 7 ranks | the 2x2 fold: row 1 the build zone and the release boundary (grid cells, each `direction: down`), row 2 a hidden hole and the failure end, `vertical-gap: 80`; one `step` width class and `compact` on every step (playbooks/flowchart.md rule 7) | 10-rank CI/CD: 550x1263 -> 794x733 with its key |
 | sequence | d2 fixes the message pitch (about 88 px) and nothing in the source changes it: compact by rows. At most 9 messages and one one-line note (`[note; compact]`: 41 px less), or 7 messages and one two-operand `alt`; prune inferred replies, then notes; split a longer protocol into two diagrams by phase | a default note row costs about 169 px |
 | state | the happy path down a spine of `compact` states in one width class, exits in one side column, a `ghost` opposite each 2-way fork (section 3) | order lifecycle: 356x779 -> 395x599 |
 | C4 container | `db <- api` (section 3), a `title` node and a key | without title and key: 610x1034 -> 680x834 |

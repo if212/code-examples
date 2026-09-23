@@ -9,6 +9,8 @@
 # Results go to OUT_DIR (default: a new temp dir); nothing is written next to this file.
 # exit: 0 the gate passed (or only tuning ran), 1 the gate failed, 2 setup error
 set -u
+PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
+export PYTHONDONTWRITEBYTECODE
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 ROUTE=$HERE/../../../workflows/route.md
 what=${1:-gate}

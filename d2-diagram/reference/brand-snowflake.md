@@ -34,7 +34,7 @@ or `--pad` by hand.
 | Structure | Mid-Blue | `#11567F` | outlines, edges, `sf-flow`, titles, icons | 7.89 |
 | Structure | Midnight | `#000000` | label text | 21.0 |
 | Structure | Medium Gray | `#5B5B5B` | `sf-muted`, edge labels | 6.79 |
-| Tint | (theme) | `#F4FAFD` / `#BCE3F7` | container fill / outline, key frame | - |
+| Tint | (theme) | `#F4FAFD` / `#BCE3F7` | container fill / outline, key frame, `sf-actor` outline | - |
 | Secondary | Star Blue | `#71D3DC` | `sf-accent-star` | 1.74 |
 | Secondary | Valencia Orange | `#FF9F36` | `sf-accent-orange` | 2.05 |
 | Secondary | Purple Moon | `#7D44CF` | `sf-accent-purple` (white text) | 5.83 |
@@ -45,6 +45,7 @@ or `--pad` by hand.
 | Class | Use | Look |
 |---|---|---|
 | `sf-node` | any component (the default) | white, 1px Mid-Blue outline, radius 6 |
+| `sf-actor` | a person, client or caller at the edge; every sequence participant | white, 1px `#BCE3F7` outline (decorative), black bold text: light chrome |
 | `sf-primary` | the focus: one node (section 4) | Snowflake Blue fill, black bold text |
 | `sf-datastore` | database, stage, table, layer | white cylinder, Mid-Blue outline |
 | `sf-external` | not ours: SaaS, partner tools | dashed Mid-Blue outline |
@@ -64,7 +65,8 @@ classes and the six geometry classes exist here: a neutral one (`focal`,
 
 | Neutral class | Here | Note |
 |---|---|---|
-| `service` `actor` `state` | `sf-node` | |
+| `service` `state` | `sf-node` | |
+| `actor` | `sf-actor` | a sequence lifeline takes its light outline |
 | `focal` `focal-solid` | `sf-primary` | one node, section 4 |
 | `datastore` | `sf-datastore` | |
 | `external` / `muted` | `sf-external` / `sf-muted` | |
@@ -75,6 +77,23 @@ classes and the six geometry classes exist here: a neutral one (`focal`,
 | `failure` | `sf-failure` | |
 | `danger` `success` | none | name the outcome in the label (full weight, never `sf-muted`); the path into a failed end is `sf-failure` |
 | `decision` `terminal` `dot` `queue` `note` `caption` | an `sf-*` class plus the shape on the object | below |
+
+Sequence diagrams: every participant is `sf-actor`, so its lifeline (drawn
+in the participant's outline colour) stays light and the messages carry the
+ink; the one `sf-primary` participant, `[sf-actor; sf-primary]`, keeps a
+Mid-Blue lifeline. Returns are `sf-edge` plus `style.stroke-dash: 5`.
+
+```d2
+# cwd: ../templates
+...@snowflake-brand
+shape: sequence_diagram
+app: Streamlit app {class: sf-actor}
+sf: Snowflake {class: [sf-actor; sf-primary]}
+stage: Internal stage {class: sf-actor}
+app -> sf: PUT orders.csv {class: sf-flow}
+sf -> stage: store file {class: sf-flow}
+sf -> app: 200 OK {class: sf-edge; style.stroke-dash: 5}
+```
 
 `sf-datastore` is the brand's one shape role. Any other shape goes on the
 object next to an `sf-*` class: a decision `shape: diamond`, a start or end

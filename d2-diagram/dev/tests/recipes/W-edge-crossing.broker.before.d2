@@ -1,0 +1,37 @@
+# Before: the broker in the top row (the architecture template's place) over a
+# producer and a consumer that the gateway also calls: the publish edge crosses
+# the gateway's edge to the consumer.
+...@neutral-theme
+direction: down
+classes: {
+  tier: {width: 140}
+}
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: call {class: dep}
+    a -> b: event {class: async}
+  }
+}
+users: Users {class: [actor; compact; tier]}
+gateway: API gateway {class: service; width: 300}
+mq: "OrderPlaced events\nRocketMQ" {class: [queue; tech]; width: 226}
+services: Services {
+  class: zone
+  order: Order service {class: [service; compact; tier]}
+  inventory: Inventory service {class: [service; compact; tier]}
+}
+data: Data {
+  class: zone
+  label.near: bottom-left
+  mysql: MySQL {class: [datastore; tier]}
+  stock: Stock DB {class: [datastore; tier]}
+}
+users -> gateway: {class: dep}
+gateway -> services.order: routes {class: dep}
+gateway -> services.inventory: routes {class: dep}
+mq <- services.order: publishes {class: async}
+mq -> services.inventory: consumes {class: async}
+services.order -> data.mysql: writes {class: dep}
+services.inventory -> data.stock: decrements {class: dep}

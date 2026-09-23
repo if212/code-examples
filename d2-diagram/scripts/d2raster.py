@@ -17,8 +17,9 @@ icons exactly = faithful. rsvg-convert ignores embedded fonts (DejaVu, no bold/i
 judge topology and colour only. cairosvg paints d2 SVGs blank with black bars; it runs only when asked
 for and its output is checked and rejected like any other. PDF: playwright, then chrome (no approximate
 route). Text is antialiased in grayscale (no LCD colour fringes). Outputs are written with mode 644.
-Every PNG is checked by pngstats (blank, missing fill colours, black bars, cropped); a route whose output
-fails is discarded and the next one is tried.
+Every PNG is checked by pngstats (blank, missing fill colours, black bars, cropped); a route whose col,
+2x (or single) output fails is discarded and the next one is tried. The annotated and dark views are aids:
+a doubt about them is noted, never fatal (finding boxes tint the fills pngstats looks for).
 """
 import argparse
 import base64
@@ -249,13 +250,25 @@ def route_cairosvg(jobs):
 ROUTES = {"playwright": route_playwright, "chrome": route_chrome, "rsvg": route_rsvg, "cairosvg": route_cairosvg}
 
 
+# the views the review verdict rests on (and single-output files); the annotated and dark views are aids:
+# the finding boxes of .ann.png tint the very fills pngstats looks for (B55), so a doubt about an aid is
+# reported and never rejects the route
+GATING = ("col", "2x", "png", "pdf")
+
+
 def verify(jobs):
-    """pngstats every output (a PDF: its header); returns (all_ok, lines)"""
+    """pngstats every output (a PDF: its header); returns (all_ok, lines). Only the GATING views decide
+    all_ok: a missing or doubtful annotated or dark view is noted and the route still counts"""
     lines, ok = [], True
     for j in jobs:
+        gate = j["kind"] in GATING
         if not os.path.exists(j["out"]):
             if j.get("dark"):
                 lines.append("raster: dark view skipped (this route cannot render prefers-color-scheme)")
+                continue
+            if not gate:
+                lines.append("raster: %-4s %s not written (an aid only: the col and 2x views decide the review)" % (
+                    j["kind"], j["out"]))
                 continue
             ok = False
             lines.append("raster: %s missing" % j["out"])
@@ -270,13 +283,16 @@ def verify(jobs):
         exp_w = int(round((j["width"] or svg_geometry(j["in"])[0]) * j["scale"]))
         size_ok = abs(st["size"][0] - exp_w) <= 2
         good = st["verdict"] == "OK" and size_ok
-        ok = ok and good
-        lines.append("raster: %-4s %s %dx%d %s%s%s%s" % (
-            j["kind"], j["out"], st["size"][0], st["size"][1], j["note"], "" if good else " REJECTED (%s" % st["verdict"],
+        if gate:
+            ok = ok and good
+        lines.append("raster: %-4s %s %dx%d %s%s%s%s%s" % (
+            j["kind"], j["out"], st["size"][0], st["size"][1], j["note"],
+            "" if good else (" REJECTED (%s" if gate else " doubtful (%s") % st["verdict"],
             "" if good else ", fills %d/%d, lines %d/%d, ink %.1f%%%s)" % (
                 st["fills_found"], st["fills_expected"], st["lines_found"], st["lines_expected"], st["ink"] * 100,
                 "" if size_ok else ", expected width %d" % exp_w),
-            (" " + st["cropped"]) if st["cropped"] else ""))
+            (" " + st["cropped"]) if st["cropped"] else "",
+            "" if good or gate else " - an aid only: the col and 2x views decide the review"))
     return ok, lines
 
 

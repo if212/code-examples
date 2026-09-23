@@ -20,8 +20,8 @@ Steps, in order (a second run changes nothing):
   4. key: the native legend (vars.d2-legend) in the design system - no shadow, paper frame with an ink-300
      outline, title KEY, slate item text, 1px node swatches - kept at the right when the canvas fits the
      column and the key is no taller than the diagram (top-aligned with the diagram, the frame hugging its
-     items), else re-flowed into rows under the diagram (the canvas grows in height); wrapped in
-     <g class="d2-key">, which the lint and the semantic check skip
+     items, d2's pad to the canvas edge), else re-flowed into rows under the diagram (the canvas grows in
+     height); wrapped in <g class="d2-key">, which the lint and the semantic check skip
   5. sequence: activation bars 1px ink-400; a group title's chip in its frame's blended colour; a group
      title that covers a lifeline or bar slides right past it
   6. tech: in nodes with class `tech`, label lines 2 and later at 14px ink-600 (same face)
@@ -917,8 +917,10 @@ def step_key(c):
         bottom = max(bottom, num(r.attrs.get("y1")), num(r.attrs.get("y2")))
     tight = bottom - fr_y + pad_top
     # at the right when the canvas fits the column and the key is no taller than the diagram beside it (a tall
-    # key beside a short diagram leaves a dead band under the diagram); else a row under the diagram
-    below = dg.W > c.column + 0.5 or tight > content.h + 16
+    # key beside a short diagram leaves a dead band under the diagram); else a row under the diagram. At the
+    # right the key keeps d2's pad to the canvas edge, as the diagram does (d2 leaves it about half a pad)
+    right_w = max(dg.W, num(frame.attrs.get("x")) + num(frame.attrs.get("width")) + pad - dg.vb.x0)
+    below = right_w > c.column + 0.5 or tight > content.h + 16
     if below:
         fr_x, fr_y = content.x0, content.y1 + 16
     row_h, top_pad, left = 28.0, 8.0, 12.0
@@ -980,13 +982,15 @@ def step_key(c):
     fw, fh = num(frame.attrs.get("width")), num(frame.attrs.get("height"))
     if not below:
         c.key_box = Box(fr_x, fr_y, fr_x + fw, fr_y + fh)
-    if not below and (abs(shift) > 0.5 or fh - tight > 0.5):
-        # the canvas: as tall as the diagram or the key, whichever reaches lower
         x0, y0 = dg.vb.x0, dg.vb.y0
-        low = max(fr_y + fh, content.y1)
-        H = math.ceil(max(content.y1, fr_y + shift + tight) + (dg.vb.y1 - low) - y0)
-        c.key_box = Box(fr_x, fr_y + shift, fr_x + fw, fr_y + shift + tight)
-        resize(c, x0, y0, math.ceil(dg.W), H)
+        W, H = math.ceil(right_w), math.ceil(dg.H)
+        if abs(shift) > 0.5 or fh - tight > 0.5:
+            # the canvas: as tall as the diagram or the key, whichever reaches lower
+            low = max(fr_y + fh, content.y1)
+            H = math.ceil(max(content.y1, fr_y + shift + tight) + (dg.vb.y1 - low) - y0)
+            c.key_box = Box(fr_x, fr_y + shift, fr_x + fw, fr_y + shift + tight)
+        if W != math.ceil(dg.W) or H != math.ceil(dg.H) or abs(shift) > 0.5 or fh - tight > 0.5:
+            resize(c, x0, y0, W, H)
     if below:
         where = "below"
         max_w = max(content.w, 320.0)

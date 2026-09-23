@@ -94,13 +94,9 @@ labels, protocols) goes under `Assumed:`.
    (its stages, zones, owners, trust boundaries), never rows invented for the
    layout; 2 levels at most (deployment: 3, cloud > cluster > namespace), no
    one-child groups.
-3. A label is the rendered text: the user's words, in English. Translate a
-   request in another language into short English labels, keep product and
-   tech names as written, and put the user's term in a brief comment after
-   the label (`logs: User activity logs  # <the term as the user wrote it>`);
-   the `# request:` line keeps the original. The brief may hold any script,
-   the .d2 only ASCII. `\n` breaks a label at about 22 characters. Name the
-   technology in the label (`Orders DB\nPostgres`).
+3. A label is the rendered text: the user's words, plain English ASCII;
+   product and tech names stay as written. `\n` breaks a label at about 22
+   characters. Name the technology in the label (`Orders DB\nPostgres`).
 4. Nothing invented silently: whatever the request does not state gets
    `{inferred}`, a label or title you chose included; semcheck lists it, and
    the report's `Assumed:` line says it.
@@ -115,7 +111,7 @@ Attributes go in ONE block at the end of the line, comma-separated:
 | Attribute | On | semcheck checks |
 |---|---|---|
 | `inferred` | node, edge | listed for the report (info) |
-| `start`, `end`, `decision` | node | flowchart, state: all reachable from the start, nothing leaves an end; a decision has 2+ exits, all labelled |
+| `start`, `end`, `decision` | node | flowchart, state: all reachable from the start, nothing leaves an end; a decision has 2+ exits, all labelled (in a failure scope, the scope's one failure edge counts) |
 | `note`, `group` | node | a title or note, exempt from reachability; sequence: a frame (`alt`, `loop`), not an actor |
 | `cols: a b`, `fields: a b` | node | erd, class: those columns or fields exist |
 | `external`, `shape: x` | node | not checked: notes for drafting |
@@ -157,8 +153,6 @@ takes the label `*`: `status: * {note}`.
 
 Recipes: `workflows/review-and-fix.md#<code>`. An INFO `S-missing-node` names a
 request term no label, key or `out:` entry covers: add it, or put it in `out:`.
-A request in another script gets the same check by hand: each of its nouns
-has a node (its term in the label's comment) or an `out:` entry.
 
 ## 7. Worked example
 

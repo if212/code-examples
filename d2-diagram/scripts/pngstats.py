@@ -25,6 +25,8 @@ import sys
 import zlib
 from collections import Counter
 
+sys.dont_write_bytecode = True  # keep the skill's scripts/ free of __pycache__ (B57)
+
 MAX_SAMPLES = 400000  # pixels examined per image (subsampled on a grid above that)
 
 

@@ -1,12 +1,12 @@
 # Playbook: sequence diagrams
 
-Messages over time between 2-6 participants: an API call chain, an OAuth handshake, a
-checkout. Not structure (`playbooks/architecture.md`), a lifecycle (`playbooks/state.md`)
-or branching (`playbooks/flowchart.md`). Template: `templates/sequence.d2` (4
-participants, 7 messages, activation bars, a two-outcome `alt`); syntax:
-`reference/syntax.md` section 13. Variants: a saga (rule 9), a protocol artifact (rule
-10), an agent's tool calls (a `loop`: model -> app `tool_use`, app -> tool, app -> model
-`tool_result`; the app calls tools, never the model).
+Messages over time between 2-5 participants (6 on a slide): an API call chain, an OAuth
+handshake, a checkout. Not structure (`playbooks/architecture.md`), a lifecycle
+(`playbooks/state.md`) or branching (`playbooks/flowchart.md`). Template:
+`templates/sequence.d2` (4 participants, 7 messages, activation bars, a two-outcome `alt`);
+syntax: `reference/syntax.md` section 13. Variants: a saga (rule 9), a protocol artifact
+(rule 10), an agent's tool calls (a `loop`: model -> app `tool_use`, app -> tool, app ->
+model `tool_result`; the app calls tools, never the model).
 
 ## Skeleton
 
@@ -18,16 +18,17 @@ participants, 7 messages, activation bars, a two-outcome `alt`); syntax:
 | Returns | `{class: secondary; style.stroke-dash: 3}`; an error reply `failure` |
 | Activation bars | a message to a child key (`db.a`) draws a bar: on every participant that does work, one key per activation, or on none |
 | Notes | `api.x: One short line {class: [note; compact]}`: a child with no edges (rule 4) |
-| Fragments | a `zone` titled with its question (`"alt: charge result"`); outcomes are nested zones (rule 6) |
+| Fragments | a `zone` titled with its question (`"alt: charge result"`); outcomes are nested zones, success `zone-green` and failure `zone-amber` (rule 6) |
 
 ## Budget at 800px (measured)
 
-- A message row is about 88px, a compact note about 110, a group title 30-45. The
-  template (4 participants, 7 messages, a two-operand `alt`) is 774 x 878.
-- At most 9 messages and one note, or 7 messages and one two-operand `alt`. Longer:
-  two diagrams, one per phase, or `steps` boards (`playbooks/change.md` section 3).
-- Gaps follow the longest label between neighbours: four participants with 25-character
-  labels fill 800px; a 120px participant box holds about 12 characters.
+- A message row is about 88px, a compact note about 110, a group title 30-45 (the template:
+  774 x 878). At most 9 messages and one note, or 7 messages and one two-operand `alt`.
+  Longer: two diagrams, one per phase, or `steps` boards (`playbooks/change.md` section 3).
+- Lifelines stand 150px apart or more (box + 40 past 110px; wider for a long label between
+  neighbours): 5 participants fit 800px, a sixth makes 900 (scale 0.89, 12px text), so
+  make a state change a note (`job.wh: Warehouse spins up`). A 120px box holds about 12
+  characters; four participants with 25-character labels fill 800px.
 
 ## Notation checklist
 
@@ -50,10 +51,9 @@ is a plain `actor` (`external`'s dark dashed outline would be the heaviest lifel
 
 ### 2. One message is one line of at most 40 characters
 
-The method, the path, parameters in parentheses: `POST /token (code, code_verifier)`.
-A placeholder names the value (`302 code=AUTH_CODE`), never `...`. d2 centres a label on
-its arrow; a label that crosses a participant it does not touch slides into the widest
-gap on its way (d2check).
+The method, the path, parameters in parentheses: `POST /token (code, code_verifier)`. A
+placeholder names the value (`302 code=AUTH_CODE`), never `...`. A label over a lifeline
+its arrow does not end on slides into the widest gap on its way (d2check).
 
 ### 3. Returns are dashed and quieter; failed returns are red
 
@@ -74,12 +74,12 @@ come out ragged. Number the messages; name phases around the diagram or split by
 
 ### 6. alt: one nested zone per outcome, each touching the same participants
 
-The outer zone's title names the question (`"alt: charge result"`, `style:
-{text-transform: none}`); each outcome is a nested zone titled with its guard, `style:
-{text-transform: none; bold: false}` (`[approved]`). Every outcome touches the same
-participants, and a note in one gets its twin on the same participant in the other: the
-frames come out equally wide (`W-seq-group-ragged`). Quote group labels (an unquoted `[`
-fails to compile); d2check matches title chips to their frames and slides them off lifelines.
+The outer zone's title names the question (`"alt: charge result"`, `style: {text-transform:
+none}`); each outcome is a nested zone titled with its guard (`[approved]`, `style:
+{text-transform: none; bold: false}`): `zone-green` if it ends in success, `zone-amber` in
+failure, else `zone`. Every outcome touches the same participants; a note in one gets its
+twin on the same participant in the other, so the frames are equally wide
+(`W-seq-group-ragged`). Quote group labels: an unquoted `[` fails to compile.
 
 ### 7. Inside a group, use only declared participants
 

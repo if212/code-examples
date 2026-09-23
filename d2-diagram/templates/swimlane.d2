@@ -63,8 +63,8 @@ support.close -> cust.received: {class: ok}
 # The key: one line per edge class drawn, in the real classes.
 vars: {
   d2-legend: {
-    a: {class: ghost}
-    b: {class: ghost}
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
     a -> b: main path {class: flow}
     a -> b: refund received {class: ok}
     a -> b: declined {class: failure}

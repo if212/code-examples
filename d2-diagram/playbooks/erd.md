@@ -15,7 +15,7 @@ section 12.
 | Table style | the template's globs at the END of the file: 16px rows, square corners, `ink-500` headers; d2check draws 1px row rules and bold headers |
 | Relationships | `parent.pk <-> child.fk` with both arrowheads `cf-*`; the last glob makes them `dep` at 2px |
 | Key | the crow's-foot `vars.d2-legend` (four lines at 4px, rule 5), or a `caption` naming the notation |
-| Enum values | one `[note; compact]` named after the type: `"order_status values:\npending, paid"` |
+| Enum values | one `[note; compact]` named after the type, `near: bottom-center`: `"order_status values:\npending, paid"` |
 
 ## Budget at 800px (measured)
 
@@ -85,9 +85,9 @@ widens its column gap by the label width.
 
 ### 6. Enum values and domain notes
 
-Put enum values in one `[note; compact]` named after the type; keep the type name in the
-column (`status: ticket_status`). Group tables in `zone`s per domain only when the request
-names the grouping (a tenant boundary it describes).
+Put enum values in one `[note; compact]` named after the type, `near: bottom-center` (ELK
+parks an edgeless note in the first column); the column keeps the type name (`status:
+ticket_status`). Domain `zone`s only when the request names the grouping (a tenant boundary).
 
 ### 7. A nullable FK beside NOT NULL ones on one parent row: dash it
 
@@ -103,8 +103,8 @@ target-arrowhead.shape: cf-many}`: the line then says what the stacked heads can
 direction: right
 vars: {
   d2-legend: {
-    a: {class: ghost}
-    b: {class: ghost}
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
     a -> b: exactly one {class: dep; style.stroke-width: 4; target-arrowhead.shape: cf-one-required}
     a -> b: zero or one {class: dep; style.stroke-width: 4; target-arrowhead.shape: cf-one}
     a -> b: zero or many {class: dep; style.stroke-width: 4; target-arrowhead.shape: cf-many}

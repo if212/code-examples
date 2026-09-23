@@ -1,0 +1,21 @@
+# request: "Release runbook for the wiki: run the e2e tests, then a manual
+#  approval; once approved, a 10% canary, then the full rollout. Any failure,
+#  or a rejection, rolls back."
+type: flowchart
+reader: team wiki
+width: 800
+direction: down
+focus: none
+out: notifications, the rollback steps
+nodes:
+  release: Release
+  release.e2e: Run e2e tests {start}
+  release.approval: Approve? {decision}
+  release.canary: Canary 10%
+  release.rollout: Full rollout {end}
+  rollback: Roll back {end}
+edges:
+  release.e2e -> release.approval
+  release.approval -> release.canary: approved
+  release.canary -> release.rollout
+  release -> rollback: any failure or rejected

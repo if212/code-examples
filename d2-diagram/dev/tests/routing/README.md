@@ -9,7 +9,7 @@ is blind: a fresh model session that sees nothing but route.md and the requests.
 
 | File | Cases | Use |
 |---|---|---|
-| `heldout.json` | 86 | release gate; never tune route.md on it. H01-H30 (the first gate), E01-E20 and Z01-Z20 (20 English and 20 Chinese requests) and P01-P16 (Chinese vocabulary probes) written by the round-3 routing review; Chinese text is stored as `\uXXXX` escapes, so the file stays ASCII |
+| `heldout.json` | 50 | release gate; never tune route.md on it. H01-H30 (the first gate) and E01-E20 (written by the round-3 routing review). The skill is English only: the round-4 Chinese requests (Z01-Z20) and vocabulary probes (P01-P16) were dropped |
 | `dev.json` | 99 | tuning: the jobs-lens phrasings (R01-R99) |
 | `validation.json` | 24 | tuning: fresh phrasings, one per template |
 | `validation2.json` | 20 | tuning: traps ("flowchart" of services, "tree" of dependencies) |
@@ -17,8 +17,8 @@ is blind: a fresh model session that sees nothing but route.md and the requests.
 A case: `{"id", "request", "expect", "alt": [...], "call", "altcall": [...], "why"}`.
 `expect` is a template name (or `OUT` / `EDIT`), `alt` lists answers accepted as right,
 `call` is the expected call. Alternates are fixed BEFORE a run, never after a miss.
-The E, Z and P cases were written blind, but the round-4 route.md answers the misses the review
-found on them (routing F3-F10): they are held out from now on, and the next miss spends them.
+The E cases were written blind, but the round-4 route.md answers the misses the review found on
+them (routing F3-F10): they are held out from now on, and the next miss spends them.
 
 ## Protocol
 
@@ -36,8 +36,8 @@ sh run.sh tuning           # dev, validation, validation2 (after any route.md ch
 python3 blind_eval.py heldout.json ../../../workflows/route.md --per-request --gate 90%,83%
 ```
 
-- Release gate: at least 90% of the templates and 83% of the calls (27 and 25 of 30; 78 and 72
-  of 86), in both modes (one session for all requests, and one session per request).
+- Release gate: at least 90% of the templates and 83% of the calls (45 and 42 of 50), in both
+  modes (one session for all requests, and one session per request).
 - An EDIT or OUT call scores its template as right whatever template it names: the edited
   file stands in for the template (SKILL.md, editing).
 - The call is the noisy part: the model sometimes draws the default where route.md
@@ -56,10 +56,19 @@ python3 blind_eval.py heldout.json ../../../workflows/route.md --per-request --g
 
 ## Results
 
-Round 4 (the 86-case gate, 2026-09-23), five runs: run 1 on an earlier wording of the one-picture
-exception (sha1 08c0de9a), runs 2 and 3 on sha1 9c6bfe31, runs 4 and 5 (the verification) on the
-shipped route.md (sha1 609a4790: a one-picture RAG request goes to llm-app, as
-playbooks/pipeline.md rule 9 measures). Runs 1, 2 and 4 cover every set; runs 3 and 5 the gate only:
+Round 4 verification (the 50-case English gate, route.md sha1 e382d7de, after the Chinese genre
+tie-breaker was dropped), one run:
+
+| Set | Mode | Templates | Calls | Call misses (template right) |
+|---|---|---|---|---|
+| heldout | one session | 50/50 | 47/50 | H14, H30, E20: the default drawn where ASK or SPLIT was expected |
+| heldout | per request | 50/50 | 48/50 | H14, E20 |
+
+Round 4 (the 86-case gate of the time, before the English-only scope dropped Z and P), five runs:
+run 1 on an earlier wording of the one-picture exception (sha1 08c0de9a), runs 2 and 3 on sha1
+9c6bfe31, runs 4 and 5 (the verification) on the shipped route.md (sha1 609a4790: a one-picture RAG
+request goes to llm-app, as playbooks/pipeline.md rule 9 measures). Runs 1, 2 and 4 cover every set;
+runs 3 and 5 the gate only:
 
 | Set | Mode | Templates | Calls | Call misses (template right) |
 |---|---|---|---|---|

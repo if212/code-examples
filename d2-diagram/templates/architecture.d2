@@ -28,7 +28,8 @@ web: Web client {class: [actor; compact; tier]}
 mobile: Mobile client {class: [actor; compact; tier]}
 # The fan-out node spans the three services it routes to: straight edges.
 gateway: "API gateway\nKong" {class: [service; tech]; width: 400}
-# The broker sits in the top row, over its producer and its consumer.
+# The broker sits in the top row, over its producer and its consumer (a
+# consumer the gateway also calls: see playbooks/architecture.md rule 2).
 events: "Order events\nKafka" {class: [queue; tech]; width: 180}
 
 # Services in the order of the tier below them, the consumer last. The

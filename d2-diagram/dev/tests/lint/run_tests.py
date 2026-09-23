@@ -384,6 +384,23 @@ def raster_cases():
         r = subprocess.run([sys.executable, d2raster, "--inspect", os.path.join(OUT, "tc") + "=" + tsvg, "--no-detail"],
                            capture_output=True, text=True)
         check("raster: transparent cells are not 'cropped'", r.returncode == 0, (r.stdout.strip().splitlines() or [""])[-1][:160])
+        # B55: the annotated view is an aid. Finding boxes stacked over the whole picture tint every fill
+        # (pngstats: SUSPECT); the review still rests on the reader's view, and the doubtful .ann.png is kept
+        raw = open(svg, encoding="utf-8").read()
+        vx, vy, vw, vh = (float(v) for v in re.search(r'viewBox="([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+)"', raw).groups())
+        boxes = "".join('<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" fill="#E5484D" fill-opacity="0.08" '
+                        'stroke="#E5484D" stroke-width="2" stroke-dasharray="6,4" rx="4"/>' % (
+                            vx + 4 * i, vy + 4 * i, vw - 8 * i, vh - 8 * i) for i in range(8))
+        end = raw.rfind("</svg>", 0, raw.rfind("</svg>"))
+        tint = os.path.join(OUT, "tinted")
+        with open(tint + ".ann.svg", "w", encoding="utf-8") as fh:
+            fh.write(raw[:end] + '<g id="d2lint-annotations">' + boxes + "</g>" + raw[end:])
+        r = subprocess.run([sys.executable, d2raster, "--inspect", tint + "=" + svg, "--no-detail"],
+                           capture_output=True, text=True)
+        check("raster: a doubtful annotated view never downgrades the review (B55)",
+              r.returncode == 0 and "(faithful)" in r.stdout and " doubtful (" in r.stdout and
+              os.path.exists(tint + ".ann.png") and os.path.exists(tint + ".col.png"),
+              "exit=%d %s" % (r.returncode, " | ".join(r.stdout.strip().splitlines())[-200:]))
         wide = os.path.join(OUT, "bad_wide_chain.svg")
         subprocess.run([sys.executable, d2raster, "--inspect", os.path.join(OUT, "wide") + "=" + wide], capture_output=True)
         det = os.path.join(OUT, "wide.2x.png")

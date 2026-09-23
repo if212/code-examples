@@ -42,28 +42,28 @@ and put 4 gateway edges into one zone (rule 3). Past that, split the diagram.
 ## 3. Rules
 
 **1. The lower tier lines up under its callers.** One width class for both
-tiers (140); the lower nodes in their callers' order, callers with no lower
-partner at the row end; a store two callers use spans both (2 x 140 + the
-20px gap = 300); ONE lower zone for stores and third parties, its `width` =
-the upper zone's, so both zones share their edges. The template: every
-lower node centred under its caller, 0 doglegs; the round-3 lower tier in
-its own order drew 5 Z-shaped edges (W-dogleg, 58-168px sideways).
+tiers (140); lower nodes in their callers' order, callers with no lower
+partner at the row end; a store two callers use spans both (2 x 140 + 20 =
+300); ONE lower zone for stores and third parties, as wide as the upper zone.
+The template: every lower node centred under its caller, 0 doglegs; the
+round-3 lower tier in its own order drew 5 Z-shaped edges (W-dogleg).
 
 **2. Async edges carry the verb, and the node written first ranks higher.**
 The template's broker sits in the top row, written first on both edges
 (`events <- services.orders: publishes`, `events -> services.notify: consumes`).
-A broker in the data zone: `consumer <- broker` keeps the consumer in the
-services row (`broker -> consumer` looped around the zone: 521x499 vs 450x449).
+A consumer the gateway also calls: that broker crosses the gateway's edge
+(W-edge-crossing), so it goes in the lower zone between producer and consumer,
+`consumer <- broker` (`broker -> consumer` loops around the zone), each
+service spanning its store and half the broker: 696x810, all edges straight.
 
 ```d2
 # cwd: ../templates
 ...@neutral-theme
 direction: down
-classes: {w: {width: 140}}
 services: Services {
   class: zone
-  orders: Orders {class: [service; compact; w]}
-  notify: Notifications {class: [service; compact; w]}
+  orders: Orders {class: [service; compact]}
+  notify: Notifications {class: [service; compact]}
 }
 data: Data {
   class: zone

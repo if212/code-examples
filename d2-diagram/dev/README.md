@@ -15,7 +15,7 @@ point: [../SKILL.md](../SKILL.md).
 | `workflows/review-and-fix.md` | rubric, one `### CODE` recipe per finding code, compile-error table | step 5 |
 | `workflows/icons.md` | icon ladder | when icons are used |
 | `playbooks/*.md` | per-type rules, <= 150 lines each | the routed type |
-| `reference/*.md` | design system, Snowflake brand, syntax, layout, icons, export | on demand |
+| `reference/*.md` | design system (<= 420 lines: emphasis, keys, type, special shapes), Snowflake brand, syntax, layout, icons, export; every file has a line budget in `dev/tests/structure/check.py` (`BUDGETS`) | on demand |
 | `templates/*.d2` | starting diagrams (<= 80 lines, clean in d2check) and the two theme files | copied |
 | `scripts/` | `d2check.sh` (the loop) calls `font-flags.sh`, `svgpost.py` (the post step: labels off bends, keys, tables, tech lines), `d2lint.py`, `semcheck.py`, `d2raster.py` (+ `raster.cjs`, `pngstats.py`); `doctor.sh` (setup), `icon.sh`, `contrast.py` | run |
 | `assets/icons/`, `assets/fonts/` | offline Lucide pack (ISC), bundled fonts (OFL) | embedded |
@@ -27,7 +27,9 @@ point: [../SKILL.md](../SKILL.md).
 Conventions: every file is printable ASCII (no tabs, no emoji). Docs call
 scripts as `sh ${CLAUDE_SKILL_DIR}/scripts/x.sh` or `python3 .../x.py`, so the
 exec bit never matters. Python is standard library only (3.8+) and never
-writes `__pycache__` (`sys.dont_write_bytecode = True`). Shell is POSIX `sh`,
+writes `__pycache__` (`sys.dont_write_bytecode = True` before any import of a
+skill script; shell runners export `PYTHONDONTWRITEBYTECODE=1`; structure check
+(p) and the runner's closing bytecode check enforce it). Shell is POSIX `sh`,
 shellcheck-clean in `sh` and `dash` modes. Every code block tagged `d2` in the
 docs must render (first line `# fragment` to skip, `# cwd: <dir>` for imports),
 and every block tagged `d2-bad` must fail.
@@ -46,14 +48,15 @@ sh dev/run_all_tests.sh --list       # the suites and what they need
 Logs go to `${TMPDIR:-/tmp}/d2-diagram-tests/<suite>.log` (each run clears
 that folder: run one at a time). For a failed suite, its FAIL lines with their
 details and the end of its log are printed. Exit 0 means every suite that ran
-passed (skipped suites are listed as SKIP with the reason); the full run takes
+passed (skipped suites are listed as SKIP with the reason) and no suite left
+`__pycache__` or `.pyc` anywhere in the skill (the `bytecode` row); the full run takes
 about 10 minutes, `--quick` about 2. The suites need d2 and python3;
 the faithful-render cases need Chromium (Node Playwright or a Chrome binary);
 `check_export.sh --native` (not run by default) downloads d2's own driver.
 
 | Suite | Command | Proves |
 |---|---|---|
-| structure | `sh dev/tests/structure/check.sh` | the checks (a)-(o): frontmatter, paths, anchors and `section N` / `rule N` references (and no link from a shipped file into `dev/`), reachability, a heading per code, ASCII, size, deleted paths, junk, class lists, script syntax, allowed-tools, templates fmt + routed, the svgpost wiring, no escape-hatch wording ("the honest shape") in the recipes, a recipe grep context (`-A N`) that covers the longest recipe |
+| structure | `sh dev/tests/structure/check.sh` | the checks (a)-(p): frontmatter, paths, anchors and `section N` / `rule N` references (and no link from a shipped file into `dev/`), reachability, a heading per code, ASCII, size budgets (SKILL.md 170 lines / 9 KB, playbooks 150, templates 80, each workflow and reference file its own), deleted paths, junk, class lists, script syntax, allowed-tools, templates fmt + routed, the svgpost wiring, no escape-hatch wording ("the honest shape") in the recipes, a recipe grep context (`-A N`) that covers the longest recipe, no way to write bytecode into the skill |
 | lint | `python3 dev/tests/lint/run_tests.py` | every d2lint code fires on its case, ok cases stay clean, rasterizer checks |
 | d2check | `sh dev/tests/lint/test_d2check.sh` | exit codes, summary lines, file modes, routes, multi-board |
 | doctor | `sh dev/tests/lint/test_doctor.sh` | doctor.sh on simulated machines (one dependency taken away at a time) prints the right verdict and fix; every script's `--help` and usage exit |
@@ -64,7 +67,7 @@ the faithful-render cases need Chromium (Node Playwright or a Chrome binary);
 | export | `sh dev/tests/refs/check_export.sh` | the commands of reference/export.md, run on fixtures |
 | recipes | `sh dev/tests/recipes/run.sh` | every `Fix:` in review-and-fix.md (see below) |
 | icons | `sh dev/tests/refs/verify_icons.sh` | every icon name in the docs answers HTTP 200 (network) |
-| routing | `sh dev/tests/routing/run.sh gate` | blind `claude -p` sessions, given only workflows/route.md, pick the right template for 86 held-out requests (36 in Chinese): 90% templates and 83% calls in both modes (needs the claude CLI; `--llm`) |
+| routing | `sh dev/tests/routing/run.sh gate` | blind `claude -p` sessions, given only workflows/route.md, pick the right template for 50 held-out English requests: 90% templates and 83% calls in both modes (needs the claude CLI; `--llm`) |
 
 ## Build the zip
 

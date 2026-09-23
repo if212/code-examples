@@ -39,8 +39,8 @@ Fix: make the canvas narrower, not the font bigger: `direction: down` (tiers
 side by side instead of ranks in a row), wrap labels near 22 characters with
 `\n` (`"Order management\nservice"`). Past about 15 nodes, split into `steps`
 boards (playbooks/change.md section 3). Sequence: every participant adds a
-column; messages of one line, at most 40 characters (playbooks/sequence.md
-rule 2).
+column 150px wide or more, so five fit 800px (a state change becomes a note on
+its lifeline); messages of one line, at most 40 characters (playbooks/sequence.md).
 
 ### W-small-text
 Seen: text displays at 10-12px. At scale < 1 it is the E-small-text case,
@@ -57,10 +57,9 @@ Fix: by type (reference/layout.md section 9 has the numbers):
   the release boundary side by side (each a grid cell with `direction:
   down`), one flow edge between them; row 2: an invisible hole under the
   build zone and the failure end under the boundary, `vertical-gap: 80` so
-  the failure edge shows past its label. One `step` width class
-  (`{width: 184; height: 48}`), the passthrough `-- --elk-padding
-  "[top=44,left=24,bottom=20,right=24]"`: a 10-rank CI/CD tower of 550x1263
-  became 754x657 (the file: playbooks/flowchart.md rule 7).
+  the failure edge shows past its label. One `step` width class and
+  `compact` on every step: a 10-rank CI/CD tower of 550x1263 became 794x733
+  with its key (the file: playbooks/flowchart.md rule 7).
 - Sequence: at most 9 messages and one one-line note (`[note; compact]`,
   never while an activation bar is open: it is drawn over the bar), or 7
   messages and one two-operand `alt`. Prune inferred replies first, then
@@ -87,7 +86,7 @@ machine: the happy path down a spine of `compact` states in one width class
 (`{width: 140; height: 48}`), every exit into one side column, and a hidden
 `ghost` (the theme class) on the far side of each 2-way fork, its edge
 labelled like its sibling: an order lifecycle went from 356x779 (aspect 0.46)
-to 395x599, 630x598 with the key its markers need at the right.
+to 395x599, 642x598 with the key its markers need at the right.
 
 ### E-contrast
 Seen: a label below 3:1 against its fill: a raw `style.fill` or
@@ -103,12 +102,10 @@ as a light card on any page) and turn raw fills into role classes. Opt-in
 dark mode: reference/design-system.md section 9.
 
 ### W-non-ascii
-Seen: a label holds a non-ASCII character (arrow, accent, dash, emoji, CJK);
-the tripwire also names the `.d2` line (comments count too).
-Fix: plain ASCII equivalents (`->`, `e`, `-`); markers come from icons or a
-class, never emoji. Text in another script has no ASCII equivalent:
-translate it into short English, in the brief and the .d2 together (SKILL.md,
-Hard rules); the user's term goes in a brief comment.
+Seen: a label holds a non-ASCII character (arrow, accent, curly quote, long
+dash, emoji); the tripwire also names the `.d2` line (comments count too).
+Fix: plain ASCII equivalents (`->`, `e`, `"`, `-`); markers come from icons
+or a class, never emoji (SKILL.md, Hard rules).
 
 ## Collisions
 
@@ -181,9 +178,13 @@ Fix: the E-edge-through-node fix.
 
 ### W-edge-crossing
 Seen: two edges cross. Container children keep their declaration order, so a
-target declared on the wrong side of its sibling forces a crossing.
+target declared on the wrong side of its sibling forces a crossing. A broker
+in the top row over a producer and a consumer that the gateway also calls
+crosses the gateway's edge.
 Fix: declare each container's children in the order of the nodes they connect
-to (orders under web, billing under mobile) and the main path first.
+to (orders under web, billing under mobile) and the main path first. Broker:
+into the lower zone between producer and consumer, `consumer <- broker`, each
+service spanning its store and half the broker (playbooks/architecture.md rule 2).
 
 ### W-edge-overlap
 Seen: two edges run on top of each other: bypass edges in a one-row grid.
@@ -332,12 +333,10 @@ counts.
 
 ### S-missing-node
 Seen: a node of the brief is not drawn (error), or (INFO) the request names a
-term that no brief label, key or `out:` entry covers; a request in another
-script is not searchable (INFO).
+term that no brief label, key or `out:` entry covers.
 Fix: draw it with the brief's key (and its edges); a node hidden with
 `style.opacity: 0` is not drawn. A hidden grid slot is fine: list the node in it (`t1.x`).
-INFO: add the term to the brief, or to `out:` when it is left out on purpose;
-for a request in another script, check each of its nouns by hand.
+INFO: add the term to the brief, or to `out:` when it is left out on purpose.
 
 ### S-extra-node
 Seen: a node that is not in the brief: often a typo in an edge end
@@ -380,9 +379,7 @@ Fix: write each edge once.
 ### S-node-label
 Seen: a node's text differs from the brief (drifted wording, or a label cut
 by an unquoted `#`).
-Fix: use the brief's label: the user's words, in English (a brief label in
-another script: translate it in the brief and the .d2 together); quote
-labels holding `#`.
+Fix: use the brief's label, the user's words; quote labels holding `#`.
 
 ### S-node-label-case
 Seen: the label differs from the brief only in case.
@@ -463,8 +460,13 @@ Fix: remove the edge; if the flow really continues, it is not an end (new
 state or new outcome in the brief).
 
 ### S-decision
-Seen: a decision has fewer than 2 exits, or unlabelled branches.
-Fix: label every branch (`yes` / `no`, or the condition).
+Seen: a decision has fewer than 2 exits, or unlabelled branches. Inside a
+failure scope (a container with one `failure` edge out), that edge counts as
+the decision's reject exit; with two or more, none does.
+Fix: label every branch (`yes` / `no`, or the condition). A decision inside a
+failure scope takes no reject edge of its own: the scope's one failure edge
+carries it, labelled with both causes (`release -> rollback: any failure or
+rejected`, playbooks/flowchart.md rule 4).
 
 ### S-dead-end
 Seen: a flowchart step has no outgoing edge and is not marked `{end}`.

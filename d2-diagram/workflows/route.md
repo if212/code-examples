@@ -54,11 +54,8 @@ Tie-breakers:
 - One parent each -> tree; several parents, cycles, grants -> depgraph ("dependency tree" is
   depgraph, "class hierarchy" is class). Two states in one image -> compare; 3+ states,
   slides or animation -> steps. Past, exact times -> timeline; future periods -> roadmap.
-- Chinese "architecture diagram" (jiagou tu) names a genre, not row 23: of an organization or of
-  functions -> tree; technical or business architecture drawn as layers (access, application, data
-  layers; front, middle and back office) -> stack; of a deployment -> deployment; warehouse
-  layering (ODS, DWD, DWS, ADS) -> pipeline. "Topology": of a deployment -> deployment, of calls
-  between services -> architecture, of a network -> network.
+- "Topology": of a deployment -> deployment, of calls between services -> architecture, of a
+  network -> network.
 
 Assume, ask, split. ASSUME by default: draw; read the repo for facts; list the reading in `Assumed:`.
 - ASK one question (default inside) only when: the facts are the user's and absent from request,

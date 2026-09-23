@@ -14,7 +14,8 @@ usage: python3 dev/tests/structure/check.py [--skill DIR] [-v]     (wrapper: sh 
   (d) every code d2lint.py and semcheck.py can emit has a `### <CODE>` heading in
       workflows/review-and-fix.md, and every code heading is a code the scripts emit
   (e) ASCII tripwire: .md .d2 .sh .py .cjs .brief files outside dev/, and dev's own docs
-  (f) SKILL.md is at most 170 lines and 9 KB
+  (f) size budgets: SKILL.md at most 170 lines and 9 KB; every workflow, playbook, reference and
+      template file within its line budget (BUDGETS; B56: design-system.md may hold ~400 lines)
   (g) no file names a path deleted in the rewrite (PLAN section 3), and none of them exists
   (h) no __pycache__, .pyc, .DS_Store, __MACOSX or editor leftovers outside dev/
   (i) every class used in templates/ and in ```d2 blocks of the docs is defined by a theme
@@ -30,6 +31,9 @@ usage: python3 dev/tests/structure/check.py [--skill DIR] [-v]     (wrapper: sh 
       shape" or say a layout change cannot fix it (a warning ships only when its recipe failed)
   (o) the recipe lookup reads whole recipes: the `-A N` grep context that SKILL.md and
       workflows/review-and-fix.md give is the same and covers the longest `### ` section
+  (p) no bytecode can be written into the skill (B57): every .py file sets
+      `sys.dont_write_bytecode = True` before it imports a script of the skill, and every .sh
+      file that runs python sets PYTHONDONTWRITEBYTECODE=1
 exit: 0 all checks pass (warnings allowed) | 1 a check failed | 2 usage error
 """
 import argparse
@@ -478,15 +482,41 @@ def check_e(skill, rep):
     rep.check('e', 'ASCII tripwire (no tabs, no non-ASCII)', errs, note='%d files' % len(files))
 
 
+# (f) line budgets of what the agent reads (the first matching pattern wins); SKILL.md also has 9 KB
+BUDGETS = (
+    ('SKILL.md', 170),
+    ('workflows/route.md', 100), ('workflows/brief.md', 250), ('workflows/icons.md', 100),
+    ('workflows/review-and-fix.md', 700),      # read one recipe at a time (grep `^### CODE` -A N)
+    ('playbooks/*.md', 150),
+    ('reference/design-system.md', 420),       # B56: emphasis, keys, type scale and special shapes
+    ('reference/syntax.md', 520), ('reference/layout.md', 380), ('reference/icons.md', 280),
+    ('reference/export.md', 260), ('reference/brand-snowflake.md', 200),
+    ('workflows/*.md', 250), ('reference/*.md', 250),
+    ('templates/neutral-theme.d2', 150), ('templates/snowflake-brand.d2', 150), ('templates/*.d2', 80),
+)
+
+
 def check_f(skill, rep):
     raw = open(os.path.join(skill, 'SKILL.md'), 'rb').read()
     lines, size = raw.count(b'\n'), len(raw)
     errs = []
-    if lines > 170:
-        errs.append('SKILL.md has %d lines (max 170)' % lines)
     if size > 9 * 1024:
         errs.append('SKILL.md is %d bytes (max %d)' % (size, 9 * 1024))
-    rep.check('f', 'SKILL.md size', errs, note='%d lines, %d bytes' % (lines, size))
+    files = ['SKILL.md'] + sorted(os.path.relpath(f, skill) for d in ('workflows', 'playbooks', 'reference',
+                                                                       'templates')
+                                  for f in glob.glob(os.path.join(skill, d, '*')) if f.endswith(('.md', '.d2')))
+    tightest = []
+    for rel in files:
+        cap = next((n for pat, n in BUDGETS if fnmatch.fnmatch(rel, pat)), None)
+        if cap is None:
+            errs.append('%s has no line budget in check.py BUDGETS' % rel)
+            continue
+        n = open(os.path.join(skill, rel), 'rb').read().count(b'\n')
+        if n > cap:
+            errs.append('%s has %d lines (budget %d)' % (rel, n, cap))
+        tightest.append((cap - n, rel, n, cap))
+    near = ', '.join('%s %d/%d' % (r, n, c) for _, r, n, c in sorted(tightest)[:3])
+    rep.check('f', 'size budgets', errs, note='SKILL.md %d lines, %d bytes; tightest: %s' % (lines, size, near))
 
 
 def check_g(skill, rep):
@@ -726,6 +756,42 @@ def check_o(skill, rep):
               % ('/'.join(str(v) for v in sorted(set(found.values()))) or '?', name, longest), errs)
 
 
+SIBLINGS = ('d2lint', 'semcheck', 'svgpost', 'pngstats', 'd2raster', 'contrast', 'theme_rules')
+
+
+def check_p(skill, rep):
+    """B57: nothing may write __pycache__ into the skill: an import of a skill script compiles it into
+    scripts/__pycache__ unless the importer turned bytecode off first"""
+    errs = []
+    imp = re.compile(r'^\s*(?:import|from)\s+(%s)\b' % '|'.join(SIBLINGS), re.M)
+    for rel in all_files(skill):
+        if '/dist/' in rel:
+            continue
+        path = os.path.join(skill, rel)
+        if rel.endswith('.py'):
+            text = read(path)
+            off = text.find('sys.dont_write_bytecode = True')
+            first = imp.search(text)
+            if off < 0:
+                errs.append('%s: never sets sys.dont_write_bytecode = True' % rel)
+            elif first and first.start() < off:
+                errs.append('%s:%d: imports %s before sys.dont_write_bytecode = True' % (
+                    rel, text.count('\n', 0, first.start()) + 1, first.group(1)))
+        elif rel.endswith('.sh'):
+            text = read(path)
+            code = '\n'.join(l for l in text.splitlines() if not l.lstrip().startswith('#'))
+            runs_py = re.search(r'\bpython3\b|"\$PY"|\$PY\b', code)
+            if runs_py and 'PYTHONDONTWRITEBYTECODE=1' not in code:
+                errs.append('%s: runs python without PYTHONDONTWRITEBYTECODE=1' % rel)
+            for m in imp.finditer(code):      # python heredocs that import a skill script
+                before = code[:m.start()]
+                if 'sys.dont_write_bytecode = True' not in before[before.rfind('<<'):]:
+                    errs.append('%s:%d: a heredoc imports %s before sys.dont_write_bytecode = True' % (
+                        rel, text.count('\n', 0, text.find(m.group(0))) + 1, m.group(1)))
+    rep.check('p', 'no bytecode: python sets dont_write_bytecode before skill imports, shell exports '
+              'PYTHONDONTWRITEBYTECODE', errs)
+
+
 def check_l(skill, rep):
     errs, warns = [], []
     tpls = sorted(p for p in glob.glob(os.path.join(skill, 'templates', '*.d2')))
@@ -813,7 +879,8 @@ def main():
     check_m(skill, rep, front)
     check_n(skill, rep)
     check_o(skill, rep)
-    n = 15
+    check_p(skill, rep)
+    n = 16
     print('structure: %d/%d checks pass%s%s' % (
         n - len(rep.failed), n, (', failed: ' + ' '.join(rep.failed)) if rep.failed else '',
         (', warnings: ' + ' '.join(rep.warned)) if rep.warned else ''))

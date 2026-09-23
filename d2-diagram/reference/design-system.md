@@ -148,8 +148,9 @@ By role; the family is the bundled font (`assets/fonts/README.md`, applied by d2
   d2check changes only size and color.
 - No title inside the diagram: the page caption carries it. C4 is the one
   exception, its notation names the view: one `title` node, "Container
-  diagram: <system>", centered above (a `top-left` title sits beside the
-  diagram and widens the canvas by its own width; markdown labels clip).
+  diagram: <system>" or "System context: <system>", centered above (a
+  `top-left` title sits beside the diagram and widens the canvas by its own
+  width; markdown labels clip).
 
 ## 6. Strokes, radii, spacing
 
@@ -208,8 +209,9 @@ pending -> cancelled: cancel {class: dep}
 ## 8. Keys
 
 A color, dash, weight or marker that carries meaning no label states gets a
-key; semcheck fails a diagram that needs one and has none, or a key that
-leaves one of those encodings out (`S-key`). Pick the key by the encoding:
+key. semcheck (`S-key`) fails a missing key, or one that leaves an encoding
+out, for edge classes, `external` and `muted` nodes and tinted panels; a
+marker's key line is yours to add. Pick the key by the encoding:
 
 | Encoding | Key | Model |
 |---|---|---|
@@ -232,9 +234,10 @@ their notation or their labels carry the meaning.
   lost. Name what it cannot show: `legacy (gray label)` for `muted`,
   `final state (double border)`.
 - d2check restyles and places the legend: the "KEY" title, the frame, 1px
-  swatch outlines; right of the diagram when that fits the column, else in a
-  row under it (wrapping when long). Never style it or position it by hand
-  (d2 ignores `near` and `position` in `d2-legend`).
+  swatch outlines; right of the diagram, top-aligned, when that fits the
+  column and the key is no taller than the diagram, else in rows under it.
+  Never style it or position it by hand (d2 ignores `near` and `position` in
+  `d2-legend`).
 
 ```d2
 # cwd: ../templates

@@ -1,9 +1,0 @@
-...@mini-theme
-direction: right
-logs: User behaviour logs {class: service}
-kafka: Kafka {class: service}
-flink: Flink {class: service}
-hive: Hive {class: datastore}
-logs -> kafka: publish {class: dep}
-kafka -> flink: consume {class: dep}
-flink -> hive: write {class: dep}

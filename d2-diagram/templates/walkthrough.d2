@@ -52,9 +52,9 @@ aws.cart -> aws.cartdb: SQL {class: secondary}
 # The key: the parts off the path, the path, the routes off it.
 vars: {
   d2-legend: {
-    a: {class: ghost}
-    b: {class: ghost}
-    m: off the path {class: [muted; compact; svc]}
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    m: off the path (gray label) {class: [muted; compact; svc]}
     a -> b: the path {class: flow}
     a -> b: other routes {class: secondary}
   }

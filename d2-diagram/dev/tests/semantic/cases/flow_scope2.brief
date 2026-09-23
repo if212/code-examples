@@ -1,0 +1,22 @@
+# request: "Release runbook: run the e2e tests, then a manual approval; once
+#  approved, a 10% canary, then the full rollout. Any failure rolls back; a
+#  failed rollout also pages the on-call engineer."
+type: flowchart
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  release: Release
+  release.e2e: Run e2e tests {start}
+  release.approval: Approve? {decision}
+  release.canary: Canary 10%
+  release.rollout: Full rollout {end}
+  rollback: Roll back {end}
+  page: Page on-call {end}
+edges:
+  release.e2e -> release.approval
+  release.approval -> release.canary: approved
+  release.canary -> release.rollout
+  release -> rollback: any failure
+  release -> page: rollout failed
