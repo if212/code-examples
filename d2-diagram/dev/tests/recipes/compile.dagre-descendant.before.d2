@@ -1,0 +1,7 @@
+# Before: dagre (here from -l dagre) cannot draw an edge from a container into its own child.
+# expect-error: goes from a container to a descendant
+# d2: -l dagre
+...@neutral-theme
+direction: down
+a: Orders {class: zone; api: Orders API {class: service}}
+a -> a.api: {class: dep}

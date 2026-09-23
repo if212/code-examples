@@ -4,6 +4,7 @@ blank, garbled or cropped image. Standard library only.
 
 usage:
   d2raster.py IN.svg --out OUT.png [--scale 2] [--width PX] [--dark]     one PNG (PNG deliverables)
+  d2raster.py IN.svg --out OUT.pdf                                       one vector PDF page (PDF deliverables)
   d2raster.py --inspect PREFIX=IN.svg [PREFIX=IN.svg ...] [--column 800] [--dark] [--no-detail]
       the review set d2check reads, per SVG:
         PREFIX.col.png   the reader's view: displayed width min(svg width, column) at 1x
@@ -14,10 +15,10 @@ usage:
 Routes: playwright (raster.cjs) and chrome (any Chrome/Chromium binary) render the embedded fonts and
 icons exactly = faithful. rsvg-convert ignores embedded fonts (DejaVu, no bold/italic) = approximate:
 judge topology and colour only. cairosvg paints d2 SVGs blank with black bars; it runs only when asked
-for and its output is checked and rejected like any other.
+for and its output is checked and rejected like any other. PDF: playwright, then chrome (no approximate
+route). Text is antialiased in grayscale (no LCD colour fringes). Outputs are written with mode 644.
 Every PNG is checked by pngstats (blank, missing fill colours, black bars, cropped); a route whose output
 fails is discarded and the next one is tried.
-exit: 0 faithful | 3 only an approximate route worked | 1 nothing usable
 """
 import argparse
 import base64
@@ -25,6 +26,7 @@ import json
 import math
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -38,6 +40,25 @@ import pngstats  # noqa: E402
 FAITHFUL = ("playwright", "chrome")
 AUTO = ["playwright", "chrome", "rsvg"]
 READ_LIMIT = 2000  # px on the long edge that the Read tool shows without downscaling
+DOCTOR = "sh %s" % shlex.quote(os.path.join(HERE, "doctor.sh"))
+EPILOG = """exit codes (shared by every script of the skill):
+  0   faithful: rendered by Chromium (playwright or a Chrome binary)
+  1   hard failure: no usable output (no renderer worked, or the input is not a d2 SVG)
+  3   degraded: only rsvg-convert worked - fonts are substitutes, do not ship the PNG
+  64  usage error
+examples:
+  python3 d2raster.py docs/flow.svg --out docs/flow.png --scale 2     PNG deliverable (2x)
+  python3 d2raster.py docs/flow.svg --out docs/flow.pdf               vector PDF deliverable
+  python3 d2raster.py --inspect /tmp/d2work/flow/flow=docs/flow.svg   the review set (d2check does this)
+setup problems (no node, playwright or Chromium): %s""" % DOCTOR
+
+
+class ArgParser(argparse.ArgumentParser):
+    """argparse with the skill's exit convention: a usage error exits 64, not 2"""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        self.exit(64, "%s: error: %s (run with --help for the options)\n" % (self.prog, message))
 
 
 def svg_geometry(path):
@@ -46,7 +67,7 @@ def svg_geometry(path):
     tag = re.search(r"<svg\b[^>]*>", head)  # the outer <svg>; the inner d2-svg always has a width
     m = re.search(r'viewBox="([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+)"', tag.group(0) if tag else "")
     if not m:
-        raise ValueError("no viewBox in %s" % path)
+        raise ValueError("no viewBox in %s - is it an SVG written by d2?" % path)
     w = re.search(r'\swidth="([\d.]+)"', tag.group(0))
     return float(m.group(3)), float(m.group(4)), (float(w.group(1)) if w else None)
 
@@ -86,9 +107,13 @@ def find_chrome():
                                               os.path.expanduser("~/Library/Caches/ms-playwright")]):
         if not r:
             continue
-        for pat in ("chromium-*/chrome-linux/chrome", "chromium-*/chrome-linux64/chrome",
-                    "chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium",
-                    "chromium_headless_shell-*/chrome-linux/headless_shell"):
+        # Playwright's layouts before 1.57 (chrome-linux, chrome-mac) and after (Chrome for Testing builds)
+        cft = "Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+        for pat in ("chromium-*/chrome-linux/chrome", "chromium-*/chrome-linux64/chrome", "chromium-*/chrome-linux-arm64/chrome",
+                    "chromium-*/chrome-mac/Chromium.app/Contents/MacOS/Chromium", "chromium-*/chrome-mac-arm64/" + cft,
+                    "chromium-*/chrome-mac-x64/" + cft, "chromium_headless_shell-*/chrome-linux/headless_shell",
+                    "chromium_headless_shell-*/chrome-mac/headless_shell",
+                    "chromium_headless_shell-*/chrome-headless-shell-*/chrome-headless-shell"):
             hits = sorted(glob.glob(os.path.join(r, pat)), reverse=True)
             if hits:
                 return hits[0]
@@ -106,13 +131,30 @@ def route_playwright(jobs):
         json.dump(jobs, fh)
     try:
         for attempt in (1, 2):  # a browser launch can fail transiently on a loaded machine: retry once
-            code, log = run(["node", os.path.join(HERE, "raster.cjs"), "--jobs", jf])
-            if code in (0, 10):
+            code, log = run(["node", os.path.join(HERE, "raster.cjs"), "--jobs", jf, "--quiet"])
+            if code == 0 or code == 64 or "module not found" in log:
                 break
     finally:
         os.remove(jf)
-    last = log.strip().splitlines()[-1] if log.strip() else "exit %d" % code
+    last = log.strip().splitlines()[0] if log.strip() else "exit %d" % code
     return code == 0, ("ok" if code == 0 else last)
+
+
+def chrome_base():
+    """Chrome makes a Unix socket under $TMPDIR (SingletonSocket), and a socket path over ~100 characters
+    makes it crash (SIGTRAP): with a long $TMPDIR, Chrome gets /tmp instead"""
+    base = tempfile.gettempdir()
+    if len(base) > 48 and os.path.isdir("/tmp") and os.access("/tmp", os.W_OK):
+        base = "/tmp"
+    return base
+
+
+def chrome_cmd(exe, tmp, extra):
+    cmd = [exe, "--headless", "--disable-gpu", "--disable-lcd-text", "--hide-scrollbars", "--mute-audio",
+           "--no-first-run", "--no-default-browser-check", "--user-data-dir=" + os.path.join(tmp, "prof")] + extra
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
+        cmd.insert(1, "--no-sandbox")
+    return cmd
 
 
 def route_chrome(jobs):
@@ -121,28 +163,37 @@ def route_chrome(jobs):
         return False, "no Chrome/Chromium binary found (set CHROME_PATH)"
     for j in jobs:
         W, H, _ = svg_geometry(j["in"])
-        css_w = int(round(j["width"] or W))
-        css_h = int(math.ceil(H * css_w / W - 0.01))
-        tmp = tempfile.mkdtemp(prefix="d2raster-")
+        base = chrome_base()
+        tmp = tempfile.mkdtemp(prefix="d2r-", dir=base)
+        env = dict(os.environ, TMPDIR=base)
         try:
-            uri = "data:image/svg+xml;base64," + base64.b64encode(open(j["in"], "rb").read()).decode()
             page = os.path.join(tmp, "page.html")
+            if j["out"].lower().endswith(".pdf"):
+                inline = re.sub(r"^<\?xml[^>]*>\s*", "", open(j["in"], encoding="utf-8").read())
+                with open(page, "w", encoding="utf-8") as f:
+                    f.write('<!doctype html><html><head><style>@page{size:%spx %spx;margin:0}html,body{margin:0}'
+                            'svg{display:block}</style></head><body>%s</body></html>' % (W, H, inline))
+                cmd = chrome_cmd(exe, tmp, ["--no-pdf-header-footer", "--print-to-pdf-no-header",
+                                            "--print-to-pdf=" + os.path.abspath(j["out"]), "file://" + page])
+                code, log = run(cmd, timeout=90, env=env)
+                if code != 0 or not os.path.exists(j["out"]) or not os.path.getsize(j["out"]):
+                    return False, "%s: exit %d: %s" % (os.path.basename(exe), code, log.strip()[-160:])
+                continue
+            css_w = int(round(j["width"] or W))
+            css_h = int(math.ceil(H * css_w / W - 0.01))
+            uri = "data:image/svg+xml;base64," + base64.b64encode(open(j["in"], "rb").read()).decode()
             with open(page, "w") as f:
                 f.write('<!doctype html><html><body style="margin:0;background:%s"><img src="%s" '
                         'style="display:block;width:%dpx;height:auto"></body></html>' % (
                             "#0d1117" if j.get("dark") else "#fff", uri, css_w))
             # new-headless Chrome's viewport is ~87px shorter than --window-size: oversize the window, then crop
-            cmd = [exe, "--headless", "--disable-gpu", "--hide-scrollbars", "--mute-audio", "--no-first-run",
-                   "--no-default-browser-check", "--user-data-dir=" + os.path.join(tmp, "prof"),
-                   "--force-device-scale-factor=%s" % j["scale"], "--window-size=%d,%d" % (css_w, css_h + 240),
-                   "--screenshot=" + os.path.abspath(j["out"]), "file://" + page]
-            if hasattr(os, "geteuid") and os.geteuid() == 0:
-                cmd.insert(1, "--no-sandbox")
+            extra = ["--force-device-scale-factor=%s" % j["scale"], "--window-size=%d,%d" % (css_w, css_h + 240),
+                     "--screenshot=" + os.path.abspath(j["out"]), "file://" + page]
             if j.get("dark"):
-                cmd.insert(1, "--force-dark-mode")
-            code, log = run(cmd, timeout=90)
+                extra.insert(0, "--force-dark-mode")
+            code, log = run(chrome_cmd(exe, tmp, extra), timeout=90, env=env)
             if code != 0 or not os.path.exists(j["out"]) or not os.path.getsize(j["out"]):
-                return False, "%s: %s" % (os.path.basename(exe), log.strip()[-160:])
+                return False, "%s: exit %d: %s" % (os.path.basename(exe), code, log.strip()[-160:])
             pngstats.crop_png(j["out"], int(round(css_w * j["scale"])), int(round(css_h * j["scale"])))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
@@ -187,7 +238,7 @@ ROUTES = {"playwright": route_playwright, "chrome": route_chrome, "rsvg": route_
 
 
 def verify(jobs):
-    """pngstats every output; returns (all_ok, lines)"""
+    """pngstats every output (a PDF: its header); returns (all_ok, lines)"""
     lines, ok = [], True
     for j in jobs:
         if not os.path.exists(j["out"]):
@@ -197,6 +248,12 @@ def verify(jobs):
             ok = False
             lines.append("raster: %s missing" % j["out"])
             continue
+        if j["out"].lower().endswith(".pdf"):
+            with open(j["out"], "rb") as fh:
+                good = fh.read(5) == b"%PDF-"
+            ok = ok and good
+            lines.append("raster: pdf  %s %s%s" % (j["out"], j["note"], "" if good else " REJECTED (not a PDF)"))
+            continue
         st = pngstats.analyse(j["out"], j["check_svg"], j.get("ebox"), check_fills=not j.get("dark"))
         exp_w = int(round((j["width"] or svg_geometry(j["in"])[0]) * j["scale"]))
         size_ok = abs(st["size"][0] - exp_w) <= 2
@@ -204,14 +261,14 @@ def verify(jobs):
         ok = ok and good
         lines.append("raster: %-4s %s %dx%d %s%s%s%s" % (
             j["kind"], j["out"], st["size"][0], st["size"][1], j["note"], "" if good else " REJECTED (%s" % st["verdict"],
-            "" if good else ", fills %d/%d, ink %.1f%%%s)" % (st["fills_found"], st["fills_expected"], st["ink"] * 100,
-                                                                "" if size_ok else ", expected width %d" % exp_w),
+            "" if good else ", fills %d/%d, lines %d/%d, ink %.1f%%%s)" % (
+                st["fills_found"], st["fills_expected"], st["lines_found"], st["lines_expected"], st["ink"] * 100,
+                "" if size_ok else ", expected width %d" % exp_w),
             (" " + st["cropped"]) if st["cropped"] else ""))
     return ok, lines
 
 
-def render(jobs, route_pref):
-    routes = AUTO if route_pref == "auto" else [route_pref]
+def render(jobs, routes, quiet=False):
     tried = []
     for r in routes:
         for j in jobs:
@@ -229,12 +286,16 @@ def render(jobs, route_pref):
                     print(ln)
             for j in jobs:
                 if os.path.exists(j["out"]):
-                    os.replace(j["out"], j["out"] + ".rejected-%s.png" % r)
+                    os.replace(j["out"], j["out"] + ".rejected-%s%s" % (r, os.path.splitext(j["out"])[1]))
             continue
-        for t in tried:
-            print("raster: skipped %s" % t)
-        for ln in lines:
-            print(ln)
+        for j in jobs:
+            if os.path.exists(j["out"]):
+                os.chmod(j["out"], 0o644)
+        if not quiet:
+            for t in tried:
+                print("raster: skipped %s" % t)
+            for ln in lines:
+                print(ln)
         return r
     for t in tried:
         print("raster: failed %s" % t)
@@ -242,58 +303,89 @@ def render(jobs, route_pref):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("svg", nargs="?")
-    ap.add_argument("--out", help="PNG to write (single-PNG mode)")
-    ap.add_argument("--scale", "--dpr", type=float, default=2.0, dest="scale", help="pixel ratio (single-PNG mode, default 2)")
+    ap = ArgParser(prog="d2raster.py", description=__doc__.split("\n\n")[0].replace("\n", " "),
+                   epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("svg", nargs="?", metavar="IN.svg", help="SVG written by d2check (single-output mode)")
+    ap.add_argument("--out", metavar="OUT.png|OUT.pdf", help="file to write (single-output mode); .pdf makes a vector PDF")
+    ap.add_argument("--scale", "--dpr", type=float, default=2.0, dest="scale", help="pixel ratio of a PNG (default 2)")
     ap.add_argument("--width", type=float, default=0, help="CSS width to display the SVG at (default: its own width)")
     ap.add_argument("--inspect", nargs="+", metavar="PREFIX=IN.svg", help="write the d2check review set per SVG")
     ap.add_argument("--column", type=float, default=800, help="doc column width for the reader's view (default 800)")
     ap.add_argument("--dark", action="store_true", help="also render prefers-color-scheme: dark")
     ap.add_argument("--no-detail", action="store_true", help="skip PREFIX.2x.png")
+    ap.add_argument("--quiet", action="store_true", help="print only the route line (and problems)")
     ap.add_argument("--route", default=os.environ.get("D2CHECK_ROUTE", "auto") or "auto",
-                    choices=["auto", "playwright", "chrome", "rsvg", "cairosvg"])
+                    choices=["auto", "playwright", "chrome", "rsvg", "cairosvg"],
+                    help="force one renderer (default $D2CHECK_ROUTE, else auto)")
     a = ap.parse_args()
+    if not 0 < a.scale <= 8:
+        ap.error("--scale wants a pixel ratio in (0, 8], e.g. 2")
     jobs = []
-    if a.inspect:
-        for spec in a.inspect:
-            prefix, _, svg = spec.partition("=")
-            if not svg:
-                ap.error("--inspect wants PREFIX=IN.svg, got %r" % spec)
-            W, H, _ = svg_geometry(svg)
-            cw = display_width(svg, a.column)
-            ebox = pngstats.expected_box(svg)
-            base = {"check_svg": svg, "ebox": ebox}
-            jobs.append(dict(base, kind="col", **{"in": svg, "out": prefix + ".col.png", "scale": 1, "width": cw,
-                        "note": "(reader's view: %dpx column, scale %.2f)" % (a.column, cw / W)}))
-            if not a.no_detail:
-                # round down, with a few px of margin: Chromium rounds fractional device scales up
-                det = min(2.0, math.floor((READ_LIMIT - 4) / max(W, H) * 1000) / 1000)
-                jobs.append(dict(base, kind="2x", **{"in": svg, "out": prefix + ".2x.png", "scale": det, "width": 0,
-                            "note": "(detail %.2fx)" % det}))
-            if os.path.exists(prefix + ".ann.svg"):
-                jobs.append(dict(base, kind="ann", **{"in": prefix + ".ann.svg", "out": prefix + ".ann.png", "scale": 1,
-                            "width": cw, "note": "(numbered findings)"}))
-            if a.dark:
-                jobs.append(dict(base, kind="dark", dark=True, **{"in": svg, "out": prefix + ".dark.png", "scale": 1,
-                            "width": cw, "note": "(dark page, prefers-color-scheme: dark)"}))
-    elif a.svg and a.out:
-        W, H, _ = svg_geometry(a.svg)
-        jobs.append({"kind": "png", "in": a.svg, "out": a.out, "scale": a.scale, "width": a.width, "dark": a.dark,
-                     "check_svg": a.svg, "ebox": pngstats.expected_box(a.svg), "note": "(%.2fx)" % a.scale})
-    else:
-        ap.error("give IN.svg --out OUT.png, or --inspect PREFIX=IN.svg")
+    try:
+        if a.inspect:
+            for spec in a.inspect:
+                prefix, _, svg = spec.partition("=")
+                if not svg:
+                    ap.error("--inspect wants PREFIX=IN.svg, got %r" % spec)
+                W, H, _ = svg_geometry(svg)
+                cw = display_width(svg, a.column)
+                ebox = pngstats.expected_box(svg)
+                base = {"check_svg": svg, "ebox": ebox}
+                jobs.append(dict(base, kind="col", **{"in": svg, "out": prefix + ".col.png", "scale": 1, "width": cw,
+                            "note": "(reader's view: %dpx column, scale %.2f)" % (a.column, cw / W)}))
+                if not a.no_detail:
+                    # round down, with a few px of margin: Chromium rounds fractional device scales up
+                    det = min(2.0, math.floor((READ_LIMIT - 4) / max(W, H) * 1000) / 1000)
+                    jobs.append(dict(base, kind="2x", **{"in": svg, "out": prefix + ".2x.png", "scale": det, "width": 0,
+                                "note": "(detail %.2fx)" % det}))
+                if os.path.exists(prefix + ".ann.svg"):
+                    jobs.append(dict(base, kind="ann", **{"in": prefix + ".ann.svg", "out": prefix + ".ann.png", "scale": 1,
+                                "width": cw, "note": "(numbered findings)"}))
+                if a.dark:
+                    jobs.append(dict(base, kind="dark", dark=True, **{"in": svg, "out": prefix + ".dark.png", "scale": 1,
+                                "width": cw, "note": "(dark page, prefers-color-scheme: dark)"}))
+        elif a.svg and a.out:
+            if a.svg.lower().endswith(".d2"):
+                ap.error("%s is the d2 source: render it with sh %s %s, then rasterize the SVG it writes" % (
+                    a.svg, shlex.quote(os.path.join(HERE, "d2check.sh")), shlex.quote(a.svg)))
+            if not a.out.lower().endswith((".png", ".pdf")):
+                ap.error("--out must end in .png or .pdf (SVG comes from d2check.sh): %s" % a.out)
+            W, H, _ = svg_geometry(a.svg)
+            if a.out.lower().endswith(".pdf"):
+                jobs.append({"kind": "pdf", "in": a.svg, "out": a.out, "scale": 1, "width": 0, "dark": False,
+                             "check_svg": a.svg, "note": "(vector, %dx%d px page)" % (W, H)})
+            else:
+                jobs.append({"kind": "png", "in": a.svg, "out": a.out, "scale": a.scale, "width": a.width, "dark": a.dark,
+                             "check_svg": a.svg, "ebox": pngstats.expected_box(a.svg), "note": "(%.2fx)" % a.scale})
+        else:
+            ap.error("give IN.svg --out OUT.png (or OUT.pdf), or --inspect PREFIX=IN.svg")
+    except (OSError, ValueError) as e:
+        print("d2raster: %s - give the SVG that d2check.sh wrote (the path is relative to %s)" % (
+            ("%s: %s" % (e.filename, e.strerror)) if isinstance(e, OSError) and e.filename else e, os.getcwd()),
+            file=sys.stderr)
+        return 1
     for j in jobs:
-        d = os.path.dirname(os.path.abspath(j["out"]))
-        os.makedirs(d, exist_ok=True)
-    used = render(jobs, a.route)
+        os.makedirs(os.path.dirname(os.path.abspath(j["out"])), exist_ok=True)
+    pdf = any(j["out"].lower().endswith(".pdf") for j in jobs)
+    if a.route == "auto":
+        routes = ["playwright", "chrome"] if pdf else AUTO
+    elif pdf and a.route not in FAITHFUL:
+        ap.error("a PDF needs a Chromium route (playwright or chrome), not %s" % a.route)
+    else:
+        routes = [a.route]
+    used = render(jobs, routes, a.quiet)
     if used is None:
-        print("route: none - NO USABLE RASTER: not visually reviewed")
+        if a.inspect:
+            print("route: none - NO USABLE RASTER: not visually reviewed. Check the setup: %s" % DOCTOR)
+        else:
+            print("route: none - no %s written: no renderer worked (raster: lines above). Check the setup: %s" % (
+                "PDF" if pdf else "PNG", DOCTOR))
         return 1
     if used in FAITHFUL:
         print("route: %s (faithful)" % used)
         return 0
-    print("route: %s (approximate: embedded fonts ignored - judge topology and colour only, not label fit)" % used)
+    print("route: %s (approximate: embedded fonts ignored - judge topology and colour only, not label fit; "
+          "for a faithful render see %s)" % (used, DOCTOR))
     return 3
 
 

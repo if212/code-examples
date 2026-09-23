@@ -1,0 +1,6 @@
+# expect: E-label-overflow
+# expect-text: end cap
+# expect-text: set width:
+# a fixed width pushes the queue's end cap into the label
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+q: "Queue\nKafka topic" {shape: queue; width: 110}

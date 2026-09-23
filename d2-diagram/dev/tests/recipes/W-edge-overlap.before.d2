@@ -1,0 +1,14 @@
+# Before: in a one-row grid two bypass edges run on top of each other (and through nodes).
+# expect: E-edge-through-node
+...@neutral-theme
+grid-rows: 1
+horizontal-gap: 60
+extract: Extract {class: service}
+stage: Stage {class: service}
+transform: Transform {class: [service; focal]}
+publish: Publish {class: service}
+extract -> stage: {class: flow}
+stage -> transform: {class: flow}
+transform -> publish: {class: flow}
+extract -> transform: {class: dep}
+stage -> publish: {class: dep}

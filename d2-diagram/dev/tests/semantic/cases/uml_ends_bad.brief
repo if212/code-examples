@@ -1,0 +1,11 @@
+# the multiplicity is expected at the Order end, but the diagram puts it at LineItem
+type: class
+nodes:
+  Order
+  LineItem
+  Method
+  Card
+edges:
+  Order <- LineItem: contains {src: diamond-filled, src-label: "1..*"}
+  Order -> Method: pays with {dst-label: "0..1"}
+  Card -> Method {dst: triangle-hollow, dashed}

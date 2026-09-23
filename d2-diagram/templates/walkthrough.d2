@@ -1,0 +1,42 @@
+# Walkthrough template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# ONE request through the real parts (C4 dynamic): the architecture stays,
+# the path is `flow`, numbered 1..N in path order (playbooks/change.md).
+direction: down
+
+# One width for every box: the spine and each row come out even.
+classes: {
+  box: {width: 128}
+}
+
+browser: Browser {class: [actor; box]}
+# The reply as a note, not an upward edge (that detours round everything).
+# height = the Browser's, so the top row lines up.
+reply: "7. The reply retraces the path\nand CloudFront caches it 60 s" {class: note; height: 61}
+cdn: "CDN\nCloudFront" {class: [service; box]}
+# Two zones at most: each adds a title band and padding to a tall chain.
+aws: AWS VPC {
+  class: zone
+  alb: "Load balancer\nALB" {class: [service; box]}
+  gw: "API gateway\nKong" {class: [service; box]}
+  # Off the path: muted, reached by unlabelled secondary edges.
+  orders: "Orders API\nGo" {class: [muted; box]}
+  # Two hops leave it: a width spanning both targets drops both straight.
+  catalog: "Catalog API\nGo" {class: [service; focal]; width: 300}
+  cart: "Cart API\nGo" {class: [muted; box]}
+  cache: "Cache\nRedis" {class: [datastore; box]}
+  db: "Catalog DB\nPostgres" {class: [datastore; box]}
+}
+
+# Hops in path order, labelled "N. verb object" (22 characters at most).
+# The gateway's edges go left to right - muted, path, muted - so the path
+# stays one straight line and the muted pair sit beside its label.
+browser -> cdn: "1. GET /products/42" {class: flow}
+cdn -> aws.alb: "2. cache miss" {class: flow}
+aws.alb -> aws.gw: "3. forward" {class: flow}
+aws.gw -> aws.orders: {class: secondary}
+aws.gw -> aws.catalog: "4. route /products" {class: flow}
+aws.gw -> aws.cart: {class: secondary}
+aws.catalog -> aws.cache: "5. read cache (miss)" {class: flow}
+aws.catalog -> aws.db: "6. SELECT product 42" {class: flow}

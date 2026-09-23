@@ -1,0 +1,23 @@
+# After: the E-small-text levers (direction down, \n wraps) bring the canvas under the column: scale 1.
+# The focal service is declared between its siblings only so the tier stays centred (no I-sparse);
+# the Fix itself is direction down plus the wraps.
+# column: 1000
+...@neutral-theme
+direction: down
+
+web: Web storefront {class: actor}
+gateway: API gateway {class: service}
+billing: "Billing and\ninvoicing service" {class: service}
+orders: "Order management\nservice" {class: [service; focal]}
+search: "Product search\nservice" {class: service}
+ledger: "Ledger database\nPostgres" {class: datastore}
+db: "Orders database\nPostgres" {class: datastore}
+index: "Search index\nOpenSearch" {class: datastore}
+
+web -> gateway: HTTPS {class: flow}
+gateway -> billing: REST {class: dep}
+gateway -> orders: REST {class: flow}
+gateway -> search: REST {class: dep}
+billing -> ledger: posts entries {class: dep}
+orders -> db: writes orders {class: flow}
+search -> index: queries {class: dep}

@@ -1,0 +1,7 @@
+# After: the override is gone; the edge class sets 14px.
+...@neutral-theme
+direction: down
+
+api: Orders API {class: service}
+db: "Orders DB\nPostgres" {class: datastore}
+api -> db: "writes (idempotent per order id)" {class: dep}

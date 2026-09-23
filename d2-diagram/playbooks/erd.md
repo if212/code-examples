@@ -24,7 +24,7 @@ fixed at 14px, so the SVG must stay under about 930px:
 
 | Schema | Width | Smallest text at 800px |
 |---|---|---|
-| 3 levels + legend (template) | 825px | 13.5px |
+| 3 levels + legend (template) | 828px | 13.5px |
 | 4 levels + legend (6 tables) | 1183px | 9.5px: `E-small-text` |
 | 4 levels, no legend | 1024px | 12.5px |
 
@@ -87,8 +87,8 @@ On `sql_table` and `class`, `style.stroke` paints the whole BODY, so every node
 class (they all set a stroke) turns the rows dark. Use the template's globs
 after the last table: 16px rows (the d2 default is 20px), square corners.
 The focus table keeps `focal-solid` with `style.stroke: ${paper}`: blue header,
-white body. Globs beat local styles, so the second glob skips it with
-`!&class: focal-solid`.
+white body. A glob beats every class (its header would turn slate), so the
+second glob skips it with `!&class: focal-solid`.
 
 ### 5. Crow's feet stay legible on 2px lines
 

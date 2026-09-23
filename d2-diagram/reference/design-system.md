@@ -25,9 +25,8 @@ The import sets ELK, `pad: 24` and theme 0; never pass `-l`, `-t` or `--pad`.
 ## 2. Role classes
 
 Tag by what a thing IS, never by the color you want. Every node, container
-and edge gets a class: an un-classed node or container keeps d2 defaults
-(`W-unclassed`); an un-classed edge gets d2's 16px label and triangle head,
-and no lint code catches it.
+and edge gets a class: an un-classed one keeps d2's defaults (a 16px edge
+label, a triangle head), and `W-unclassed` flags it once most peers carry one.
 
 | Base role | Class | Look |
 |---|---|---|
@@ -73,7 +72,7 @@ All edges: 14px upright labels, slim `arrow` heads that follow the operator
 `class: [a; b]` applies left to right; the LAST class wins each key. Base role
 first, modifier last: `[datastore; focal]`, `[queue; danger]` (dead-letter
 queue), `[state; danger]`. The reverse `[focal; service]` draws a plain
-service box and no check flags it. A modifier alone is a radius-8 box.
+service box (`S-emphasis` on the focus). A modifier alone is a radius-8 box.
 
 `terminal` sets only the pill (radius 99, 1px outline) and takes its colors
 from the theme defaults or from a modifier listed BEFORE it:
@@ -124,8 +123,8 @@ By role; the family is the bundled font (`assets/fonts/README.md`, applied by d2
 
 - A theme class cannot know its label, so none sets `width` or `height`
   (except `dot`). d2 never grows a fixed box: a label too big for it is drawn
-  outside (`E-label-overflow`); on a cylinder it runs into the top cap, and
-  no lint code catches that.
+  outside it, or under a cylinder's top rim or a queue's end cap; both are
+  `E-label-overflow` (the rim case names the height that clears it).
 - To line up a tier, `W-sibling-size` prints the heights (`66/82`): give
   every sibling the larger one, `height: 82` (boxes and cylinders, one- and
   two-line labels). Equal widths: the widest sibling's `width`.
@@ -140,12 +139,14 @@ By role; the family is the bundled font (`assets/fonts/README.md`, applied by d2
 
 - `sql_table` and `class`: `style.stroke` paints the BODY and `style.fill`
   the header (`syntax.md` section 12), so a role class alone breaks a table
-  (`E-contrast`). Style tables with the two globs at the end of
-  `templates/erd.d2` (16px rows, 1px rules, slate headers); the one focus
-  table: `{class: focal-solid; style.stroke: ${paper}}`. `playbooks/erd.md`.
-- Sequence: participants `actor`; the one the diagram is about
-  `[actor; focal]`. Lifelines are always 2px dashed in the participant's
-  outline color (blue for the focal one). `playbooks/sequence.md`.
+  (`E-contrast`). Style them with the globs at the end of `templates/erd.d2`
+  (16px rows, 1px rules, slate headers; relationships `dep` at 2px, so crow's
+  feet stay legible); the one focus table: `{class: focal-solid; style.stroke:
+  ${paper}}`. `playbooks/erd.md`.
+- Sequence: participants `actor`; the one the diagram is about `[actor;
+  focal]`, plus `flow` on its key messages if a path matters too. Groups
+  (`alt`, `loop`) are `zone`. Lifelines are always 2px dashed in the
+  participant's outline color (blue for the focal one). `playbooks/sequence.md`.
 - Legend: native `vars.d2-legend` (mechanics: `syntax.md` section 11). Add
   one only when color or dash carries meaning the labels do not state; reuse
   the real classes so swatches match, and hide edge endpoints:
@@ -236,8 +237,7 @@ values (`style.fill: N7` fails).
 - Palette names (`ink-900` ... `ink-50`, `paper`, `primary-*`, `success-*`,
   `danger-*`, `warn-*`, `async-*`) are an interface (`${paper}` above): change
   values, never names. Theme globs do not reach the diagram and a glob beats
-  every class: style through classes. No class named `link` (an imported one
-panics d2).
+  every class: style through classes. No class named `link` (syntax.md section 7).
 - Informative strokes (edges, node outlines, `boundary`) need 3:1 on the
   canvas and every zone tint, text 4.5:1. Zone outlines are decorative (tint
   and title mark the region); mark any other with `# decorative`. Then:
@@ -247,4 +247,3 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/contrast.py --check neutral-theme.d2
 ```
 
 Lowest today: text 5.17 (`focal-solid`), strokes 3.28 (`ink-400` on `zone-violet`).
-Every class rendered: `dev/tests/style/*guide*.d2` (source tree, not shipped).

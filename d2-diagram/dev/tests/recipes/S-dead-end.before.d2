@@ -1,0 +1,14 @@
+# Before: Notify team leads nowhere and the brief does not mark it as an end.
+...@neutral-theme
+direction: down
+push: Push {class: terminal}
+build: Build and test {class: service}
+gate: Tests pass? {class: [decision; focal]}
+deploy: Deploy to prod {class: service}
+notify: Notify team {class: service}
+live: Live {class: [success; terminal]}
+push -> build: {class: flow}
+build -> gate: {class: flow}
+gate -> deploy: yes {class: flow}
+gate -> notify: no {class: failure}
+deploy -> live: {class: ok}

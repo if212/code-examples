@@ -1,0 +1,26 @@
+# request: "C4 context diagram of the online shop for the onboarding doc.
+#  Customers place orders and staff manage the catalog, both over HTTPS. The
+#  shop charges cards with Stripe, sends receipts through SendGrid, buys
+#  shipping labels from EasyPost and exports orders to the ERP every night
+#  over SFTP. No internals. Highlight the shop."
+type: context
+reader: new engineers reading the onboarding doc
+width: 800
+direction: down
+focus: shop
+out: containers and internals (c4 view), admin tooling, monitoring
+nodes:
+  customer: Customer\n[Person]\nBuys products online {shape: c4-person}
+  staff: Staff\n[Person]\nManages the catalog {shape: c4-person}
+  shop: Online shop\n[Software System]\nCatalog, cart, checkout
+  stripe: Stripe\n[Software System]\nCard payments {external}
+  sendgrid: SendGrid\n[Software System]\nOrder emails {external}
+  easypost: EasyPost\n[Software System]\nShipping labels {external}
+  erp: ERP\n[Software System]\nInvoices and stock {external}
+edges:
+  customer -> shop: Places orders\n[HTTPS]
+  staff -> shop: Manages catalog\n[HTTPS]
+  shop -> stripe: Charges cards\n[HTTPS]
+  shop -> sendgrid: Sends receipts\n[HTTPS]
+  shop -> easypost: Buys labels\n[HTTPS]
+  shop -> erp: Exports orders\n[SFTP, nightly] {dashed}

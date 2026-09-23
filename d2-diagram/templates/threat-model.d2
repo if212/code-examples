@@ -1,0 +1,51 @@
+# Threat model template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# DFD on the neutral theme: external entity = box, process = numbered circle
+# (the number is the ID the threats cite), data store = cylinder, trust
+# boundary = dashed boundary, stacked in trust order from the internet down
+# (playbooks/infrastructure.md).
+# direction: right was 1538px wide (7.3px text).
+direction: down
+
+# Geometry only; the stores share one width. A circle needs equal width and
+# height: 116 holds ~12 characters ("2. Checkout API" spilled below it).
+classes: {
+  proc: {shape: circle; width: 116; height: 116}
+  store: {width: 140}
+}
+
+# As wide as the two processes it calls, so both flows drop straight.
+browser: Customer browser {class: actor; width: 300}
+
+# One chain of processes per column. A circle's ports sit ~40px apart, so
+# its fan-outs jog: one web app feeding Auth and Payments, 4 of 7 labels on bends.
+# Boundary titles stay short: "Internal network" was struck by an edge.
+dmz: DMZ {
+  class: boundary
+  login: "1. Login" {class: [service; proc]}
+  checkout: "2. Checkout" {class: [service; proc]}
+}
+internal: Internal {
+  class: boundary
+  auth: "3. Auth" {class: [service; proc]}
+  pay: "4. Payments" {class: [service; proc; focal]}
+}
+data: Data {
+  class: boundary
+  users: "Users DB\nPostgres" {class: [datastore; store]}
+  ledger: "Payments DB\nPostgres" {class: [datastore; store]}
+}
+stripe: "Stripe\n3rd party" {class: [service; external]}
+
+# Every flow labelled "what\nprotocol", on two short lines (one line each,
+# neighbouring labels overlapped: E-label-overlap). The flows under review
+# are flow, the rest dep. Arrows follow the data: a read points from the
+# store, written `process <- store` so it stays short.
+browser -> dmz.login: "credentials\nHTTPS" {class: dep}
+browser -> dmz.checkout: "card token\nHTTPS" {class: flow}
+dmz.login -> internal.auth: "credentials\nmTLS" {class: dep}
+dmz.checkout -> internal.pay: "card token\nmTLS" {class: flow}
+internal.auth <- data.users: "password hash\nSQL" {class: dep}
+internal.pay -> stripe: "token, amount\nHTTPS" {class: flow}
+internal.pay -> data.ledger: "charge id\nSQL" {class: dep}

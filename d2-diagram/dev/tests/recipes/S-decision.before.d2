@@ -1,0 +1,18 @@
+# Before: the decision's branches carry no labels: the reader cannot tell which way is yes.
+# brief: flow.brief
+# expect: S-edge-label
+...@neutral-theme
+direction: down
+push: Push {class: terminal}
+build: Build and test {class: service}
+gate: Tests pass? {class: [decision; focal]}
+deploy: Deploy to prod {class: service}
+notify: Notify team {class: service}
+live: Live {class: [success; terminal]}
+blocked: Blocked {class: [danger; terminal]}
+push -> build: {class: flow}
+build -> gate: {class: flow}
+gate -> deploy: {class: flow}
+gate -> notify: {class: failure}
+deploy -> live: {class: ok}
+notify -> blocked: {class: failure}

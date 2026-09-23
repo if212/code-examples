@@ -21,7 +21,7 @@ a composite state, two final states coloured by outcome).
 ## Budget at 800px
 
 A state machine is narrow: the template (initial dot, 3 states, 2 finals) is
-270x781px, and each further state with a labelled transition adds about
+270x761px, and each further state with a labelled transition adds about
 160px. About seven states on the spine fill the 1280px height budget; past
 that, split into a composite overview plus one diagram per composite.
 

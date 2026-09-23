@@ -1,0 +1,8 @@
+# Before: an existing file with its own colours pins no engine, so dagre curves every edge.
+# expect: W-curved-edge
+direction: down
+web: Web app {style.fill: "#E0F2FE"}
+api: Orders API {style.fill: "#E0F2FE"; style.bold: true}
+db: "Orders DB\nPostgres" {shape: cylinder}
+web -> api: HTTPS
+api -> db: writes

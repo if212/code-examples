@@ -1,0 +1,36 @@
+# request: "Architecture of our support assistant for the AI platform docs.
+#  Support agents ask questions in Slack; the Assistant API (FastAPI) keeps the
+#  chat history in Redis, sends prompts to Claude and runs its tool calls:
+#  ticket lookup, order status and issue refund. It also queries a hybrid
+#  retriever that searches the top 8 chunks in a pgvector index. A nightly
+#  Airflow job chunks and embeds the Zendesk help center articles and upserts
+#  them into the index. Highlight the Assistant API."
+type: llm-app
+reader: engineers reading the AI platform docs
+width: 800
+direction: down
+focus: app
+out: evals, guardrails, observability, auth, the Slack bot plumbing
+nodes:
+  user: Support agent\nSlack
+  app: Assistant API\nFastAPI
+  llm: LLM\nClaude API {external}
+  tools: Tools
+  tools.tickets: Ticket lookup
+  tools.orders: Order status
+  tools.refunds: Issue refund
+  memory: Chat history\nRedis {shape: cylinder}
+  retriever: Retriever\nhybrid, top-8
+  index: Nightly indexing
+  index.docs: Help center\nZendesk {external}
+  index.embed: Embed job\nAirflow
+  vectors: Vector index\npgvector {shape: cylinder}
+edges:
+  user -> app: question
+  app <-> llm: prompt / reply
+  app <-> tools: call / result
+  app <-> memory: history
+  app -> retriever: query
+  retriever -> vectors: top-8 search
+  index.docs -> index.embed: articles
+  index.embed -> vectors: upsert {dashed}

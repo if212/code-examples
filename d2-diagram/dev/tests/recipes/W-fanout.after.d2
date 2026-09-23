@@ -1,0 +1,16 @@
+# After: one edge to the zone, labelled with the routes it stands for (the brief keeps one edge
+# per service; semcheck accepts a container edge that covers every child).
+...@neutral-theme
+direction: down
+web: Web app {class: actor}
+gateway: API gateway {class: service}
+services: Services {
+  class: zone
+  auth: Auth {class: service}
+  catalog: Catalog {class: service}
+  cart: Cart {class: service}
+  orders: Orders {class: [service; focal]}
+  payments: Payments {class: service}
+}
+web -> gateway: {class: flow}
+gateway -> services: routes /auth /catalog /cart /orders /pay {class: flow}

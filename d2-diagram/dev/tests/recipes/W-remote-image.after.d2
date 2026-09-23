@@ -1,0 +1,6 @@
+# After: a local icon file (workflows/icons.md) and no --bundle=false: d2 embeds it.
+...@neutral-theme
+direction: down
+api: Orders API {class: service; icon: icons/server.svg}
+db: "Orders DB\nPostgres" {class: datastore}
+api -> db: {class: dep}

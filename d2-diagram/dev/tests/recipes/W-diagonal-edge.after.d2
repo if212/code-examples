@@ -1,0 +1,13 @@
+# After: cells are declared so every edge joins neighbours in one row or one column.
+...@neutral-theme
+grid-rows: 2
+grid-columns: 2
+horizontal-gap: 80
+vertical-gap: 60
+web: Web app {class: actor}
+cache: "Cache\nRedis" {class: datastore}
+api: Orders API {class: [service; focal]}
+db: "Orders DB\nPostgres" {class: datastore}
+web -> api: {class: flow}
+api -> db: {class: flow}
+cache -> db: {class: dep}

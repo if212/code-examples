@@ -1,0 +1,36 @@
+# request: "Layer diagram of our data platform for the onboarding doc, top to
+#  bottom: apps (the Slack support bot, the Salesforce sales copilot, Looker
+#  dashboards); ML and AI (the LiteLLM gateway, pgvector vectors, Feast
+#  features, MLflow models); data (Fivetran ingestion, dbt transforms, the
+#  Snowflake warehouse, Airflow scheduling); infrastructure (AWS, EKS,
+#  Terraform). Security and monitoring cut across all layers. Highlight the
+#  LLM gateway."
+type: stack
+reader: new engineers reading the onboarding doc
+width: 800
+direction: down   # top = closest to the user
+focus: stack.ai.gateway
+out: calls between layers (architecture view), environments, costs
+nodes:
+  stack: ""
+  stack.apps: Apps
+  stack.apps.bot: Support bot\nSlack
+  stack.apps.copilot: Sales copilot\nSalesforce
+  stack.apps.bi: Dashboards\nLooker
+  stack.ai: ML and AI
+  stack.ai.gateway: LLM gateway\nLiteLLM
+  stack.ai.search: Vectors\npgvector
+  stack.ai.features: Features\nFeast
+  stack.ai.registry: Models\nMLflow
+  stack.data: Data
+  stack.data.ingest: Ingestion\nFivetran
+  stack.data.transform: Transform\ndbt
+  stack.data.warehouse: Warehouse\nSnowflake
+  stack.data.schedule: Scheduling\nAirflow
+  stack.infra: Infrastructure
+  stack.infra.cloud: Cloud\nAWS
+  stack.infra.compute: Compute\nEKS
+  stack.infra.iac: Provisioning\nTerraform
+  security: Security
+  monitoring: Monitoring
+edges:

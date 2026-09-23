@@ -10,6 +10,7 @@ compile into a different diagram.
 usage:
   semcheck.py BRIEF IN.d2 [--svg OUT.svg|OUT_DIR]   check (d2check passes --svg to reuse its render)
   semcheck.py BRIEF OUT.svg                          check an SVG only (no source lint)
+  semcheck.py --lint IN.d2 [--svg OUT.svg]           source slips only (quoting, classes, icons, engine)
   semcheck.py --explain IN.d2|OUT.svg                the drawn diagram as plain sentences
   semcheck.py --dump IN.d2|OUT.svg                   the drawn graph as a brief skeleton (edits)
   semcheck.py --compare OLD NEW                      meaning-level diff of two versions
@@ -17,7 +18,7 @@ usage:
   semcheck.py --field KEY BRIEF                      print one brief header value (e.g. width)
 options: --target BOARD (one board of a multi-board file), --json
 
-exit: 0 clean (warnings allowed) | 1 S- errors | 2 unusable brief, compile error or usage
+exit: 0 clean (warnings allowed) | 1 S- errors | 2 missing or unusable input, compile error, no d2, or usage
 Every finding ends with its recipe: workflows/review-and-fix.md#<code>.
 """
 import base64
@@ -52,7 +53,7 @@ SECTIONS = {'nodes': 'nodes', 'edges': 'edges', 'messages': 'edges', 'relationsh
             'transitions': 'edges'}
 NODE_ATTRS = ('shape', 'external', 'inferred', 'emphasis', 'start', 'end', 'decision', 'group',
               'note', 'cols', 'fields')
-EDGE_ATTRS = ('dashed', 'solid', 'return', 'in', 'src', 'dst', 'count', 'inferred')
+EDGE_ATTRS = ('dashed', 'solid', 'return', 'in', 'src', 'dst', 'src-label', 'dst-label', 'count', 'inferred')
 HEADS = ('triangle', 'triangle-hollow', 'arrow', 'diamond', 'diamond-filled', 'circle',
          'circle-filled', 'box', 'box-filled', 'cross', 'cf-one', 'cf-one-required', 'cf-many',
          'cf-many-required', 'none')
@@ -186,7 +187,14 @@ def split_attrs(s, allowed, where):
     m = re.search(r'(^|\s)\{([^{}]*)\}\s*$', s)
     if not m:
         return s, {}
-    items = [x.strip() for x in re.split(r'[;,]', m.group(2)) if x.strip()]
+    body, pos, items = m.group(2), 0, []
+    for sep in split_outside_quotes(body, re.compile('[;,]')) + [None]:
+        items.append(body[pos:sep.start() if sep else None].strip())
+        pos = sep.end() if sep else pos
+    items = [x for x in items if x]
+    if items and all(re.match(r'^[A-Za-z][\w.-]*\s*(=.*)?$', x) for x in items) and any('=' in x for x in items):
+        fixed = ', '.join(re.sub(r'\s*=\s*', ': ', x, count=1) for x in items)
+        raise BriefError(f"{where}: write attributes as `{{key: value}}` with a colon, not `=`: {{{fixed}}}")
     if not items or not all(re.match(r'^[A-Za-z][\w.-]*\s*(:.*)?$', x) for x in items):
         return s, {}
     attrs = {}
@@ -199,7 +207,7 @@ def split_attrs(s, allowed, where):
             raise BriefError(f"{where}: unknown attribute '{k}'" + (f" (did you mean '{near}'?)" if near else '') +
                              (" - the brief records meaning ({dashed}, {inferred}); classes and styles go in the .d2"
                               if d2ish else '') + f"; allowed here: {', '.join(allowed)}")
-        attrs[k] = v.strip() if v is not None else True
+        attrs[k] = unquote(v.strip()) if v is not None else True
     return s[:m.start()].rstrip(), attrs
 
 
@@ -252,13 +260,14 @@ def parse_edge_line(s, where):
     for i, m in enumerate(ops):
         src, op, dst = ends[i], m.group(1), ends[i + 1]
         a = dict(attrs)
-        if op == '<-':          # canonical form: `a <- b` is `b -> a`; arrowhead attrs follow their ends
+        if op == '<-':          # canonical form: `a <- b` is `b -> a`; end attrs follow their ends
             src, dst, op = dst, src, '->'
-            s_head, d_head = a.pop('src', None), a.pop('dst', None)
-            if d_head:
-                a['src'] = d_head
-            if s_head:
-                a['dst'] = s_head
+            for sk, dk in (('src', 'dst'), ('src-label', 'dst-label')):
+                s_v, d_v = a.pop(sk, None), a.pop(dk, None)
+                if d_v:
+                    a[sk] = d_v
+                if s_v:
+                    a[dk] = s_v
         edges.append({'src': src, 'dst': dst, 'op': op, 'label': label, 'attrs': a})
     return edges
 
@@ -296,6 +305,15 @@ def parse_focus(value):
         else:
             chains.extend(zip(parts, parts[1:]))
     return nodes, chains
+
+
+def template_types():
+    """Every templates/<type>.d2 of the skill is a valid brief type (the themes are not types)."""
+    try:
+        names = os.listdir(SKILL_TEMPLATES)
+    except OSError:
+        return set()
+    return {f[:-3].lower() for f in names if f.endswith('.d2')} - {'neutral-theme', 'snowflake-brand'}
 
 
 def parse_brief(path):
@@ -340,8 +358,9 @@ def parse_brief(path):
             k, v = hm.group(1).lower(), hm.group(2).strip()
             if k == 'type':
                 t = TYPE_ALIASES.get(v.lower(), v.lower())
-                if t not in TYPES and t != 'other':
-                    inv['notes'].append(f"type '{v}' is not one of {'|'.join(TYPES)}; type-specific checks are off")
+                if t not in TYPES and t != 'other' and t not in template_types():
+                    inv['notes'].append(f"type '{v}' has no template: pick one with workflows/route.md, or write "
+                                        f"`type: other` (checks for known types stay off)")
                 inv['type'] = t
             elif k == 'focus':
                 inv['has_focus'] = True
@@ -450,6 +469,48 @@ def _texts(el):
     return [norm_label(t) for t in out if t is not None]
 
 
+PATH_TOK_RE = re.compile(r'[A-Za-z]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?')
+PATH_ARGS = {'m': 2, 'l': 2, 't': 2, 'h': 1, 'v': 1, 'c': 6, 's': 4, 'q': 4, 'a': 7, 'z': 0}
+
+
+def path_points(d):
+    """Absolute points of an SVG path (end and control points). Handles every command, relative
+    ones and the one-number H/V that d2 uses for cylinders, queues and pages."""
+    toks, pts = PATH_TOK_RE.findall(d or ''), []
+    cx = cy = sx = sy = 0.0
+    cmd, i = None, 0
+    while i < len(toks):
+        if toks[i].isalpha():
+            cmd, i = toks[i], i + 1
+            if cmd in 'Zz':
+                cx, cy = sx, sy
+            continue
+        low = (cmd or 'z').lower()
+        n = PATH_ARGS.get(low, 0)
+        args = toks[i:i + n]
+        if not n or len(args) < n or any(a.isalpha() for a in args):
+            break
+        v = [float(a) for a in args]
+        i += n
+        rel = cmd.islower()
+        if low == 'h':
+            cx = v[0] + (cx if rel else 0)
+        elif low == 'v':
+            cy = v[0] + (cy if rel else 0)
+        elif low == 'a':
+            cx, cy = v[5] + (cx if rel else 0), v[6] + (cy if rel else 0)
+        else:
+            bx, by = (cx, cy) if rel else (0.0, 0.0)
+            for k in range(0, n, 2):
+                pts.append((v[k] + bx, v[k + 1] + by))
+            cx, cy = pts[-1]
+            if low == 'm':
+                sx, sy = cx, cy
+                cmd = 'l' if rel else 'L'      # more pairs after a moveto are linetos
+        pts.append((cx, cy))
+    return pts
+
+
 def _bbox_of(el):
     tag = el.tag.split('}')[-1]
     try:
@@ -462,9 +523,13 @@ def _bbox_of(el):
             ry = float(el.get('ry') or el.get('r'))
             return (cx - rx, cy - ry, cx + rx, cy + ry)
         if tag in ('path', 'polygon'):
-            nums = [float(n) for n in NUM_RE.findall(el.get('d') or el.get('points') or '')]
-            xs, ys = nums[0::2], nums[1::2]
-            if xs and ys:
+            if tag == 'path':
+                pts = path_points(el.get('d'))
+            else:
+                nums = [float(n) for n in NUM_RE.findall(el.get('points') or '')]
+                pts = list(zip(nums[0::2], nums[1::2]))
+            if pts:
+                xs, ys = [p[0] for p in pts], [p[1] for p in pts]
                 return (min(xs), min(ys), max(xs), max(ys))
     except (TypeError, ValueError):
         pass
@@ -588,9 +653,9 @@ def parse_svg(path, board=''):
         start = end = ms = me = None
         dashed = False
         if path is not None:
-            nums = [float(n) for n in NUM_RE.findall(path.get('d', ''))]
-            if len(nums) >= 4:
-                start, end = (nums[0], nums[1]), (nums[-2], nums[-1])
+            pts = path_points(path.get('d', ''))
+            if len(pts) >= 2:
+                start, end = pts[0], pts[-1]
             dashed = 'stroke-dasharray' in (path.get('style') or '')
             for attr in ('marker-start', 'marker-end'):
                 v = path.get(attr)
@@ -600,19 +665,23 @@ def parse_svg(path, board=''):
                         ms = markers.get(mm.group(1), 'unknown')
                     else:
                         me = markers.get(mm.group(1), 'unknown')
-        main, ends = [], []
+        main, ends, end_pos = [], [], []
         for t in g.iter(NS + 'text'):
             txt = norm_label(' '.join(_text_of(t)))
             try:
                 x, y = float(t.get('x')), float(t.get('y'))
                 inside = any(b[0] - 2 <= x <= b[2] + 2 and b[1] - 2 <= y <= b[3] + 4 for b in masks)
             except (TypeError, ValueError):
+                x = y = None
                 inside = True
             (main if inside else ends).append(txt)
+            if not inside:
+                end_pos.append((txt, x, y))
         if not main and not masks:
-            main, ends = ends, []
+            main, ends, end_pos = ends, [], []
         edges.append({'id': ident, 'src': src, 'dst': dst, 'op': m.group('op'), 'idx': int(m.group('idx')),
                       'texts': _texts(g), 'label': ' '.join(x for x in main if x), 'end_labels': ends,
+                      'end_pos': end_pos,
                       'start': start, 'end': end, 'marker_start': ms, 'marker_end': me, 'dashed': dashed,
                       'order': order, 'classes': classes, 'board': board})
 
@@ -910,6 +979,318 @@ def pins_engine(d2file, depth=0, seen=None):
     return any(pins_engine(p, depth + 1, seen) for p in _imports(d2file, lines))
 
 
+# ---------------------------------------------------------------------------
+# source model: which classes a file defines (itself or through imports) and uses
+# ---------------------------------------------------------------------------
+
+_WORDCH = re.compile(r'[A-Za-z0-9_]')
+
+
+class D2Source:
+    """Just enough of the d2 grammar to list key paths, `class:` uses and imports: maps, arrays,
+    quoted strings (a quote opens one only at the start of a word: `Bob's` is text), ${vars},
+    |block| strings and comments. `lines` = [(lineno, text)] from _code_lines()."""
+
+    def __init__(self, lines):
+        self.s, self.ln = [], []
+        for n, line in lines:
+            for ch in line + '\n':
+                self.s.append(ch)
+                self.ln.append(n)
+        self.i = 0
+        self.paths = []        # (key path tuple, lineno): every key, with the maps around it
+        self.refs = []         # (class name, lineno, info of the map the use sits in)
+        self.imports = []      # (spec, key path it lands at, lineno)
+
+    def peek(self, k=0):
+        j = self.i + k
+        return self.s[j] if j < len(self.s) else ''
+
+    def skip_blank(self):
+        while self.peek() in (' ', '\t'):
+            self.i += 1
+
+    def read_quoted(self):
+        q = self.peek()
+        self.i += 1
+        while self.peek() not in ('', '\n'):
+            ch = self.peek()
+            if q == '"' and ch == '\\':
+                self.i += 2
+                continue
+            self.i += 1
+            if ch == q:
+                if q == "'" and self.peek() == "'":        # '' is a quote inside '...'
+                    self.i += 1
+                    continue
+                return
+
+    def read_token(self, stops):
+        """Raw text up to a stop character outside quotes, (), [] and ${}; `#` ends it (comment)."""
+        start, depth = self.i, 0
+        while True:
+            ch = self.peek()
+            if ch in ('', '\n') or (ch in stops and depth == 0):
+                return ''.join(self.s[start:self.i])
+            prev = self.s[self.i - 1] if self.i > start else ' '
+            if ch in '"\'' and not _WORDCH.match(prev):
+                self.read_quoted()
+                continue
+            if ch == '$' and self.peek(1) == '{':
+                while self.peek() not in ('', '\n', '}'):
+                    self.i += 1
+                if self.peek() == '}':
+                    self.i += 1
+                continue
+            if ch == '#':
+                return ''.join(self.s[start:self.i])
+            if ch in '([':
+                depth += 1
+            elif ch in ')]':
+                depth = max(0, depth - 1)
+            self.i += 1
+
+    def read_array(self):
+        """A `[...]` value, which may span lines (one item per line); comments dropped. Returns
+        '[a; b]' with newlines turned into `;`, so a multi-line class list reads like a one-line one."""
+        out, depth = [], 0
+        while self.peek() != '':
+            ch = self.peek()
+            if ch in '"\'':
+                start = self.i
+                self.read_quoted()
+                out.append(''.join(self.s[start:self.i]))
+                continue
+            if ch == '#':
+                while self.peek() not in ('', '\n'):
+                    self.i += 1
+                continue
+            self.i += 1
+            if ch == '[':
+                depth += 1
+            elif ch == ']':
+                depth -= 1
+                if depth == 0:
+                    out.append(ch)
+                    break
+            out.append(';' if ch == '\n' else ch)
+        return ''.join(out)
+
+    def parse(self):
+        self.parse_map((), {'shape': None})
+        return self
+
+    def parse_map(self, path, info):
+        while self.peek() != '':
+            ch = self.peek()
+            if ch in ' \t\n;':
+                self.i += 1
+            elif ch == '#':
+                while self.peek() not in ('', '\n'):
+                    self.i += 1
+            elif ch == '}':
+                self.i += 1
+                return
+            else:
+                before = self.i
+                self.statement(path, info)
+                if self.i == before:        # never stall on a stray character
+                    self.i += 1
+
+    def statement(self, path, info):
+        n = self.ln[self.i]
+        key = self.read_token(':{;}').strip()
+        segs = tuple(key_segments(key))
+        if key.startswith('...@'):
+            self.imports.append((key[4:].strip(), path, n))
+            return
+        if segs:
+            self.paths.append((path + segs, n))
+        self.skip_blank()
+        if self.peek() == ':':
+            self.i += 1
+            self.skip_blank()
+            if self.peek() == '|':
+                pipes = ''
+                while self.peek() == '|':
+                    pipes += '|'
+                    self.i += 1
+                while self.peek() != '' and ''.join(self.s[self.i:self.i + len(pipes)]) != pipes:
+                    self.i += 1
+                self.i += len(pipes)
+            elif self.peek() == '[':
+                self.value(path, key, segs, self.read_array().strip(), n, info)
+            elif self.peek() != '{':
+                self.value(path, key, segs, self.read_token(';{}').strip(), n, info)
+            self.skip_blank()
+        if self.peek() == '{':
+            self.i += 1
+            self.parse_map(path + segs, {'shape': None})
+
+    def value(self, path, key, segs, value, n, info):
+        if value.startswith('@'):
+            self.imports.append((value[1:].strip(), path + segs, n))
+            return
+        if not segs:
+            return
+        if segs == ('shape',):
+            info['shape'] = unquote(value).lower()
+        if segs[-1] != 'class' or key.startswith(('&', '!&')) or (path[-1:] == ('classes',) and len(segs) == 1):
+            return          # not a use: a glob filter (&class), or a class NAMED "class"
+        names = value[1:-1].split(';') if value.startswith('[') and value.endswith(']') else [value]
+        for nm in names:
+            nm = unquote(nm.strip())
+            if nm and nm.lower() != 'null' and not nm.startswith('$'):     # `class: null` resets
+                self.refs.append((nm, n, info))
+
+
+def key_segments(key):
+    """A d2 key -> lowercase dotted segments, split outside quotes and ()/[] (an edge is one segment)."""
+    out, cur, q, depth = [], '', None, 0
+    for ch in key:
+        if q:
+            if ch == q:
+                q = None
+            else:
+                cur += ch
+            continue
+        if ch in '"\'' and (not cur.strip() or cur.endswith('.')):
+            q = ch
+            continue
+        if ch in '([':
+            depth += 1
+        elif ch in ')]':
+            depth = max(0, depth - 1)
+        if ch == '.' and depth == 0:
+            out.append(cur.strip())
+            cur = ''
+            continue
+        cur += ch
+    out.append(cur.strip())
+    return [p.lower() for p in out if p]
+
+
+def source_model(d2file, prefix=(), sub=(), depth=0, seen=None):
+    """(key paths as the root board sees them, class uses of THIS file, unresolved imports).
+    `...@f` lands f's keys at the import's path, `k: @f` under k, `@f.x` only f's subtree x."""
+    seen = set() if seen is None else seen
+    ap = os.path.abspath(d2file)
+    if depth > 6 or (ap, prefix, sub) in seen:
+        return [], [], []
+    seen.add((ap, prefix, sub))
+    src = D2Source(_code_lines(d2file)).parse()
+    paths = [prefix + p[len(sub):] for p, _ in src.paths if p[:len(sub)] == sub]
+    unresolved, base = [], os.path.dirname(ap)
+    for spec, where, n in src.imports:
+        if where[:len(sub)] != sub:
+            continue
+        spec = unquote(spec)
+        hit = next(((c, p) for c in import_candidates(spec)
+                    for p in [c if os.path.isabs(c) else os.path.join(base, c)] if os.path.isfile(p)), None)
+        if not hit:
+            unresolved.append((spec, n))
+            continue
+        rest = '' if spec.endswith('.d2') else spec[len(hit[0]) - 3:].lstrip('.')
+        p2, _, u2 = source_model(hit[1], prefix + where[len(sub):], tuple(key_segments(rest)), depth + 1, seen)
+        paths += p2
+        unresolved += u2
+    return paths, (src.refs if depth == 0 else []), unresolved
+
+
+def defined_classes(paths):
+    return {p[j + 1] for p in paths for j in range(len(p) - 1) if p[j] == 'classes'}
+
+
+# the same role in the other skill theme: a neutral class in a Snowflake file and back
+SF_TWIN = {'service': 'sf-node', 'actor': 'sf-node', 'focal': 'sf-primary', 'focal-solid': 'sf-primary',
+           'datastore': 'sf-datastore', 'external': 'sf-external', 'muted': 'sf-muted', 'zone': 'sf-container',
+           'zone-blue': 'sf-container', 'dep': 'sf-edge', 'flow': 'sf-flow', 'failure': 'sf-failure'}
+NEUTRAL_TWIN = {'sf-node': 'service', 'sf-primary': 'focal', 'sf-datastore': 'datastore', 'sf-external': 'external',
+                'sf-muted': 'muted', 'sf-container': 'zone', 'sf-edge': 'dep', 'sf-flow': 'flow',
+                'sf-failure': 'failure'}
+
+
+_THEME_CLASSES = {}
+
+
+def theme_classes(theme):
+    """The classes a skill theme (templates/<theme>.d2) defines; empty if it is not installed."""
+    if theme not in _THEME_CLASSES:
+        path = os.path.join(SKILL_TEMPLATES, theme + '.d2')
+        try:
+            _THEME_CLASSES[theme] = defined_classes(source_model(path)[0]) if os.path.isfile(path) else set()
+        except (OSError, UnicodeDecodeError, RecursionError):
+            _THEME_CLASSES[theme] = set()
+    return _THEME_CLASSES[theme]
+
+
+def near_class(word, known):
+    """A defined class one typo away (two for names over 5 characters), or None."""
+    cands = [c for c in known if looks_like_typo(word, c)]
+    return min(cands, key=lambda c: edit_distance(word, c)) if cands else None
+
+
+def class_findings(d2file, notes=None):
+    """S-src-class: a class used here that neither this file nor its imports define. d2 ignores
+    it silently: the object keeps the default look (a misspelled `datastor` stays a box)."""
+    try:
+        paths, refs, unresolved = source_model(d2file)
+    except (OSError, UnicodeDecodeError, RecursionError):
+        return []
+    if unresolved:          # the render fails on a missing import; say why classes went unchecked
+        if notes is not None and refs:
+            notes.append(f"classes not checked: the import `{unresolved[0][0]}` (line {unresolved[0][1]}) is not "
+                         f"next to {os.path.basename(d2file)}")
+        return []
+    if not refs:
+        return []
+    known = defined_classes(paths)
+    unknown, out = defaultdict(list), []
+    for name, n, info in refs:
+        if name.lower() in known:
+            continue
+        if info.get('shape') in ('sql_table', 'class'):     # a column or member NAMED class
+            out.append((n, 'error', 'S-src-class', f"inside a {info['shape']} `class:` applies a class, so the row "
+                        f"vanishes: quote the name, \"class\": {name}", {'classes': [name]}))
+        else:
+            unknown[name].append((n, info))
+    if unknown and not known:
+        n = min(n for uses in unknown.values() for n, _ in uses)
+        names = sorted(unknown)
+        theme = 'snowflake-brand' if all(x.lower().startswith('sf-') for x in names) else 'neutral-theme'
+        what = f"class {names[0]} is used but nothing defines it" if len(names) == 1 else \
+            f"classes {', '.join(names[:4])} are used but nothing defines them"
+        return out + [(n, 'error', 'S-src-class', f"{what}: put `...@{theme}` on line 1 and copy the theme next "
+                       f"to the file", {'classes': names})]
+    sf_file = any(c.startswith('sf-') for c in known)
+    for name, uses in sorted(unknown.items(), key=lambda kv: kv[1][0][0]):
+        n, info = uses[0]
+        also = f" (also line {', '.join(str(u[0]) for u in uses[1:3])})" if len(uses) > 1 else ''
+        low = name.lower()
+        parts = [p.strip() for p in low.split(',')]
+        if low in SF_TWIN and sf_file and SF_TWIN[low] in known:
+            fix = f"'{name}' is a neutral-theme class; this file uses snowflake-brand: write {SF_TWIN[low]}"
+        elif not sf_file and low in NEUTRAL_TWIN and NEUTRAL_TWIN[low] in known:
+            fix = f"'{name}' is a snowflake-brand class; this file uses neutral-theme: write {NEUTRAL_TWIN[low]}"
+        elif len(parts) > 1 and all(p in known for p in parts):
+            fix = f"'{name}' is one name, not a list: separate classes with `;`: class: [{'; '.join(parts)}]"
+        else:
+            # a skill theme's class in a file that does not import that theme (it has under half its classes)
+            theme = next((t for t in ('neutral-theme', 'snowflake-brand') if low in theme_classes(t)
+                          and 2 * len(theme_classes(t) & known) < len(theme_classes(t))), None)
+            near = near_class(low, known)
+            if theme:
+                fix = f"'{name}' is a {theme} class, and nothing here imports that theme: put `...@{theme}` on line 1"
+            elif near:
+                fix = f"class '{name}' is defined neither here nor in the imports, so d2 ignores it: " \
+                      f"did you mean '{near}'?"
+            else:
+                fix = f"class '{name}' is defined neither here nor in the imports, so d2 ignores it: use one the " \
+                      f"theme defines ({'brand-snowflake' if sf_file else 'design-system'}.md)"
+        out.append((n, 'error', 'S-src-class', fix + also, {'classes': [name]}))
+    return out
+
+
 ICON_RE = re.compile(r'\bicon\s*:\s*("([^"]+)"|\'([^\']+)\'|([^\s;{}]+))')
 KNOWN_FAMILIES = ('lucide', 'logos', 'k8s', 'tabler', 'mdi', 'simple-icons', 'devicon', 'carbon', 'ph',
                   'material-symbols', 'fa', 'fa6-solid', 'heroicons', 'aws', 'gcp', 'azure', 'terrastruct')
@@ -942,7 +1323,7 @@ def icon_family(ref, base):
     return None
 
 
-def lint_source(d2file, typ):
+def lint_source(d2file, typ, notes=None):
     """Slips that compile fine but change what the diagram says; plus two policy checks."""
     out = []
     lines = _code_lines(d2file)
@@ -1005,7 +1386,7 @@ def lint_source(d2file, typ):
         out.append((1, 'error', 'S-src-cli-engine',
                     'no layout engine pinned, so dagre draws curved edges: put `...@neutral-theme` on line 1 '
                     '(or set vars.d2-config.layout-engine: elk)'))
-    return out
+    return out + class_findings(d2file, notes)
 
 
 # ---------------------------------------------------------------------------
@@ -1049,6 +1430,25 @@ def canon_edge(src, op, dst):
         return (norm_key(src), norm_key(dst)), 'directed'
     a, b = sorted([norm_key(src), norm_key(dst)])
     return (a, b), ('bidirectional' if op == '<->' else 'undirected')
+
+
+def end_labels_by_end(c):
+    """An edge's arrowhead labels by the path end they sit at: 'first' = the key written first in
+    its d2 id (where the path starts and marker-start sits), 'second' = the other key."""
+    out = {'first': [], 'second': []}
+    for txt, x, y in c.get('end_pos', []):
+        if x is None or not c.get('start') or not c.get('end'):
+            continue
+        d0 = (x - c['start'][0]) ** 2 + (y - c['start'][1]) ** 2
+        d1 = (x - c['end'][0]) ** 2 + (y - c['end'][1]) ** 2
+        out['first' if d0 <= d1 else 'second'].append(txt)
+    return out
+
+
+def edge_label_cands(c):
+    """What a brief label may match: the main label, any single text, or main + arrowhead labels."""
+    ends = ' '.join(x for x in c['end_labels'] if x)
+    return [c['label']] + c['texts'] + ([f"{c['label']} {ends}", f"{ends} {c['label']}"] if ends else [])
 
 
 def diff(inv, g, rep):
@@ -1169,7 +1569,7 @@ def diff(inv, g, rep):
         pool, not_drawn = list(have), []
         labelled = [w for w in want if w['label'] is not None]
         for w in labelled:
-            hit = next((c for c in pool if label_ok(w['label'], [c['label']] + c['texts'])[0]), None)
+            hit = next((c for c in pool if label_ok(w['label'], edge_label_cands(c))[0]), None)
             if hit:
                 pool.remove(hit)
                 w['_match'] = hit
@@ -1239,12 +1639,36 @@ def diff(inv, g, rep):
                     rep.add('error', 'S-arrowhead', f"'{w['src']} {w['op']} {w['dst']}': the {end} end should be "
                             f"{want_head} but shows {got}{tip}", [c['id']])
 
+        for w in want:
+            c = w.get('_match')
+            if not c or not any(w['attrs'].get(x) for x in ('src-label', 'dst-label')):
+                continue
+            by_end = end_labels_by_end(c)
+            src_first = comp_end(c['src']) == inv_end(w['src'])      # is the brief's src written first in d2?
+            for side in ('src', 'dst'):
+                want_lab = w['attrs'].get(side + '-label')
+                if not want_lab or want_lab is True:
+                    continue
+                at = by_end['first' if (side == 'src') == src_first else 'second']
+                other = by_end['second' if (side == 'src') == src_first else 'first']
+                if norm_label(str(want_lab)).lower() in [x.lower() for x in at]:
+                    continue
+                end = w['src'] if side == 'src' else w['dst']
+                tip = (': it sits at the other end - swap source-arrowhead.label and target-arrowhead.label'
+                       if norm_label(str(want_lab)).lower() in [x.lower() for x in other] else
+                       ': set it as that end\'s arrowhead label')
+                rep.add('error', 'S-edge-label', f"'{w['src']} {w['op']} {w['dst']}': the {end} end should read "
+                        f"{want_lab!r} but shows {' / '.join(at) or 'nothing'}{tip}", [c['id']])
+
     extra_edges = [(key, kind, c) for (key, kind), have in comp_edges.items() if (key, kind) not in matched
                    for c in have]
     children = defaultdict(set)
     for k in comp_nodes:
         if k not in span_map:
             children[parent_of(k).lower()].add(k)
+
+    def is_group(k):        # in a sequence diagram an actor's notes and spans do not make it a group
+        return bool(children.get(k)) and not (typ == 'sequence' and k in g['lifelines_norm'])
 
     # one edge to/from a container may stand for edges to EVERY child of it (the fan-out recipe)
     for key, kind, c in list(extra_edges):
@@ -1326,9 +1750,12 @@ def diff(inv, g, rep):
                        and not v['attrs'].get('_implied') and not v['attrs'].get('note')]
         have_x = {k: comp_nodes[k]['bbox'][0] for k in want_actors if k in comp_nodes and comp_nodes[k]['bbox']}
         order = [k for k in want_actors if k in have_x]
-        if order != sorted(order, key=lambda k: have_x[k]):
-            rep.add('warn', 'S-seq-actor-order', 'actors are not left to right in brief order: declare all actors '
-                    'first, in reading order, before any message', order)
+        drawn = sorted(order, key=lambda k: have_x[k])
+        if order != drawn:
+            seen_as = f" (drawn: {', '.join(inv_nodes[k]['key'] for k in drawn)})"
+            rep.add('warn', 'S-seq-actor-order', 'actors are not left to right in brief order' +
+                    (seen_as if len(seen_as) < 60 else '') + ': declare all actors first, in reading order, '
+                    'before any message', order)
 
     # --- flowcharts and state machines: start, reachability, ends, decisions
     if typ in ('flowchart', 'state'):
@@ -1449,7 +1876,7 @@ def diff(inv, g, rep):
             rep.add('error', 'S-emphasis', f"focus '{fk}' is not a node key in the brief", [fk])
             continue
         n = comp_nodes.get(k)
-        if n and children.get(k):
+        if n and is_group(k):
             if sf:
                 rep.add('error', 'S-emphasis', f"focus '{n['id']}' is a group, and Snowflake has no focus group: "
                         f"make the node inside it that matters most the focus (sf-primary)", [n['id']], n['bbox'])
@@ -1501,7 +1928,7 @@ def diff(inv, g, rep):
     # --- two different nodes showing the same text read as ONE thing
     by_label = defaultdict(list)
     for k, n in comp_nodes.items():
-        if k in span_map or children.get(k):
+        if k in span_map or is_group(k):
             continue
         t = next((x for x in n['texts'] if x), '')
         if t:
@@ -1564,14 +1991,18 @@ def explain(g):
         if ms in CARD and me in CARD:
             extra = (f"  [cardinality: one {d} row has {rows(CARD[ms], s)}; one {s} row has {rows(CARD[me], d)}]")
         elif me == 'triangle-hollow':
-            extra = f'  [inheritance: {s} is a {d}]'
+            extra = f'  [realization: {s} implements {d}]' if e['dashed'] else f'  [inheritance: {s} is a {d}]'
         elif me == 'diamond-filled':
             extra = f'  [composition: {d} owns {s}]'
         elif me == 'diamond':
             extra = f'  [aggregation: {d} has {s}]'
-        elif (ms not in (None, 'triangle')) or (me not in (None, 'triangle')):
+        elif (ms not in (None, 'triangle', 'arrow')) or (me not in (None, 'triangle', 'arrow')):
             extra = f"  [{ms or '-'} .. {me or '-'}]"
-        if e['end_labels']:
+        by_end = end_labels_by_end(e)
+        for which, key in (('first', e['src']), ('second', e['dst'])):
+            if by_end[which]:
+                extra += f"  [{name(key)} end: {' '.join(by_end[which])}]"
+        if e['end_labels'] and not (by_end['first'] or by_end['second']):
             extra += f"  [end labels: {' .. '.join(e['end_labels'])}]"
         style = ' (dashed)' if e['dashed'] else ''
         if set(e['classes']) & set(FOCAL_EDGE):
@@ -1581,15 +2012,17 @@ def explain(g):
 
 
 def _brief_quote(s):
-    return f'"{s}"' if re.search(r'[#{}:]|^\s|\s$', s) else s
+    return f'"{s}"' if re.search(r'[#{}:;,]|^\s|\s$', s) else s
 
 
 def source_case(text, lab):
     """Zone and boundary titles reach the SVG upper-cased (text-transform): take the source's spelling."""
     if not text or lab != lab.upper() or lab == lab.lower():
         return lab
-    m = re.search(r'\\n'.join(re.escape(p) for p in lab.split('\\n')), text, re.I)
-    return m.group(0) if m else lab
+    pat = r'\\n'.join(re.escape(p) for p in lab.split('\\n'))
+    # the label follows a colon (`services: Services`); a bare match could be the lowercase KEY
+    m = re.search(r':[ \t]*["\']?(' + pat + r')(?![\w-])', text, re.I) or re.search('(' + pat + ')', text, re.I)
+    return m.group(1) if m else lab
 
 
 def dump(g, src=None):
@@ -1599,6 +2032,8 @@ def dump(g, src=None):
     classes = {c for n in g['nodes'].values() for c in n['classes']}
     typ = 'sequence' if seq else 'erd' if 'sql_table' in text else 'class' if re.search(r'shape\s*:\s*class\b', text) \
         else 'state' if 'dot' in classes else 'flowchart' if 'decision' in classes else 'architecture'
+    if len(g.get('boards', [])) > 1 and re.search(r'^\s*steps\s*:', text, re.M):
+        typ = 'steps'
     dm = re.search(r'^direction\s*:\s*(\w+)', text, re.M)
     focus = [n['id'] for n in g['nodes'].values() if set(n['classes']) & set(FOCAL_NODE)]
     out = [f'# request: "<paste the user\'s request, plus the requested change>"',
@@ -1640,13 +2075,14 @@ def dump(g, src=None):
         out.append(f"  {n['id']}: {shown}" + (f" {{{', '.join(attrs)}}}" if attrs else ''))
     out.append('edges:')
 
-    def canon(e):       # (src, op, dst, src head, dst head) with `a <- b` turned into `b -> a`
+    def canon(e):       # (src, op, dst, src head, dst head, src labels, dst labels), `a <- b` as `b -> a`
+        by_end = end_labels_by_end(e)
         if e['op'] == '<-':
-            return e['dst'], '->', e['src'], e['marker_end'], e['marker_start']
-        return e['src'], e['op'], e['dst'], e['marker_start'], e['marker_end']
+            return e['dst'], '->', e['src'], e['marker_end'], e['marker_start'], by_end['second'], by_end['first']
+        return e['src'], e['op'], e['dst'], e['marker_start'], e['marker_end'], by_end['first'], by_end['second']
     plain = ('triangle', 'arrow')       # d2's and the themes' default heads say nothing: not listed
     for e in g['edges']:
-        s, op, d, ms, me = canon(e)
+        s, op, d, ms, me, sl, dl = canon(e)
         if seq:
             s = s.split('.')[0] if norm_key(s) in span else s
             d = d.split('.')[0] if norm_key(d) in span else d
@@ -1655,6 +2091,9 @@ def dump(g, src=None):
             attrs.append(f'src: {ms or "none"}')
         if op == '<->' or (me and me not in plain):
             attrs.append(f'dst: {me or "none"}')
+        for side, labs in (('src', sl), ('dst', dl)):
+            if labs:
+                attrs.append(f"{side}-label: {_brief_quote(' '.join(labs))}")
         lab = e['label']
         out.append(f"  {s} {op} {d}" + (f": {_brief_quote(lab)}" if lab else '') +
                    (f" {{{', '.join(attrs)}}}" if attrs else ''))
@@ -1698,8 +2137,29 @@ def compare(ga, gb):
 # main
 # ---------------------------------------------------------------------------
 
+def add_lint(rep, lint, d2file, g=None):
+    """Source-lint tuples (line, level, code, message[, extra]) -> findings; an S-src-class finding
+    names (and boxes, for the annotated PNG) the drawn objects that carry the unknown class."""
+    for item in lint:
+        n, lvl, code, msg = item[:4]
+        extra = item[4] if len(item) > 4 else {}
+        objs, box = [], None
+        if g and extra.get('classes'):
+            want = {c.lower() for c in extra['classes']}
+            hits = [o for o in list(g['nodes'].values()) + g['edges'] if want & {c.lower() for c in o['classes']}]
+            objs = [o['id'] for o in hits]
+            box = next((o['bbox'] for o in hits if o.get('bbox')), None)
+        rep.add(lvl, code, f'{os.path.basename(d2file)}:{n}: {msg}', objs, box)
+
+
+NO_D2 = ('d2 is not on PATH, so nothing can be compiled - install it: curl -fsSL https://d2lang.com/install.sh | '
+         f'sh -s -- ; then check the whole setup: sh {os.path.join(os.path.dirname(os.path.abspath(__file__)), "doctor.sh")}')
+
+
 def graph_for(path, layout, target, tmps, search=()):
     """Parse a .d2 (compiled here) or an SVG / board directory. Returns (graph, error)."""
+    if path.endswith('.d2') and not shutil.which('d2'):
+        return None, NO_D2
     if path.endswith('.d2'):
         res, tmp, err = render(path, layout, target, search)
         if err:
@@ -1721,13 +2181,59 @@ def main(argv):
     ap.add_argument('--svg', help='already-rendered SVG (or multi-board directory) of DIAGRAM: no second render')
     ap.add_argument('--target', default=None, help="one board only ('' = root, e.g. layers.x)")
     ap.add_argument('--layout', help=argparse.SUPPRESS)       # tests only: skills never pass -l
-    ap.add_argument('--json', action='store_true')
-    ap.add_argument('--explain', action='store_true')
-    ap.add_argument('--dump', action='store_true')
-    ap.add_argument('--compare', metavar='OLD')
-    ap.add_argument('--hint', metavar='ERROR_TEXT')
-    ap.add_argument('--field', metavar='KEY')
+    ap.add_argument('--json', action='store_true', help='machine-readable report (what d2check reads)')
+    ap.add_argument('--explain', action='store_true', help='the drawn diagram as plain sentences')
+    ap.add_argument('--dump', action='store_true', help='the drawn graph as a brief skeleton, for edits')
+    ap.add_argument('--compare', metavar='OLD', help='meaning-level diff of OLD against DIAGRAM')
+    ap.add_argument('--hint', metavar='ERROR_TEXT', help="fix line(s) for a d2 compile error ('-' reads stdin)")
+    ap.add_argument('--field', metavar='KEY', help='print one header value of BRIEF (type, width, ...)')
+    ap.add_argument('--lint', metavar='IN.d2', help='source slips only (quoting, classes, icons, engine): no brief')
     a = ap.parse_args(argv)
+
+    def not_text(path):
+        """A .d2 or brief that is not UTF-8 text (a binary, an AppleDouble ._ file) is named, not a traceback."""
+        try:
+            with open(path, encoding='utf-8') as fh:
+                fh.read()
+        except UnicodeDecodeError:
+            print(f'semcheck: {path} is not UTF-8 text')
+            return True
+        except OSError:
+            pass
+        return False
+
+    if a.lint:
+        # source slips only (quoting, classes, icons, engine): no brief, no render; --svg adds boxes
+        if not os.path.isfile(a.lint):
+            print(f'semcheck: no such file: {a.lint}')
+            return 2
+        if not_text(a.lint):
+            return 2
+        tmps = []
+        try:
+            g = None
+            if a.svg:
+                g, err = graph_for(a.svg, None, a.target, tmps)
+                if err:
+                    print(f'semcheck: {err}')
+                    return 2
+            rep, notes = Report(), []
+            add_lint(rep, lint_source(a.lint, 'other', notes), a.lint, g)
+        finally:
+            for t in tmps:
+                shutil.rmtree(t, ignore_errors=True)
+        n_err, n_warn = rep.count('error'), rep.count('warn')
+        if a.json:
+            print(json.dumps({'tool': 'semcheck', 'mode': 'lint', 'diagram': a.lint, 'errors': n_err,
+                              'warnings': n_warn, 'findings': rep.items, 'notes': notes}, indent=1))
+        else:
+            print(f'semcheck --lint {a.lint}')
+            for it in rep.items:
+                print(f"  {it['severity'].upper():5} {it['code']:26} {it['message']} -> {it['anchor']}")
+            for nt in notes:
+                print(f'  note: {nt}')
+            print(f"  verdict: {'FAIL' if n_err else 'PASS'} ({n_err} error(s), {n_warn} warning(s))")
+        return 1 if n_err else 0
 
     if a.hint is not None:
         text = sys.stdin.read() if a.hint == '-' else a.hint
@@ -1749,6 +2255,13 @@ def main(argv):
         print(re.match(r'\d+', v).group(0) if a.field.lower() == 'width' and re.match(r'\d+', v) else v)
         return 0
 
+    # a missing input is named as such, not as a compile error of a file d2 could not open
+    for path in (a.compare, a.svg, a.diagram, a.brief):
+        if path and not os.path.exists(path):
+            print(f'semcheck: no such file: {path}')
+            return 2
+        if path and os.path.isfile(path) and not path.endswith('.svg') and not_text(path):
+            return 2
     tmps = []
     try:
         if a.compare or a.explain or a.dump:
@@ -1760,6 +2273,9 @@ def main(argv):
                 ga, err = graph_for(a.compare, a.layout, a.target, tmps, [os.path.dirname(os.path.abspath(target))])
                 gb, err2 = (graph_for(target, a.layout, a.target, tmps, [os.path.dirname(os.path.abspath(a.compare))])
                             if not err else (None, None))
+                if (err or err2) == NO_D2:
+                    print(f'semcheck: {NO_D2}')
+                    return 2
                 if err or err2:
                     print(f"semcheck: cannot compile {a.compare if err else target}: {err or err2}")
                     for h in hint_lines(err or err2):
@@ -1770,7 +2286,7 @@ def main(argv):
                 return code
             g, err = graph_for(a.svg or target, a.layout, a.target, tmps)
             if err:
-                print(f'semcheck: cannot compile {target}: {err}')
+                print(f'semcheck: {err}' if err == NO_D2 else f'semcheck: cannot compile {target}: {err}')
                 for h in hint_lines(err):
                     print('  ' + h)
                 return 2
@@ -1784,23 +2300,23 @@ def main(argv):
         except BriefError as e:
             print(f'semcheck: brief problem: {e}')
             return 2
-        lint = []
+        lint, lint_notes = [], []
         if a.diagram.endswith('.d2'):
             if not os.path.isfile(a.diagram):
                 print(f'semcheck: no such file: {a.diagram}')
                 return 2
-            lint = lint_source(a.diagram, inv['type'])
+            lint = lint_source(a.diagram, inv['type'], lint_notes)
         g, err = graph_for(a.svg or a.diagram, a.layout, a.target, tmps)
         if err:
-            print(f"semcheck: {a.diagram} does not compile (`d2 validate` can pass while this fails): {err}")
+            print(f'semcheck: {err}' if err == NO_D2 else
+                  f"semcheck: {a.diagram} does not compile (`d2 validate` can pass while this fails): {err}")
             for h in hint_lines(err):
                 print('  ' + h)
             return 2
         rep = Report()
-        for n, lvl, code, msg in lint:
-            rep.add(lvl, code, f'{os.path.basename(a.diagram)}:{n}: {msg}')
+        add_lint(rep, lint, a.diagram, g)
         diff(inv, g, rep)
-        notes = list(inv['notes'])
+        notes = list(inv['notes']) + lint_notes
         # these two travel as INFO findings so they reach the d2check summary, not only this listing
         miss = uncovered_request_terms(inv)
         if miss:

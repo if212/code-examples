@@ -1,0 +1,12 @@
+# After: no grid: ELK routes each bypass on its own track.
+...@neutral-theme
+direction: right
+extract: Extract {class: service}
+stage: Stage {class: service}
+transform: Transform {class: [service; focal]}
+publish: Publish {class: service}
+extract -> stage: {class: flow}
+stage -> transform: {class: flow}
+transform -> publish: {class: flow}
+extract -> transform: {class: dep}
+stage -> publish: {class: dep}

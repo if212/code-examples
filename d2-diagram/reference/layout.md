@@ -126,6 +126,12 @@ under ~75 px: one short word, longer titles wrapped one word per line with
 the hits back (one-word titles: 17/40 at 30, 23/40 at 20). On dagre titles
 float above the box: crossed in 12-20 of 30 diagrams, any placement.
 
+Outside titles (`outside-top-*`, `outside-bottom-*`) leave the box. In
+`direction: right` the edges that cross its border turn diagonal (9 of 13 on
+the architecture template, `W-diagonal-edge`); in `down` edges stay straight (0 of
+33 on four templates), but the title floats in the gap between ranks, loosely
+tied to its box. `border-*` titles bent no edge in either direction.
+
 Container icons (20 random zone diagrams, ELK `down`, one-word titles):
 
 | Combination | Clean |
@@ -238,20 +244,20 @@ a container and connect the outside nodes to it.
 
 ## 8. Spacing flags (CLI only)
 
-d2-config rejects them (render error; `d2 validate` passes). d2check adds
-`--elk-nodeNodeBetweenLayers 40 --elk-edgeNodeBetweenLayers 20` to every ELK
-render; pass others after `--`:
-`sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh in.d2 out.svg -- --elk-padding "[top=50,left=100,bottom=50,right=50]"`.
+d2check adds `--elk-nodeNodeBetweenLayers 40 --elk-edgeNodeBetweenLayers 20
+--elk-padding "[top=50,left=50,bottom=30,right=50]"` to every ELK render (d2-config
+rejects them: render error, `d2 validate` passes). Flags after `--` come later
+and win: `sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh in.d2 out.svg -- --elk-padding "[top=50,left=100,bottom=30,right=50]"`.
 Its `re-render:` line records the flags: copy it into the report.
 
 | Flag (default) | Controls | 3-zone diagram, `down` | same, `right` |
 |---|---|---|---|
 | `--elk-nodeNodeBetweenLayers` (70) | gap between ranks | 40: -60 px height | 40: -60 px width |
 | `--elk-edgeNodeBetweenLayers` (40) | edge-to-node gap between ranks | 20: -50 px height | 20: -20 px width |
-| `--elk-padding` (`[top=50,left=50,bottom=50,right=50]`) | container inner padding | 20: -60 w, -147 h | 20: -180 px width |
+| `--elk-padding` (`[top=50,left=50,bottom=50,right=50]`; d2check: bottom=30) | container inner padding | 20: -60 w, -147 h | 20: -180 px width |
 | `--dagre-nodesep` (60) | gap between siblings | 30: -69 px width | 30: -65 px height |
 
-- d2check's two defaults took 140 and 290 px off two 3-zone diagrams
+- The two layer flags took 140 and 290 px off two 3-zone diagrams
   (`down`; the same width off in `right`); all three ELK flags at 40/20/20:
   468 x 1107 -> 408 x 820. `--dagre-edgesep` gained nothing; the gap between
   siblings in one ELK rank is fixed at 20 px.
@@ -299,6 +305,7 @@ Its `re-render:` line records the flags: copy it into the report.
 | crossing between containers | move the node, one edge to the group, split | 4 |
 | tall stepped band under a hub | one edge to a container of the targets | 4 |
 | edge through a container title | title `top-left`; lines under ~75 px (`\n`); `--elk-padding` left 100 | 5 |
+| edges turn diagonal into a container (`right`) | title `top-left`, not `outside-*` | 5 |
 | container icon on its title | title `top-left` + icon `top-right`; no container icons on dagre | 5 |
 | icon over a leaf label | ELK; `height` table; icons only on rectangle-like shapes | 6 |
 | diagonal or overlapping edge in a grid | adjacent cells only; equal row counts and widths; connect outside nodes to the grid | 7 |

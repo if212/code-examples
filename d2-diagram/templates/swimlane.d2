@@ -1,0 +1,58 @@
+# Swimlane template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Who does each step: one grid row per lane, time runs right
+# (playbooks/flowchart.md, swimlane section). grid-rows = lanes; each lane
+# has grid-columns = 1 name cell + the step columns.
+grid-rows: 3
+vertical-gap: 24
+
+classes: {
+  # Every lane has the same column count and cell size, so the columns line
+  # up across lanes and every edge between aligned cells is straight.
+  lane: {label: ""; grid-columns: 5; horizontal-gap: 24; vertical-gap: 16}
+  # The lane name: a caption in a hidden one-cell grid (a bare caption sticks
+  # to the top of its cell). Fixed width keeps the columns aligned;
+  # vertical-gap 30 centres it: 20 + 2 x 30 = 80, the cell height.
+  head: {label: ""; width: 88; grid-rows: 1; horizontal-gap: 0; vertical-gap: 30; style.opacity: 0}
+  cell: {width: 128; height: 80}
+}
+
+# Staircase: inside a lane the next step takes the next column; a handoff
+# goes straight up or down in the same column. Empty cells are hidden.
+# Never skip a lane: route the handoff through the lane between.
+cust: {
+  class: [zone; lane]
+  h: {class: head; t: Customer {class: caption}}
+  request: "Request\nrefund" {class: [service; cell]}
+  declined: "Refund\ndeclined" {class: [danger; terminal; cell]}
+  s3: "" {class: cell; style.opacity: 0}
+  received: "Refund\nreceived" {class: [success; terminal; cell]}
+}
+support: {
+  class: [zone; lane]
+  h: {class: head; t: Support {class: caption}}
+  review: "Review\nrequest" {class: [service; cell]}
+  check: "Within\n30 days?" {class: [decision; cell]}
+  s3: "" {class: cell; style.opacity: 0}
+  close: "Close\nticket" {class: [service; cell]}
+}
+fin: {
+  class: [zone; lane]
+  h: {class: head; t: Finance {class: caption}}
+  s1: "" {class: cell; style.opacity: 0}
+  approve: "Approve\namount" {class: [service; cell]}
+  issue: "Issue\nrefund" {class: [service; cell; focal]}
+  receipt: "Send\nreceipt" {class: [service; cell]}
+}
+
+# Main path flow, rejection failure, the last hop ok. Only decision exits
+# carry labels: a 24px gap has no room for more.
+cust.request -> support.review: {class: flow}
+support.review -> support.check: {class: flow}
+support.check -> fin.approve: yes {class: flow}
+support.check -> cust.declined: no {class: failure}
+fin.approve -> fin.issue: {class: flow}
+fin.issue -> fin.receipt: {class: flow}
+fin.receipt -> support.close: {class: flow}
+support.close -> cust.received: {class: ok}

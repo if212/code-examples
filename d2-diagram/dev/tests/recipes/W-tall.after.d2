@@ -1,0 +1,36 @@
+# After: a serpentine grid (reference/layout.md section 7): each row is a stage with its own
+# direction; equal counts and widths keep the turn edges vertical.
+...@neutral-theme
+classes: {step: {width: 130}}
+grid-columns: 1
+vertical-gap: 60
+
+build: Build {
+  class: zone
+  direction: right
+  checkout: Checkout {class: [service; step]}
+  deps: Install deps {class: [service; step]}
+  lint: Lint {class: [service; step]}
+  unit: Unit tests {class: [service; step]}
+  checkout -> deps -> lint -> unit: {class: flow}
+}
+ship: Package {
+  class: zone
+  direction: left
+  build: Build image {class: [service; step]}
+  scan: Scan image {class: [service; step]}
+  push: Push image {class: [service; step]}
+  staging: Deploy staging {class: [service; step]}
+  build -> scan -> push -> staging: {class: flow}
+}
+release: Release {
+  class: zone
+  direction: right
+  smoke: Smoke tests {class: [service; step]}
+  approve: Approve {class: [service; step]}
+  prod: Deploy prod {class: [service; step; focal]}
+  verify: Verify {class: [service; step]}
+  smoke -> approve -> prod -> verify: {class: flow}
+}
+build.unit -> ship.build: {class: flow}
+ship.staging -> release.smoke: {class: flow}

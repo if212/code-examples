@@ -1,0 +1,16 @@
+# Before: children keep their declaration order, so web ends up left of mobile while its
+# target orders sits right of billing: the two edges cross.
+...@neutral-theme
+direction: down
+clients: Clients {
+  class: zone
+  web: Web app {class: actor}
+  mobile: Mobile app {class: actor}
+}
+services: Services {
+  class: zone
+  billing: Billing {class: service}
+  orders: Orders {class: [service; focal]}
+}
+clients.web -> services.orders: {class: flow}
+clients.mobile -> services.billing: {class: dep}

@@ -1,0 +1,6 @@
+# expect: E-icon-collision
+# expect-text: less than 1px apart
+# descenders (g, p, y) of a 2-line label rest on the icon below them: no overlap, but they touch
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+ledger: "Payments\nledger (pg)" {shape: cylinder; icon: ./database.svg}
+report: "Quarterly\nbudget query" {shape: document; icon: ./database.svg}

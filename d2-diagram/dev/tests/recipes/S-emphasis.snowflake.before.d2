@@ -1,0 +1,13 @@
+# Before: the brief's focus is the Snowflake group, but the brand theme has no focus group.
+...@snowflake-brand
+direction: right
+fivetran: Fivetran {class: sf-external}
+sf: Snowflake {
+  class: sf-container
+  raw: RAW {class: sf-datastore}
+  staging: STAGING {class: sf-datastore}
+  marts: MARTS {class: sf-datastore}
+  raw -> staging: dbt {class: sf-flow}
+  staging -> marts: dbt {class: sf-flow}
+}
+fivetran -> sf.raw: {class: sf-edge}

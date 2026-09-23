@@ -1,0 +1,18 @@
+# request: "Snowflake pipeline: Fivetran loads RAW, dbt builds STAGING and MARTS.
+#  Highlight the Snowflake part."
+type: pipeline
+reader: data team wiki
+width: 800
+direction: right
+focus: sf.marts   # Snowflake has no focus group: the node that matters most
+out: BI tools
+nodes:
+  fivetran: Fivetran
+  sf: Snowflake
+  sf.raw: RAW
+  sf.staging: STAGING
+  sf.marts: MARTS
+edges:
+  fivetran -> sf.raw
+  sf.raw -> sf.staging: dbt
+  sf.staging -> sf.marts: dbt

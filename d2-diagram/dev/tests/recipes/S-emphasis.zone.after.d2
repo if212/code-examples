@@ -1,0 +1,13 @@
+# After: a focused group takes zone-blue (the one blue group).
+...@neutral-theme
+direction: down
+gateway: API gateway {class: service}
+orders: Orders {class: service}
+pay: Payments {
+  class: zone-blue
+  auth: Card auth {class: service}
+  ledger: Ledger {class: service}
+  auth -> ledger: {class: dep}
+}
+gateway -> pay.auth: {class: dep}
+gateway -> orders: {class: dep}

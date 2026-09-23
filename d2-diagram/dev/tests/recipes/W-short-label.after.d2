@@ -1,0 +1,9 @@
+# After: the path moves into the target's label in words; the edges stay bare (label every
+# edge of a kind, or none).
+...@neutral-theme
+direction: down
+ingress: Ingress {class: service}
+web: "Web service\npath /" {class: service}
+api: "API service\npath /api" {class: [service; focal]}
+ingress -> web: {class: dep}
+ingress -> api: {class: flow}

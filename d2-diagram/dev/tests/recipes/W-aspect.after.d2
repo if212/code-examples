@@ -1,0 +1,32 @@
+# After: three rows of three (serpentine grid) fill the column instead of one narrow tower.
+...@neutral-theme
+classes: {step: {width: 140}}
+grid-columns: 1
+vertical-gap: 60
+
+order: Order {
+  class: zone
+  direction: right
+  receive: Receive order {class: [service; step]}
+  validate: Validate {class: [service; step]}
+  reserve: Reserve stock {class: [service; step]}
+  receive -> validate -> reserve: {class: flow}
+}
+pay: Payment {
+  class: zone
+  direction: left
+  charge: Charge card {class: [service; step; focal]}
+  pick: Pick {class: [service; step]}
+  pack: Pack {class: [service; step]}
+  charge -> pick -> pack: {class: flow}
+}
+deliver: Delivery {
+  class: zone
+  direction: right
+  print: Print label {class: [service; step]}
+  ship: Ship {class: [service; step]}
+  notify: Notify buyer {class: [service; step]}
+  print -> ship -> notify: {class: flow}
+}
+order.reserve -> pay.charge: {class: flow}
+pay.pack -> deliver.print: {class: flow}

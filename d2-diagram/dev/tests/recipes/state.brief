@@ -1,0 +1,25 @@
+# request: "State machine of a deployment for the platform docs. A new
+#  deployment is Queued; it starts building once a runner is free. Building
+#  moves to Deploying when the build passes, and Deploying goes Live when the
+#  health checks pass. Any failure while building or deploying ends in Failed.
+#  Highlight Deploying."
+type: state
+reader: platform engineers reading the internal docs
+width: 800
+direction: down
+focus: active.deploying
+out: rollback, manual approval, cancellation
+nodes:
+  start: "" {start}
+  queued: Queued
+  active: In progress
+  active.building: Building
+  active.deploying: Deploying
+  live: Live {end}
+  failed: Failed {end}
+transitions:
+  start -> queued
+  queued -> active.building: "start [runner free]"
+  active.building -> active.deploying: build passes
+  active.deploying -> live: checks pass
+  active -> failed: any step fails

@@ -1,0 +1,33 @@
+# request: "Who does what when a customer asks for a refund? The customer requests
+#  it; support reviews the request and checks it is within 30 days. If not, the
+#  refund is declined. If it is, finance approves the amount, issues the refund
+#  and sends the receipt; support then closes the ticket and the customer has
+#  the refund. Highlight the step where the money moves."
+type: swimlane
+reader: support and finance staff reading the process wiki
+width: 800
+direction: right   # time runs right, lanes stack down
+focus: fin.issue
+out: partial refunds, chargebacks, refunds over the approval limit
+nodes:
+  cust.h.t: Customer {note}
+  cust.request: Request\nrefund {start}
+  cust.declined: Refund\ndeclined {end}
+  cust.received: Refund\nreceived {end}
+  support.h.t: Support {note}
+  support.review: Review\nrequest
+  support.check: Within\n30 days? {decision}
+  support.close: Close\nticket
+  fin.h.t: Finance {note}
+  fin.approve: Approve\namount
+  fin.issue: Issue\nrefund
+  fin.receipt: Send\nreceipt
+edges:
+  cust.request -> support.review
+  support.review -> support.check
+  support.check -> fin.approve: yes
+  support.check -> cust.declined: no
+  fin.approve -> fin.issue
+  fin.issue -> fin.receipt
+  fin.receipt -> support.close
+  support.close -> cust.received

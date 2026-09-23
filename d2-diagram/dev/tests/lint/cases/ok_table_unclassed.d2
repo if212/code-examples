@@ -1,0 +1,13 @@
+# expect-clean: E- W-
+# sql_table and class shapes take no role class (a node class would paint their rows): not W-unclassed
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+classes: {svc: {style: {fill: "#FFFFFF"; stroke: "#475569"}}}
+api: Orders API {class: svc}
+worker: Billing worker {class: svc}
+orders: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  total: decimal
+}
+api -> orders: writes
+worker -> orders: reads

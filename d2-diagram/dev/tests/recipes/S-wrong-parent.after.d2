@@ -1,0 +1,11 @@
+# After: an edge that leaves a container is written at the root with full paths.
+...@neutral-theme
+direction: down
+vpc: AWS VPC {
+  class: zone
+  web: Web tier {class: service}
+  api: Orders API {class: [service; focal]}
+  web -> api: {class: dep}
+}
+db: "Orders DB\nPostgres" {class: datastore}
+vpc.api -> db: {class: dep}

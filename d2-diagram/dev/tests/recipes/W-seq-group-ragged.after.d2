@@ -1,0 +1,13 @@
+# After: no phase groups (groups only for alt, loop, opt): the numbered messages carry the
+# order and the text around the diagram names the phases (playbooks/sequence.md rule 5).
+...@neutral-theme
+shape: sequence_diagram
+user: User {class: actor}
+app: Mobile app {class: [actor; focal]}
+auth: Auth server {class: actor}
+api: Items API {class: actor}
+user -> app: "1. open app" {class: dep}
+app -> auth: "2. authorize" {class: dep}
+auth -> app: "3. token" {class: secondary}
+app -> api: "4. GET /items" {class: dep}
+api -> app: "5. items" {class: secondary}

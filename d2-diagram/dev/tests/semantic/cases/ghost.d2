@@ -1,0 +1,18 @@
+# invisible balancing children (reference/layout.md section 3): not part of the graph
+...@mini-theme
+classes: {ghost: {style.opacity: 0}}
+start: "" {class: dot}
+pending: Pending {class: service}
+cancelled: Cancelled {class: terminal}
+paid: Paid {class: service}
+refunded: Refunded {class: terminal}
+shipped: Shipped {class: terminal}
+start -> pending: {class: flow}
+pending -> cancelled: cancel {class: dep}
+pending -> paid: pay {class: flow}
+pending -> g1: cancel {class: ghost}
+paid -> refunded: refund {class: dep}
+paid -> shipped: ship {class: flow}
+paid -> g2: refund {style.opacity: 0}
+g1.class: ghost
+g2: {style.opacity: 0}

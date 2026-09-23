@@ -1,0 +1,60 @@
+# Layer stack template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# One grid row: the stack of layers, then one tall bar per cross-cutting
+# concern. Cells of a row share its height, so each bar spans the stack.
+# Top = closest to the user. No edges: position is the relation
+# (playbooks/hierarchy.md).
+grid-rows: 1
+horizontal-gap: 12
+
+# Geometry only. A grid's gaps are also its padding (default 60px: bands
+# 180px tall). Every band is 516px inside: part width = (516 - (n-1)*12)/n,
+# so 4 parts: 120, 3: 164, 2: 252, and the band edges line up exactly.
+# Bars: a centred title of about 10 characters (MONITORING: 98 of 112px).
+classes: {
+  layer: {grid-rows: 1; horizontal-gap: 12; vertical-gap: 12}
+  p4: {width: 120; height: 60}
+  p3: {width: 164; height: 60}
+  bar: {width: 112; label.near: center-center}
+}
+
+# The stack is one untitled zone, as tall as the bars beside it. (A hidden
+# helper also works, but semcheck then misses it: S-missing-node.)
+stack: "" {
+  class: zone
+  grid-rows: 4
+  vertical-gap: 12
+  horizontal-gap: 12
+
+  apps: Apps {
+    class: [zone; layer]
+    bot: "Support bot\nSlack" {class: [service; p3]}
+    copilot: "Sales copilot\nSalesforce" {class: [service; p3]}
+    bi: "Dashboards\nLooker" {class: [service; p3]}
+  }
+  # The band holding the focus is the only tinted one.
+  ai: ML and AI {
+    class: [zone-blue; layer]
+    gateway: "LLM gateway\nLiteLLM" {class: [service; p4; focal]}
+    search: "Vectors\npgvector" {class: [service; p4]}
+    features: "Features\nFeast" {class: [service; p4]}
+    registry: "Models\nMLflow" {class: [service; p4]}
+  }
+  data: Data {
+    class: [zone; layer]
+    ingest: "Ingestion\nFivetran" {class: [service; p4]}
+    transform: "Transform\ndbt" {class: [service; p4]}
+    warehouse: "Warehouse\nSnowflake" {class: [service; p4]}
+    schedule: "Scheduling\nAirflow" {class: [service; p4]}
+  }
+  infra: Infrastructure {
+    class: [zone; layer]
+    cloud: "Cloud\nAWS" {class: [service; p3]}
+    compute: "Compute\nEKS" {class: [service; p3]}
+    iac: "Provisioning\nTerraform" {class: [service; p3]}
+  }
+}
+
+security: Security {class: [zone; bar]}
+monitoring: Monitoring {class: [zone; bar]}

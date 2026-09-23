@@ -1,0 +1,24 @@
+# After: composition = filled diamond on the whole: style.filled: true on that arrowhead.
+# brief: uml.brief
+...@neutral-theme
+direction: down
+Order: {
+  shape: class
+  class: focal-solid
+  style.stroke: ${paper}
+  +id: UUID
+  +total(): Money
+}
+LineItem: {
+  shape: class
+  +sku: string
+  +qty: int
+}
+# composition: a filled diamond on the whole (Order)
+Order <- LineItem: contains {
+  class: dep
+  source-arrowhead: {shape: diamond; style.filled: true}
+  target-arrowhead.label: "1..*"
+}
+*: {&shape: class; style: {font-size: 16; stroke-width: 1; border-radius: 0}}
+*: {&shape: class; !&class: focal-solid; style.fill: ${ink-600}}

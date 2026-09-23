@@ -1,0 +1,36 @@
+# request: "Roadmap slide for the engineering all-hands, Q3 2026 to Q2 2027, per
+#  stream. Platform: the Postgres 18 upgrade runs through Q4 (in progress), then
+#  multi-region failover in the first half of 2027. Data: Snowpipe ingest is done;
+#  the Snowflake cutover lands Nov 14, then we retire Redshift in Q1. AI: the
+#  support bot beta runs to year end, GA in Q1 is at risk. Mobile: App 5.0 is done,
+#  nothing in Q4, offline mode in the first half of 2027. Show status with a key
+#  and highlight the cutover."
+type: roadmap
+reader: engineers at the all-hands (slide, shown at doc width)
+width: 800
+direction: down   # periods run right, streams stack down
+focus: data.cutover
+out: owners, dependencies between items, exact start and end dates
+nodes:
+  head.a: Q3 2026
+  head.b: Q4 2026
+  head.c: Q1 2027
+  head.d: Q2 2027
+  platform: Platform
+  platform.pg: Postgres 18 upgrade
+  platform.dr: Multi-region failover
+  data: Data
+  data.pipe: Snowpipe ingest
+  data.cutover: Snowflake cutover\nNov 14
+  data.redshift: Retire Redshift
+  ai: AI
+  ai.beta: Support bot beta
+  ai.ga: Support bot GA
+  mobile: Mobile
+  mobile.app: App 5.0
+  mobile.offline: Offline mode
+  status.done: Done
+  status.doing: In progress
+  status.planned: Planned
+  status.risk: At risk
+edges:

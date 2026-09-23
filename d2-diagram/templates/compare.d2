@@ -1,0 +1,56 @@
+# Compare template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Before | after: two grid cells, each laid out on its own (a cell keeps its
+# own `direction`). No edge crosses the panels (playbooks/change.md).
+grid-columns: 2
+horizontal-gap: 16
+
+# Green means "added" here, not success: the legend is required.
+vars: {
+  d2-legend: {
+    added: Added {class: [service; success]}
+    removed: Removed {class: muted}
+    changed: Changed {class: [service; focal]}
+  }
+}
+
+# One width for every box: both panels come out the same size. 104 holds
+# lines of about 10 characters (13 touch the border): wrap or shorten.
+# A geometry class goes right after the base role; the modifier stays last.
+classes: {
+  box: {width: 104}
+}
+
+# Same keys, same order on both sides, so shared parts land in the same
+# place; a replacement takes the slot of the part it replaces. An edge on
+# one side only gets a hidden twin on the other: same graph, same layout.
+# Removed parts are muted and appear on the before side only.
+before: "Before: server sessions" {
+  class: zone
+  direction: down
+  web: "Web app\nReact" {class: [actor; box]}
+  api: "Shop API\nRails" {class: [service; box]}
+  db: "Users DB\nPostgres" {class: [datastore; box]}
+  sessions: "Sessions\nMemcached" {class: [datastore; box; muted]}
+  web -> api: {class: dep}
+  api -> db: {class: dep}
+  api -> sessions: {class: dep}
+  # hidden twin of the after side's web -> idp
+  web -> sessions: {class: dep; style.opacity: 0}
+}
+
+# The one change the reader must see is focal; other changed parts stay
+# plain and the title names them. Added parts are success.
+after: "After: OIDC tokens" {
+  class: zone-blue
+  direction: down
+  web: "Web app\nReact" {class: [actor; box]}
+  api: "Shop API\nJWT auth" {class: [service; box; focal]}
+  db: "Users DB\nPostgres" {class: [datastore; box]}
+  idp: "Login\nAuth0" {class: [service; box; external; success]}
+  web -> api: {class: dep}
+  api -> db: {class: dep}
+  api -> idp: {class: dep}
+  web -> idp: {class: dep}
+}

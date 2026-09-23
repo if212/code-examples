@@ -1,0 +1,12 @@
+# Before: the store is declared inside the vpc block, so d2 draws vpc.db instead of the
+# brief's db outside the VPC.
+...@neutral-theme
+direction: down
+vpc: AWS VPC {
+  class: zone
+  web: Web tier {class: service}
+  api: Orders API {class: [service; focal]}
+  db: "Orders DB\nPostgres" {class: datastore}
+  web -> api: {class: dep}
+  api -> db: {class: dep}
+}

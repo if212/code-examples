@@ -1,0 +1,20 @@
+# request: "Login sequence: the app sends the credentials to the auth server, which
+#  checks them against the user store and returns a token; on a lockout it retries
+#  after a delay. Focus on the auth server."
+type: sequence
+reader: engineers reading a design doc
+width: 800
+direction: down
+focus: auth
+out: MFA, password reset
+nodes:
+  app: Mobile app
+  auth: Auth server
+  users: User store
+  locked: "opt: locked out" {group}
+messages:
+  app -> auth: "1. POST /login"
+  auth -> users: "2. check password"
+  users -> auth: "3. match" {return}
+  auth -> app: "4. 200 token" {return}
+  auth -> app: "5. 429 retry later" {return, in: locked}

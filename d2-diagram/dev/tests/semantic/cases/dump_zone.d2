@@ -1,0 +1,8 @@
+...@mini-theme
+# a zone whose key is its title in lower case: the dump takes the label, not the key
+services: Services {
+  class: zone
+  api: API {class: service}
+}
+db: Orders DB {class: datastore}
+services.api -> db: writes {class: dep}

@@ -1,0 +1,11 @@
+# After: the row takes the larger height the finding printed (66/82 -> 82) through one class.
+...@neutral-theme
+classes: {tier: {height: 82}}
+direction: down
+gateway: API gateway {class: service}
+orders: Orders {class: [service; tier; focal]}
+payments: "Payments\nPCI zone" {class: [service; tier]}
+search: Search {class: [service; tier]}
+gateway -> orders: {class: flow}
+gateway -> payments: {class: dep}
+gateway -> search: {class: dep}

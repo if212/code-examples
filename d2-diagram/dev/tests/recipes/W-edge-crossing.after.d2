@@ -1,0 +1,16 @@
+# After: the targets are declared in the order of their sources (orders under web, billing
+# under mobile), and the main path is declared first.
+...@neutral-theme
+direction: down
+clients: Clients {
+  class: zone
+  web: Web app {class: actor}
+  mobile: Mobile app {class: actor}
+}
+services: Services {
+  class: zone
+  orders: Orders {class: [service; focal]}
+  billing: Billing {class: service}
+}
+clients.web -> services.orders: {class: flow}
+clients.mobile -> services.billing: {class: dep}

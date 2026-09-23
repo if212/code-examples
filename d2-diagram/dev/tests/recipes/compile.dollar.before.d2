@@ -1,0 +1,7 @@
+# Before: `$` starts a ${var} substitution, even inside double quotes.
+# expect-error: substitutions must begin on {
+...@neutral-theme
+direction: down
+api: Pricing API {class: service}
+bill: Billing {class: service}
+api -> bill: "costs $5 per call" {class: dep}

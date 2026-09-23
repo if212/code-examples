@@ -1,0 +1,10 @@
+...@mini-theme
+# a class list may span lines, one class per line (and carry comments)
+app: App {
+  class: [
+    service
+    terminal # shape only
+  ]
+}
+db: Orders DB {class: datastore}
+app -> db: writes {class: dep}

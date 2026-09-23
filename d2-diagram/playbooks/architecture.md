@@ -146,5 +146,5 @@ aws.eks.shop.api -> aws.data.rds: ":5432" {class: flow}
   API's middle row the edge ran past the database (W-long-edge, 485px).
 - A hub called by two containers gets a `width` spanning both, so both edges
   drop in straight (else W-label-on-bend on the jogging one).
-- The template uses 1246 of the 1280px height budget (one more label line:
-  1262px): add containers beside the existing ones, not in a new row.
+- The template uses 1226 of the 1280px height budget (one more label line:
+  1242px): add containers beside the existing ones, not in a new row.

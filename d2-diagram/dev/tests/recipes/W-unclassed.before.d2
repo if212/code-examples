@@ -1,0 +1,12 @@
+# Before: four nodes carry a role class, Kafka was forgotten and keeps d2's lavender default.
+...@neutral-theme
+direction: down
+web: Web app {class: actor}
+api: Orders API {class: [service; focal]}
+db: "Orders DB\nPostgres" {class: datastore}
+kafka: "Order events\nKafka"
+jobs: Fulfilment worker {class: service}
+web -> api: {class: flow}
+api -> db: {class: dep}
+api -> kafka: {class: async}
+kafka -> jobs: {class: async}

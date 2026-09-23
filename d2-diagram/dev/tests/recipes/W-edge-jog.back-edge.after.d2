@@ -1,0 +1,14 @@
+# After: the back-edge written confirmed <- held keeps ELK's rank order; the jog is gone.
+...@neutral-theme
+direction: down
+placed: Placed {class: state}
+awaiting: Awaiting payment {class: state}
+confirmed: Confirmed {class: [state; focal]}
+shipping: Shipping {class: state}
+held: Held {class: state}
+placed -> awaiting: {class: flow}
+awaiting -> confirmed: {class: flow}
+confirmed -> shipping: {class: flow}
+shipping -> held: {class: dep}
+confirmed <- held: {class: dep}
+awaiting -> held: {class: dep}

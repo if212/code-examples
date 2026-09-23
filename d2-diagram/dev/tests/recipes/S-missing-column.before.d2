@@ -1,0 +1,21 @@
+# Before: the brief lists tasks.title, the table lacks it.
+# brief: erd.brief
+...@neutral-theme
+direction: right
+users: {
+  shape: sql_table
+  id: uuid {constraint: primary_key}
+  email: text {constraint: unique}
+}
+tasks: {
+  shape: sql_table
+  class: focal-solid
+  style.stroke: ${paper}
+  id: uuid {constraint: primary_key}
+  assignee_id: uuid {constraint: [foreign_key; nullable]}
+}
+# nullable FK: cf-one (zero or one) at the parent end
+users.id <-> tasks.assignee_id: {source-arrowhead.shape: cf-one; target-arrowhead.shape: cf-many}
+*: {&shape: sql_table; style: {font-size: 16; stroke-width: 1; border-radius: 0}}
+*: {&shape: sql_table; !&class: focal-solid; style.fill: ${ink-600}}
+(** <-> **)[*]: {class: dep; style.stroke-width: 2}

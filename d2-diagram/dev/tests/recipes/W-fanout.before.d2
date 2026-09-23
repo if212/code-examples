@@ -1,0 +1,19 @@
+# Before: five edges from the gateway into one zone: ELK draws a stair-stepped comb.
+...@neutral-theme
+direction: down
+web: Web app {class: actor}
+gateway: API gateway {class: service}
+services: Services {
+  class: zone
+  auth: Auth {class: service}
+  catalog: Catalog {class: service}
+  cart: Cart {class: service}
+  orders: Orders {class: [service; focal]}
+  payments: Payments {class: service}
+}
+web -> gateway: {class: flow}
+gateway -> services.auth: {class: dep}
+gateway -> services.catalog: {class: dep}
+gateway -> services.cart: {class: dep}
+gateway -> services.orders: {class: flow}
+gateway -> services.payments: {class: dep}

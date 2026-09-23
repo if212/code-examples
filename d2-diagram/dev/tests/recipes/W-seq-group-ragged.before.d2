@@ -1,0 +1,19 @@
+# Before: phase groups span different participants, so their bands start and end at
+# different x.
+...@neutral-theme
+shape: sequence_diagram
+user: User {class: actor}
+app: Mobile app {class: [actor; focal]}
+auth: Auth server {class: actor}
+api: Items API {class: actor}
+login: Login {
+  class: zone
+  user -> app: "1. open app" {class: dep}
+  app -> auth: "2. authorize" {class: dep}
+  auth -> app: "3. token" {class: secondary}
+}
+fetch: Fetch data {
+  class: zone
+  app -> api: "4. GET /items" {class: dep}
+  api -> app: "5. items" {class: secondary}
+}

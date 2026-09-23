@@ -1,0 +1,15 @@
+# After: messages are declared in time order (declaration order is drawing order).
+# brief: seq.brief
+...@neutral-theme
+shape: sequence_diagram
+app: Mobile app {class: actor}
+auth: Auth server {class: [actor; focal]}
+users: User store {class: actor}
+app -> auth: "1. POST /login" {class: dep}
+auth -> users: "2. check password" {class: dep}
+users -> auth: "3. match" {class: secondary}
+auth -> app: "4. 200 token" {class: secondary}
+locked: "opt: locked out" {
+  class: zone
+  auth -> app: "5. 429 retry later" {class: failure}
+}

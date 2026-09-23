@@ -149,6 +149,100 @@ if [ -f "$SKILL/scripts/font-flags.sh" ]; then
   has "$o" '^fonts: d2 built-in (d2-default)' && ! has "$o" '^re-render: .*font' && ok "D2_FONT_FAMILY=d2-default: d2's built-in fonts" || bad "d2-default family" "$o"
 fi
 
+# 10. toolchain usability (WP8a) -------------------------------------------------------------------------
+# d2's environment variables are ignored (D2_WATCH used to hang the render); the SVG is the clean one
+sh "$CHECK" --no-raster "$T/ok_flowchart.d2" "$T/out/clean.svg" > /dev/null 2>&1
+o=$(D2_WATCH=true D2_LAYOUT=dagre D2_PAD=100 SCALE=2 timeout 60 sh "$CHECK" --no-raster "$T/ok_flowchart.d2" "$T/out/env.svg" 2>&1); rc=$?
+vb() { grep -o 'viewBox="[^"]*"' "$1" | head -1; }
+[ "$rc" = 3 ] && has "$o" '^warning: ignored d2 settings from the environment: D2_LAYOUT=dagre D2_PAD=100 D2_WATCH=true SCALE=2' &&
+  [ -n "$(vb "$T/out/env.svg")" ] && [ "$(vb "$T/out/env.svg")" = "$(vb "$T/out/clean.svg")" ] && ok "D2_WATCH/D2_LAYOUT/D2_PAD/SCALE ignored with a warning, no hang (B3)" ||
+  bad "hostile environment (exit $rc)" "$o"
+# an explicit D2_FONT_FAMILY beats the snowflake-brand detection
+if [ -f "$SKILL/scripts/font-flags.sh" ]; then
+  mkdir -p "$T/sfd" && printf '...@snowflake-brand\na -> b\n' > "$T/sfd/sf.d2" && cp "$SKILL/templates/snowflake-brand.d2" "$T/sfd/"
+  o=$(D2_FONT_FAMILY=default sh "$CHECK" --no-raster "$T/sfd/sf.d2" 2>&1)
+  has "$o" '^fonts: default (' && ok "D2_FONT_FAMILY overrides the brand detection" || bad "D2_FONT_FAMILY precedence" "$o"
+fi
+# a theme imported by absolute path still selects ELK and its spacing flags
+mkdir -p "$T/abs/theme" "$T/abs/doc" && cp "$SKILL/templates/neutral-theme.d2" "$T/abs/theme/"
+printf '...@%s/abs/theme/neutral-theme\na: A\nb: B\na -> b\n' "$T" > "$T/abs/doc/abs.d2"
+o=$(sh "$CHECK" --no-raster "$T/abs/doc/abs.d2" 2>&1)
+has "$o" '^render: ok .*(elk)' && has "$o" "^re-render: .*--elk-padding '\[top=50,left=50,bottom=30,right=50\]'" &&
+  ok "absolute theme import: ELK detected, ELK flags + padding on the re-render line" || bad "absolute import" "$o"
+# multi-board + brief: S- findings and the display line belong to the root board (B8)
+if [ -f "$SKILL/scripts/semcheck.py" ]; then
+  mkdir -p "$T/b8" && cp "$HERE/d2check/multi_board.d2" "$T/b8/mb.d2"
+  { printf '# request: "a multi-board test"\ntype: steps\nreader: test\nwidth: 800\ndirection: down\nout: none\nnodes:\n'
+    sed -n 's/^\([a-z][a-z0-9_]*\): \(.*\)$/  \1: \2/p' "$T/b8/mb.d2" | grep -v 'vars\|steps\|layers\|scenarios' | head -3
+    printf '  ghost: Ghost node\nedges:\n'; } > "$T/b8/mb.brief"
+  o=$(sh "$CHECK" --no-raster --brief "$T/b8/mb.brief" "$T/b8/mb.d2" 2>&1)
+  first=$(printf '%s\n' "$o" | grep -n '^board index.svg' | cut -d: -f1)
+  sline=$(printf '%s\n' "$o" | grep -n '^  S-' | head -1 | cut -d: -f1)
+  next=$(printf '%s\n' "$o" | grep -n '^board ' | sed -n 2p | cut -d: -f1)
+  [ -n "$first" ] && [ -n "$sline" ] && [ -n "$next" ] && [ "$sline" -gt "$first" ] && [ "$sline" -lt "$next" ] &&
+    has "$o" '^display: ' && ok "multi-board: S- findings listed under board index.svg (B8)" || bad "B8 multi-board semantics" "$o"
+fi
+# --quiet: codes without the numbered detail lines; --json: one parseable object; --out; --help
+cp "$HERE/cases/bad_short_label.d2" "$T/q.d2"
+o=$(sh "$CHECK" --no-raster --quiet "$T/q.d2" 2>&1); rc=$?
+[ "$rc" = 3 ] && has "$o" '^W-short-label x1 -> ' && ! has "$o" '^  \[' && ! has "$o" '^fonts: default' && has "$o" '^result: ' &&
+  ok "--quiet: code lines only, no finding details or fonts line" || bad "--quiet (exit $rc)" "$o"
+o=$(sh "$CHECK" --no-raster --json "$T/q.d2" 2>&1); rc=$?
+j=$(printf '%s' "$o" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["exit"], d["codes"].get("W-short-label"), d["warnings"] >= 1, d["errors"], "display" in d)' 2>&1)
+[ "$rc" = 3 ] && [ "$j" = "3 1 True 0 True" ] && ok "--json: one object, exit/codes/warnings/display" || bad "--json (exit $rc: $j)" "$o"
+o=$(sh "$CHECK" --no-raster --out "$T/out/viaout.svg" "$T/ok_flowchart.d2" 2>&1); rc=$?
+[ -f "$T/out/viaout.svg" ] && ok "--out writes the deliverable" || bad "--out (exit $rc)" "$o"
+sh "$CHECK" --no-raster --out "$T/a.svg" "$T/ok_flowchart.d2" "$T/b.svg" > /dev/null 2>&1; rc=$?
+[ "$rc" = 64 ] && ok "--out and a second OUT disagree: exit 64" || bad "conflicting outputs exit $rc"
+o=$(sh "$CHECK" --help 2>&1); rc=$?
+[ "$rc" = 0 ] && has "$o" '^exit codes' && has "$o" '^examples:' && has "$o" '--json' && ok "--help: options, exit codes, examples" || bad "--help (exit $rc)" "$o"
+# an animated SVG (every board in one file): only its first frame is linted, the brief is not applied
+cp "$HERE/d2check/multi_board.d2" "$T/anim.d2"
+o=$(sh "$CHECK" --no-raster "$T/anim.d2" "$T/out/anim-animated.svg" -- --animate-interval 1000 2>&1); rc=$?
+[ "$rc" = 3 ] && has "$o" '^lint: 0 error(s)' && has "$o" 'only the first (the base board) is linted' && grep -q '@keyframes' "$T/out/anim-animated.svg" &&
+  ok "animated SVG through d2check: first frame linted, no cross-frame phantoms" || bad "animated SVG (exit $rc)" "$o"
+# the ERD sample whose crow's-foot markers used to read as cropped content (B23): faithful, exit 0
+if [ -f "$SKILL/dev/tests/style/erd.ds.d2" ]; then
+  o=$(sh "$CHECK" --check-fmt "$SKILL/dev/tests/style/erd.ds.d2" "$T/out/erd.svg" 2>&1); rc=$?
+  [ "$rc" = 0 ] && has "$o" '^reviewed: faithful' && ok "ERD with crow's feet: faithful, exit 0 (B23)" || bad "ERD sample (exit $rc)" "$o"
+fi
+
+# paths with spaces: the READ: line is shell-quoted, and --json gives each PNG as one existing path
+mkdir -p "$T/sp ace/d2 work" && cp "$HERE/cases/ok_flowchart.d2" "$T/sp ace/my flow.d2"
+o=$(D2_WORK="$T/sp ace/d2 work" sh "$CHECK" --json "$T/sp ace/my flow.d2" 2>&1); rc=$?
+j=$(printf '%s' "$o" | python3 -c 'import json,os,sys; d=json.load(sys.stdin); r=d["read"]; print(len(r) >= 1 and all(os.path.isfile(p) for p in r), d["output"].endswith("my flow.svg"))' 2>&1)
+[ "$rc" = 0 ] && [ "$j" = "True True" ] && ok "--json read: whole paths when they contain spaces" || bad "--json with spaces (exit $rc: $j)" "$o"
+# --json on a compile error carries d2's error and the hint: line, not only the log path
+printf 'left -> right\n' > "$T/kwj.d2"
+o=$(sh "$CHECK" --no-raster --json "$T/kwj.d2" 2>&1); rc=$?
+j=$(printf '%s' "$o" | python3 -c 'import json,sys; d=json.load(sys.stdin); t="\n".join(d["text"]); print(d["exit"], "reserved keywords" in t, "hint:" in t)' 2>&1)
+[ "$rc" = 1 ] && [ "$j" = "1 True True" ] && ok "--json on exit 1: text holds d2's error and the hint" || bad "--json compile error (exit $rc: $j)" "$o"
+# exit 2 names its real cause: the tripwire, or an unformatted file under --check-fmt (no E-/S- findings)
+printf 'a: Caf\303\251\n' > "$T/trip.d2"
+o=$(sh "$CHECK" --no-raster "$T/trip.d2" 2>&1); rc=$?
+[ "$rc" = 2 ] && has "$o" '^result: exit 2 - replace the non-ASCII' && ! has "$o" '^result: .*E-/S-' &&
+  ok "exit 2 from the tripwire says so" || bad "tripwire result line (exit $rc)" "$o"
+printf 'a->b\n' > "$T/unf.d2"
+o=$(sh "$CHECK" --no-raster --check-fmt "$T/unf.d2" 2>&1); rc=$?
+[ "$rc" = 2 ] && has "$o" '^result: exit 2 - format the source' && [ "$(cat "$T/unf.d2")" = 'a->b' ] &&
+  ok "--check-fmt: exit 2 names the formatting, file untouched" || bad "--check-fmt result line (exit $rc)" "$o"
+# a theme file draws nothing: d2 writes no SVG; d2check says why and ends with a result: line
+cp "$SKILL/templates/neutral-theme.d2" "$T/theme-only.d2"
+o=$(sh "$CHECK" --no-raster "$T/theme-only.d2" 2>&1); rc=$?
+[ "$rc" = 1 ] && has "$o" 'the file draws nothing' && has "$o" '^hint: a theme is imported' && has "$o" '^result: exit 1' &&
+  ok "a theme file as input: exit 1, why, hint and result lines" || bad "theme file as input (exit $rc)" "$o"
+# a python older than 3.8 counts as none: rendered, not reviewed (exit 3), and --json stays valid
+mkdir -p "$T/oldpy" && printf '#!/bin/sh\ncase "$*" in *version_info*) exit 1 ;; esac\nexec %s "$@"\n' "$(command -v python3)" > "$T/oldpy/python3"
+chmod +x "$T/oldpy/python3"
+o=$(PATH="$T/oldpy:$PATH" sh "$CHECK" --json "$T/ok_flowchart.d2" "$T/out/oldpy.svg" 2>&1); rc=$?
+j=$(printf '%s' "$o" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["exit"], "older than python 3.8" in d["error"])' 2>&1)
+[ "$rc" = 3 ] && [ "$j" = "3 True" ] && ok "python older than 3.8: exit 3, named in --json" || bad "old python (exit $rc: $j)" "$o"
+# a missing brief is a missing file (1, like a missing IN); an SVG as input points at d2lint.py (64)
+sh "$CHECK" --no-raster --brief "$T/nope.brief" "$T/ok_flowchart.d2" > /dev/null 2>&1; rc=$?
+[ "$rc" = 1 ] && ok "missing --brief file: exit 1" || bad "missing brief exit $rc"
+o=$(sh "$CHECK" "$T/out/ok.svg" 2>&1); rc=$?
+[ "$rc" = 64 ] && has "$o" 'd2lint.py' && ok "an SVG as input: exit 64, points at d2lint.py" || bad "SVG input (exit $rc)" "$o"
+
 # 9. speed: the acceptance sample -----------------------------------------------------------------------
 if [ -f "$HERE/d2check/arch.ds.d2" ]; then
   cp "$HERE/d2check/arch.ds.d2" "$HERE/d2check/neutral-theme.d2" "$T/"

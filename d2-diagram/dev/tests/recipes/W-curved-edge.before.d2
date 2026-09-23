@@ -1,0 +1,7 @@
+# Before: no theme import and no layout-engine, so d2 falls back to dagre and curves every edge.
+direction: down
+web: Web app
+api: Orders API
+db: "Orders DB\nPostgres" {shape: cylinder}
+web -> api: HTTPS
+api -> db: writes

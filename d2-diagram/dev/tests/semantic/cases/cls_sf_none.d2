@@ -1,0 +1,4 @@
+vars: {d2-config: {layout-engine: elk}}
+app: App {class: sf-node}
+db: Orders DB {class: sf-datastore}
+app -> db: writes {class: sf-flow}

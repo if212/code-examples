@@ -1,0 +1,26 @@
+# After: nothing leaves a final state (a redeploy is a new run from the initial dot).
+# brief: state.brief
+...@neutral-theme
+direction: down
+
+# Initial state: a dot with no label.
+start: "" {class: dot}
+queued: Queued {class: state}
+# Composite state: its substates run inside one zone.
+active: In progress {
+  class: zone
+  building: Building {class: state}
+  deploying: Deploying {class: [state; focal]}
+}
+# Final states: terminal + double border, coloured by outcome.
+live: Live {class: [success; terminal]; style.double-border: true}
+failed: Failed {class: [danger; terminal]; style.double-border: true}
+
+# Main path first, as flow. Labels are events; quote them when they hold
+# a guard: "start [runner free]".
+start -> queued: {class: flow}
+queued -> active.building: "start [runner free]" {class: flow}
+active.building -> active.deploying: build passes {class: flow}
+active.deploying -> live: checks pass {class: flow}
+# One transition out of the composite state covers every state inside it.
+active -> failed: any step fails {class: failure}

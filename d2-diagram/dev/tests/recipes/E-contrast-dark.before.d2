@@ -1,0 +1,8 @@
+# Before: dark-theme-id adds a dark mode, and raw fills keep their light colour there while
+# the default label colour turns light: light text on light boxes.
+...@neutral-theme
+vars: {d2-config: {dark-theme-id: 200}}
+direction: down
+payments: Payments {style.fill: "#FEF3C7"}
+ledger: "Ledger\nPostgres" {shape: cylinder; style.fill: "#DCFCE7"}
+payments -> ledger: posts entries

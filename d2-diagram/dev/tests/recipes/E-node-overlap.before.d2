@@ -1,0 +1,9 @@
+# Before: two notes on the same near constant are drawn on top of each other.
+# expect: E-label-overlap
+...@neutral-theme
+direction: down
+api: Orders API {class: [service; focal]}
+db: "Orders DB\nPostgres" {class: datastore}
+api -> db: writes {class: dep}
+n1: Writes are idempotent {class: note; near: top-right}
+n2: Reads go to a replica {class: note; near: top-right}

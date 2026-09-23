@@ -1,0 +1,8 @@
+# Before: a one-character path label says nothing at reading size.
+...@neutral-theme
+direction: down
+ingress: Ingress {class: service}
+web: Web service {class: service}
+api: API service {class: [service; focal]}
+ingress -> web: "/" {class: dep}
+ingress -> api: "/api" {class: flow}

@@ -1,0 +1,7 @@
+# request: "The app writes orders to the orders database."
+type: architecture
+nodes:
+  app: App
+  db: Orders DB {shape=cylinder}
+edges:
+  app -> db: writes

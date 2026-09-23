@@ -42,8 +42,8 @@ serve: Transform (dbt) and serve {
 # The one edge between rows: node to node (never row to row). It is
 # vertical only while both rows are equally wide: no labels on horizontal
 # hops (a label widens its row by its width + ~37px), merges and fan-outs
-# of 3 at most (a 4th node adds a 50px routing track). d2lint misses tilts
-# under 12 degrees: check this edge in the col.png after every edit.
+# of 3 at most (a 4th node adds a 50px routing track). d2lint flags a lean
+# over 8px (W-diagonal-edge); still check this edge in the col.png.
 load.raw -> serve.stg: {class: flow}
 
 # Slides (1600px column): delete `grid-columns`/`vertical-gap` and both

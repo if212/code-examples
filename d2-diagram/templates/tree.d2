@@ -1,0 +1,57 @@
+# Tree template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Org chart: the top two levels are an ELK tree; each group's members are a
+# one-column grid INSIDE its zone, so width grows with groups, not leaves:
+# 4 groups of 4 fit (846px, 14.1px text). Every team as its own tree node:
+# 8 teams under 3 leads made 1150px (11px text, W-aspect). Module trees and
+# mind maps grow right (playbooks/hierarchy.md).
+direction: down
+
+# Geometry only, no font styles: one size per level keeps the rows even.
+# horizontal-gap is also the grid's side padding (12 here; the default
+# left a 60px margin and a 1230px canvas).
+classes: {
+  group: {grid-rows: 4; vertical-gap: 8; horizontal-gap: 12}
+  lead: {width: 160; height: 56}
+  member: {width: 160; height: 40}
+}
+
+# One root. Each group: its lead first (a service card), then the members,
+# muted (regular weight), so every group reads lead first.
+head: "M. Garcia\nHead of Data" {class: [service; focal-solid]; width: 200}
+eng: Data engineering {
+  class: [zone; group]
+  lead: "A. Kim\nEng manager" {class: [service; lead]}
+  ingest: Ingestion {class: [muted; member]}
+  warehouse: Warehouse {class: [muted; member]}
+  streaming: Streaming {class: [muted; member]}
+}
+analytics: Analytics {
+  class: [zone; group]
+  lead: "R. Osei\nAnalytics lead" {class: [service; lead]}
+  finance: Finance BI {class: [muted; member]}
+  product: Product analytics {class: [muted; member]}
+  selfserve: Self-serve BI {class: [muted; member]}
+}
+ml: ML platform {
+  class: [zone; group]
+  lead: "L. Novak\nEng manager" {class: [service; lead]}
+  features: Feature store {class: [muted; member]}
+  training: Training {class: [muted; member]}
+  serving: Model serving {class: [muted; member]}
+}
+gov: Governance {
+  class: [zone; group]
+  lead: "S. Patel\nGovernance lead" {class: [service; lead]}
+  access: Access and PII {class: [muted; member]}
+  quality: Data quality {class: [muted; member]}
+  catalog: Data catalog {class: [muted; member]}
+}
+
+# ONE line per group, into the zone, never one per member. `--` draws no
+# arrowheads: reporting lines, not calls.
+head -- eng: {class: dep}
+head -- analytics: {class: dep}
+head -- ml: {class: dep}
+head -- gov: {class: dep}

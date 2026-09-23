@@ -12,10 +12,10 @@ Measured on the template's 10 nodes with d2check defaults:
 
 | Layout | 800px column | 1600px slide |
 |---|---|---|
-| Serpentine: each stage row is a grid cell with its own `direction` | 680x904, text 15px: use | fine |
-| One ELK row: `direction: right`, stages as zones | 1395px, text 8px (E-small-text) | 1395x488, clean: use |
-| ELK `direction: down`, two stage zones | 640x1130, clean; a label on each hop: 1307px (W-tall) | too tall |
-| Grid of stage columns, `grid-rows: 1` | 1230px, text 9.8px, 5 diagonal edges | never |
+| Serpentine: each stage row is a grid cell with its own `direction` | 680x864, text 15px: use | fine |
+| One ELK row: `direction: right`, stages as zones | 1395px, text 8px (E-small-text) | 1395x468, clean: use |
+| ELK `direction: down`, two stage zones | 640x1090, clean; a label on each hop: 1385px (W-tall) | too tall |
+| Grid of stage columns, `grid-rows: 1` | 1238px, text 9.6px, 6 diagonal edges | never |
 
 `direction: down` suits a short chain with unlabelled hops (6 ranks at most):
 it reads one way and ELK centres every merge and fan-out, whatever their size.
@@ -77,9 +77,9 @@ a turn at the left end is always vertical, and a turn at the right end only
 while both rows are equally wide: one `width` on every node, the same number
 of stages per row, merges and fan-outs of at most 3 with the main node in the
 middle, no labels on horizontal hops. Measured tilts: a `loads` label 52px, a
-4th source 37px (a second routing track, +50px), rows of 3 and 2 stages 133px.
-d2lint flags only the last (W-diagonal-edge starts at 12 degrees): look at the
-turn in the col.png after every edit.
+4th source 36px (a second routing track, +50px), rows of 3 and 2 stages 133px.
+d2lint flags a turn leaning over 8px (W-diagonal-edge); still look at the turn
+in the col.png after every edit.
 
 **5. Name the transformer in the title or on the turn edge,** not in a node: a
 `dbt` node adds a stage to its row (870px wide) and pushed the turn 135px off
@@ -97,7 +97,7 @@ W-edge-label-on-border); use the longest label plus 60.
 
 **8. Slides: one ELK row.** Drop `grid-columns`, `vertical-gap` and the per-row
 `direction`s, set `direction: right`, group the stages in zones and label hops
-freely. 1395x488 for the template's content, clean at `--column 1600`.
+freely. 1395x468 for the template's content, clean at `--column 1600`.
 
 ```d2
 # cwd: ../templates
@@ -125,6 +125,6 @@ wh.raw -> wh.marts: dbt {class: flow}
 `${CLAUDE_SKILL_DIR}/templates/pipeline.d2`: two rows, "Extract and load"
 (right) and "Transform (dbt) and serve" (left); three sources merge into
 Fivetran, RAW turns down into STAGING, MARTS fans out to three consumers:
-680x904 at 800px, no errors or warnings. A third row runs `direction: right`
+680x864 at 800px, no errors or warnings. A third row runs `direction: right`
 and starts under row 2's last node: that turn is at the left end, so it stays
 vertical (rule 4).

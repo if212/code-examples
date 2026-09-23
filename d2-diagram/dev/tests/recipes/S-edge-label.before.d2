@@ -1,0 +1,13 @@
+# Before: the edge label drifted from the brief (HTTP/2 instead of HTTPS).
+# brief: arch.brief
+...@neutral-theme
+direction: down
+web: Web app {class: actor}
+api: Orders API {class: [service; focal]}
+db: "Orders DB\nPostgres" {class: datastore}
+events: "Order events\nKafka" {class: queue}
+mailer: Mailer {class: service}
+web -> api: HTTP/2 {class: flow}
+api -> db: {class: dep}
+api -> events: {class: async}
+events -> mailer: {class: async}

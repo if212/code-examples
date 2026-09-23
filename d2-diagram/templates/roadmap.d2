@@ -1,0 +1,63 @@
+# Roadmap template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# What ships when, per stream (playbooks/change.md): one grid row per
+# stream, a tick row on top, the status key at the bottom. No edges.
+# grid-rows = streams + 2.
+grid-rows: 6
+vertical-gap: 8
+
+classes: {
+  # Every row: the same gaps, so a bar spanning n periods is
+  # n x 168 + (n - 1) x 12 px wide (168, 348, 528, 708) and ends on a tick.
+  row: {grid-rows: 1; horizontal-gap: 12; vertical-gap: 10}
+  bare: {label: ""; grid-rows: 1; horizontal-gap: 12; vertical-gap: 10; style.opacity: 0}
+  tick: {width: 168; height: 24}
+  q1: {width: 168; height: 48}
+  q2: {width: 348; height: 48}
+  # An empty period: a hidden spacer one period wide.
+  gap: {label: ""; width: 168; height: 48; style.opacity: 0}
+  chip: {width: 120; height: 32}
+}
+
+head: {
+  class: bare
+  a: "Q3 2026" {class: [caption; tick]}
+  b: "Q4 2026" {class: [caption; tick]}
+  c: "Q1 2027" {class: [caption; tick]}
+  d: "Q2 2027" {class: [caption; tick]}
+}
+# Status is the class: done success, in progress service, planned muted,
+# at risk danger. The one item the plan hinges on is focal; a milestone
+# date goes inside its bar.
+platform: Platform {
+  class: [zone; row]
+  pg: "Postgres 18 upgrade" {class: [service; q2]}
+  dr: "Multi-region failover" {class: [muted; q2]}
+}
+data: Data {
+  class: [zone; row]
+  pipe: "Snowpipe ingest" {class: [success; q1]}
+  cutover: "Snowflake cutover\nNov 14" {class: [service; q1; focal]}
+  redshift: "Retire Redshift" {class: [muted; q1]}
+}
+ai: AI {
+  class: [zone; row]
+  beta: "Support bot beta" {class: [service; q2]}
+  ga: "Support bot GA" {class: [danger; q1]}
+}
+mobile: Mobile {
+  class: [zone; row]
+  app: "App 5.0" {class: [success; q1]}
+  s2: {class: gap}
+  offline: "Offline mode" {class: [muted; q2]}
+}
+# The key: chips in the status classes, narrower than a period so they do
+# not read as a stream. (A d2-legend swatch cannot tell service from muted.)
+status: {
+  class: bare
+  done: Done {class: [success; chip]}
+  doing: In progress {class: [service; chip]}
+  planned: Planned {class: [muted; chip]}
+  risk: At risk {class: [danger; chip]}
+}

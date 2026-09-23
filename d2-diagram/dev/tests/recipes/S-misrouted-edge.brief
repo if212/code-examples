@@ -1,0 +1,17 @@
+# request: "Fivetran loads the app database into RAW in Snowflake. Highlight RAW."
+type: pipeline
+reader: data team wiki
+width: 800
+direction: right
+focus: wh.raw
+out: transformations
+nodes:
+  src: Sources
+  src.app: App DB\nPostgres {shape: cylinder}
+  ingest: Ingest
+  ingest.fivetran: Fivetran
+  wh: Snowflake
+  wh.raw: RAW {shape: cylinder}
+edges:
+  src.app -> ingest.fivetran
+  ingest.fivetran -> wh.raw

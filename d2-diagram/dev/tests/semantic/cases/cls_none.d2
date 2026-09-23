@@ -1,0 +1,4 @@
+vars: {d2-config: {layout-engine: elk}}
+app: App {class: service}
+db: Orders DB {class: datastore}
+app -> db: writes {class: dep}

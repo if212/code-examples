@@ -1,0 +1,9 @@
+...@mini-theme
+shape: sequence_diagram
+browser: Browser {class: actor}
+api: Orders API {class: [actor; focal]}
+db: Orders DB {class: actor}
+browser -> api.t: "1. POST /orders" {class: dep}
+api.idem: Idempotency key makes a retry safe {class: service}
+api.t -> db: "2. INSERT order" {class: dep}
+api.t -> browser: "3. 201 Created" {class: dep; style.stroke-dash: 3}

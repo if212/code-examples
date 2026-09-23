@@ -1,0 +1,44 @@
+# request: "Branching model for CONTRIBUTING.md: we work on develop; release/1.1 is
+#  cut from develop, gets one fix, and is merged into main (tagged 1.1) and back
+#  into develop. A hotfix/1.1.1 branch is cut from main, merged into main (tagged
+#  1.1.1) and back into develop. main started at 1.0."
+type: gitflow
+reader: contributors reading CONTRIBUTING.md
+width: 800
+direction: right   # time runs right, one row per branch
+focus: git.d1.c -> git.d2.c -> git.d4.c -> git.d5.c -> git.d7.c   # the develop line
+out: feature branches, CI checks, version bump commits
+nodes:
+  git: ""
+  git.t1: "1.0"
+  git.t5: "1.1"
+  git.t7: "1.1.1"
+  git.m0.n: main {note}
+  git.m1.c: ""
+  git.m5.c: ""
+  git.m7.c: ""
+  git.h0.n: hotfix/1.1.1 {note}
+  git.h6.c: ""
+  git.r0.n: release/1.1 {note}
+  git.r3.c: ""
+  git.r4.c: ""
+  git.d0.n: develop {note}
+  git.d1.c: ""
+  git.d2.c: ""
+  git.d4.c: ""
+  git.d5.c: ""
+  git.d7.c: ""
+edges:
+  git.d1.c -- git.d2.c
+  git.d2.c -- git.d4.c
+  git.d4.c -- git.d5.c
+  git.d5.c -- git.d7.c
+  git.m1.c -- git.m5.c
+  git.m5.c -- git.m7.c
+  git.r3.c -- git.r4.c
+  git.d2.c -- git.r3.c
+  git.r4.c -- git.m5.c
+  git.r4.c -- git.d5.c
+  git.m5.c -- git.h6.c
+  git.h6.c -- git.m7.c
+  git.h6.c -- git.d7.c

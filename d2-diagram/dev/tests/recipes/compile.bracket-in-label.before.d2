@@ -1,0 +1,7 @@
+# Before: an unquoted `[` in a label (a UML guard).
+# expect-error: unexpected text after
+...@neutral-theme
+direction: down
+pending: Pending {class: state}
+paid: Paid {class: state}
+pending -> paid: pay [card ok] {class: dep}

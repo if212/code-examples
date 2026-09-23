@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """pngstats - decide whether a rasterized d2 diagram actually shows the diagram.
 
-Standard library only (uses Pillow for speed when it is installed).
-usage: python3 pngstats.py OUT.png [SOURCE.svg]   -> one line; exit 0 OK / 1 BLANK / 2 SUSPECT
+Standard library only (uses Pillow for speed when it is installed). d2raster.py runs it on every PNG
+it writes; run it by hand to check a PNG made some other way.
+usage: python3 pngstats.py [--json] OUT.png [SOURCE.svg]   -> one line (or a JSON object)
 
 Signals:
   ink      share of pixels that differ from the SVG's background colour
   fills    how many of the SVG's large opaque solid fill colours appear in the raster
+  lines    how many of the SVG's text and line colours appear (at least one must: no letter and no
+           line drawn means the renderer failed)
   black    share of near-black pixels (cairosvg paints d2's label masks as black bars)
   cropped  the inked area stops short of the right/bottom of where d2 drew content (short
            headless viewports)
 Verdict:
   BLANK    ink < 0.05 %, or ink < 0.2 % and none of the expected fills found
-  SUSPECT  fewer than half of the expected fills found, > 3 % near-black pixels although the SVG
-           has no dark fills, or cropped
+  SUSPECT  fewer than half of the expected fills found, none of the text and line colours found,
+           > 3 % near-black pixels although the SVG has no dark fills, or cropped
   OK       otherwise
 """
 import re
@@ -186,6 +189,47 @@ def svg_expectations(svg_text):
     return bg, [c for c, _ in fills.most_common(8)], dark
 
 
+def svg_ink_colours(svg_text, bg="#FFFFFF"):
+    """the colours d2 writes text and lines in (label text, shape outlines, edges): opaque, clearly off the
+    background and not near-black. A raster in which none of them appears drew no letter and no line (cairosvg
+    paints white-filled d2 diagrams as an empty page with black bars, which the fill check cannot see)."""
+    bgc = hexrgb(bg)
+    cols = Counter()
+
+    def add(col):
+        col = (col or "").upper()
+        if not re.fullmatch(r"#[0-9A-F]{6}", col):
+            return
+        c = hexrgb(col)
+        if sum(abs(c[i] - bgc[i]) for i in range(3)) < 60 or max(c) < 24:
+            return  # invisible on the canvas, or indistinguishable from a black bar
+        cols[col] += 1
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(svg_text.encode("utf-8"))
+
+        def walk(el, alpha):
+            tag = el.tag.split("}", 1)[-1] if isinstance(el.tag, str) else ""
+            if tag in ("mask", "defs", "clipPath", "marker", "pattern", "style", "foreignObject"):
+                return
+            a = alpha * _alpha(el)
+            if a < 0.99:
+                return
+            if tag == "text":
+                add(el.get("fill"))
+            elif tag in ("rect", "ellipse", "path", "polygon", "line", "polyline") and el.get("stroke"):
+                sw = re.search(r"stroke-width:\s*([\d.]+)", el.get("style") or "") or re.match(r"([\d.]+)", el.get("stroke-width") or "1")
+                if sw and float(sw.group(1)) >= 1:
+                    add(el.get("stroke"))
+            for ch in el:
+                walk(ch, a)
+        walk(root, 1.0)
+    except Exception:  # not parseable as XML: plain scan of the markup
+        for m in re.finditer(r'<text\b[^>]*\bfill="(#[0-9A-Fa-f]{6})"', svg_text):
+            add(m.group(1))
+    return [c for c, _ in cols.most_common(12)]
+
+
 def expected_box(svg):
     """where d2 drew content, as fractions of the canvas - lets analyse() notice a cropped raster"""
     try:
@@ -196,7 +240,9 @@ def expected_box(svg):
         dg = d2lint.load(svg)
         vb = dg.vb
         # what actually paints: remote images (shape: image with a URL) never load inside <img>
-        boxes = [n.box for n in dg.nodes.values() if n.box and not n.hidden and not n.remote_image]
+        # (and transparent cells - grid slots, spacers - draw nothing either)
+        boxes = [n.box for n in dg.nodes.values()
+                 if n.box and not n.hidden and not n.remote_image and getattr(n, "paints", True)]
         boxes += [t.box for t in dg.texts] + [e.box for e in dg.edges if e.box and not e.hidden] + [dg.legend]
         b = d2lint.union_all(boxes)
         return ((b.x0 - vb.x0) / vb.w, (b.y0 - vb.y0) / vb.h, (b.x1 - vb.x0) / vb.w, (b.y1 - vb.y0) / vb.h)
@@ -254,11 +300,13 @@ def _stats_stdlib(png, bgc):
 def analyse(png, svg=None, expect_box=None, check_fills=True):
     """expect_box: (x0, y0, x1, y1) of the drawn content as fractions of the canvas (expected_box());
     if the raster's ink stops well short of it, the image was cropped."""
-    bg, expected, dark = ("#FFFFFF", [], False)
+    bg, expected, dark, lines = ("#FFFFFF", [], False, [])
     if svg:
-        bg, expected, dark = svg_expectations(open(svg, encoding="utf-8", errors="replace").read())
+        text = open(svg, encoding="utf-8", errors="replace").read()
+        bg, expected, dark = svg_expectations(text)
+        lines = svg_ink_colours(text, bg)
     if not check_fills:
-        expected = []
+        expected, lines = [], []
     bgc = hexrgb(bg)
     try:
         w, h, n, ink, black, hist, ibox = _stats_pillow(png, bgc)
@@ -270,11 +318,14 @@ def analyse(png, svg=None, expect_box=None, check_fills=True):
         cnt = sum(v for k, v in hist.items() if abs(k[0] - cc[0]) <= 3 and abs(k[1] - cc[1]) <= 3 and abs(k[2] - cc[2]) <= 3)
         if cnt >= 4:
             found.append(c)
+    lines_found = [c for c in lines if sum(v for k, v in hist.items() if all(abs(k[i] - hexrgb(c)[i]) <= 12 for i in range(3))) >= 4]
     ink_r, black_r = ink / max(n, 1), black / max(n, 1)
     # a tiny diagram (one short label, pale fills) can ink < 0.2 %: blank only if its fills are missing too
     if ink_r < 0.0005 or (ink_r < 0.002 and not (expected and found)):
         verdict = "BLANK"
     elif expected and len(found) * 2 < len(expected):
+        verdict = "SUSPECT"
+    elif lines and not lines_found:  # not one letter or line in the colours the SVG draws them in
         verdict = "SUSPECT"
     elif black_r > 0.03 and not dark:
         verdict = "SUSPECT"
@@ -293,19 +344,51 @@ def analyse(png, svg=None, expect_box=None, check_fills=True):
             cropped = "ink bbox %d,%d-%d,%d but content expected to reach %d,%d-%d,%d (cropped?)" % (
                 ix0, iy0, ix1, iy1, ex0, ey0, ex1, ey1)
     return {"verdict": verdict, "cropped": cropped, "ink_box": ibox, "size": [w, h], "ink": round(ink_r, 4),
-            "black": round(black_r, 4), "fills_expected": len(expected), "fills_found": len(found), "colors": len(hist)}
+            "black": round(black_r, 4), "fills_expected": len(expected), "fills_found": len(found),
+            "lines_expected": len(lines), "lines_found": len(lines_found), "colors": len(hist)}
 
 
-def main():
-    if len(sys.argv) < 2:
-        print(__doc__)
-        return 2
-    svg = sys.argv[2] if len(sys.argv) > 2 else None
-    r = analyse(sys.argv[1], svg, expected_box(svg) if svg else None)
-    print("%s %s %dx%d ink=%.1f%% fills=%d/%d black=%.1f%% colors=%d%s" % (
-        r["verdict"], sys.argv[1], r["size"][0], r["size"][1], r["ink"] * 100, r["fills_found"],
-        r["fills_expected"], r["black"] * 100, r["colors"], " " + r["cropped"] if r["cropped"] else ""))
-    return {"OK": 0, "BLANK": 1, "SUSPECT": 2}[r["verdict"]]
+EPILOG = """exit codes (shared by every script of the skill):
+  0   OK: the PNG shows the diagram
+  1   hard failure: the PNG or the SVG cannot be read
+  2   finding: BLANK or SUSPECT (do not ship or trust this PNG; re-make it with d2raster.py)
+  64  usage error
+examples:
+  python3 pngstats.py docs/flow.png docs/flow.svg        compare against the SVG it came from
+  python3 pngstats.py --json docs/flow.png               ink and colour counts only"""
+
+
+def main(argv=None):
+    import argparse
+
+    class ArgParser(argparse.ArgumentParser):
+        def error(self, message):  # the skill's convention: usage errors exit 64 (2 means a finding)
+            self.print_usage(sys.stderr)
+            self.exit(64, "%s: error: %s (run with --help for the options)\n" % (self.prog, message))
+
+    ap = ArgParser(prog="pngstats.py", description=__doc__.split("\n\n")[0], epilog=EPILOG,
+                   formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("png", metavar="OUT.png", help="the PNG to check (from d2raster.py or any other rasterizer)")
+    ap.add_argument("svg", nargs="?", metavar="SOURCE.svg", help="the SVG it was rasterized from (enables the fills and crop checks)")
+    ap.add_argument("--json", action="store_true", help="print the measurements as JSON")
+    a = ap.parse_args(argv)
+    if a.png.lower().endswith(".svg"):
+        ap.error("the PNG comes first, then the SVG it was made from: pngstats.py OUT.png %s" % a.png)
+    try:
+        r = analyse(a.png, a.svg, expected_box(a.svg) if a.svg else None)
+    except (OSError, ValueError, zlib.error, struct.error) as e:
+        print("pngstats: cannot read %s: %s" % (a.png if not isinstance(e, OSError) or not e.filename else e.filename,
+                                                  e.strerror if isinstance(e, OSError) and e.strerror else e), file=sys.stderr)
+        return 1
+    if a.json:
+        import json
+        print(json.dumps(dict(r, file=a.png)))
+    else:
+        print("%s %s %dx%d ink=%.1f%% fills=%d/%d lines=%d/%d black=%.1f%% colors=%d%s" % (
+            r["verdict"], a.png, r["size"][0], r["size"][1], r["ink"] * 100, r["fills_found"],
+            r["fills_expected"], r["lines_found"], r["lines_expected"], r["black"] * 100, r["colors"],
+            " " + r["cropped"] if r["cropped"] else ""))
+    return 0 if r["verdict"] == "OK" else 2
 
 
 if __name__ == "__main__":

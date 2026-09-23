@@ -1,0 +1,14 @@
+# request: "Task tracker schema for the backend README: a task is assigned to at most
+#  one user (assignee_id is NULL until someone takes it); a user can hold many
+#  tasks. Focus on tasks."
+type: erd
+reader: backend engineers reading the README
+width: 800
+direction: right
+focus: tasks
+out: comments, labels
+nodes:
+  users: users {cols: id email}
+  tasks: tasks {cols: id title assignee_id}
+relationships:
+  users.id <-> tasks.assignee_id {src: cf-one, dst: cf-many}

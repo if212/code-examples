@@ -1,0 +1,16 @@
+# request: "The Orders API runs in the AWS VPC and writes to the Orders DB, a managed
+#  Postgres outside the VPC. Highlight the Orders API."
+type: architecture
+reader: team wiki
+width: 800
+direction: down
+focus: vpc.api
+out: networking details
+nodes:
+  vpc: AWS VPC
+  vpc.web: Web tier
+  vpc.api: Orders API
+  db: Orders DB\nPostgres {shape: cylinder}
+edges:
+  vpc.web -> vpc.api
+  vpc.api -> db

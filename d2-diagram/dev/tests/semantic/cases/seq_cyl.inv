@@ -1,0 +1,13 @@
+type: sequence
+nodes:
+  web: Web app
+  api: Orders API
+  bill: Billing
+  mail: Mailer
+  db: Orders DB
+messages:
+  web -> api: POST /orders
+  api -> bill: charge
+  bill -> mail: receipt
+  api -> db: INSERT order
+  db -> api: ok {return}

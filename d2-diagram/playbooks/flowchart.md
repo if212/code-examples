@@ -21,7 +21,7 @@ boundary, one failure lane) and `templates/steps.d2` (one board per step).
 ## Budget at 800px (measured on the template)
 
 - A layer gap is 40px; a labelled edge adds a label layer (98px). The
-  template (7 steps, 2 containers, one decision) is 639x1037px.
+  template (7 steps, 2 containers, one decision) is 639x997px.
 - Past about 15 steps, or three nested decisions, split into boards
   (rule 8) or two diagrams.
 
@@ -124,6 +124,7 @@ steps: {
 }
 ```
 
-The output is a FOLDER, not one file: `d2 flow.d2 out.svg` writes
-`out/index.svg` plus `out/1.svg`, `out/2.svg`. d2check lints every board.
-Naming, single boards and animation: `reference/export.md` section 5.
+The output is a FOLDER, not one file: d2check renders `flow.d2` to
+`flow/index.svg` plus `flow/1.svg`, `flow/2.svg`, and lints every board.
+`reference/export.md`: board files and single boards section 5, animation
+section 6, names section 10.

@@ -10,6 +10,7 @@
 # terminal is shape only, so it goes last: {class: [success; terminal]}.
 # One focal per diagram. Blue = focus and main path, red = failure,
 # violet = async, green = success. No shadow, 3d or gradients.
+# Lucide icons are pinned to ink-600 (475569), the icon.sh get default.
 # Role table, type scale and rules: ${CLAUDE_SKILL_DIR}/reference/design-system.md
 # After any edit: python3 ${CLAUDE_SKILL_DIR}/scripts/contrast.py --check neutral-theme.d2
 
@@ -95,6 +96,9 @@ classes: {
   external: {style: {fill: ${paper}; stroke: ${ink-500}; stroke-width: 1; stroke-dash: 4; font-color: ${ink-700}; border-radius: 8}}
   danger: {style: {fill: ${danger-50}; stroke: ${danger-600}; stroke-width: 1; font-color: ${danger-800}; border-radius: 8}}
   success: {style: {fill: ${success-50}; stroke: ${success-600}; stroke-width: 1; font-color: ${success-800}; border-radius: 8}}
+
+  # caption: lane/row/tick/timestamp headers in grid templates (swimlane, roadmap, timeline)
+  caption: {shape: text; style: {font-size: 15; bold: true; text-transform: uppercase; font-color: ${ink-600}}}
 
   # ---- containers: tinted panel, 15px bold uppercase title at top-left ----
   zone: {label.near: top-left; style: {fill: ${ink-100}; stroke: ${ink-300}; stroke-width: 1; font-color: ${ink-600}; font-size: 15; bold: true; text-transform: uppercase; border-radius: 12}}

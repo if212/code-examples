@@ -1,0 +1,16 @@
+# expect-clean: E- W-
+# crow's-foot arrowheads live in <marker> elements: their paths must not count as drawn geometry
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: right
+orgs: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+}
+members: {
+  shape: sql_table
+  org_id: int {constraint: foreign_key}
+}
+members.org_id <-> orgs.id: {
+  source-arrowhead.shape: cf-many
+  target-arrowhead.shape: cf-one-required
+}

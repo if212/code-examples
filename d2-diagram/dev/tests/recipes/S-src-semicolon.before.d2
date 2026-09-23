@@ -1,0 +1,12 @@
+# Before: an unquoted ; ends the statement: the label is "read" and "write" becomes a node
+# (d2 fmt splits the line in two: --check-fmt keeps it for S-src-semicolon).
+# d2check: --check-fmt
+# brief: S-src.brief
+# expect: S-extra-node S-edge-label
+...@neutral-theme
+direction: down
+sdk: "C# SDK" {class: actor}
+api: Orders API {class: [service; focal]}
+db: "Orders DB\nPostgres" {class: datastore}
+sdk -> api: HTTPS {class: flow}
+api -> db: read; write

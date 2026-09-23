@@ -1,0 +1,32 @@
+# request: "Module dependency graph of packages/ for the monorepo README - any
+#  cycles? apps/web imports ui and orders, apps/api imports orders and auth;
+#  ui imports icons, auth imports users, billing and users import db. orders
+#  and billing import each other. We are refactoring orders, highlight it."
+type: depgraph
+reader: engineers reading the monorepo README
+width: 800
+direction: down   # dependents above their dependencies
+focus: orders
+out: third-party packages, dev dependencies, type-only imports
+nodes:
+  caption: "Monorepo: arrow = imports, red = cycle" {note}
+  web: apps/web
+  api: apps/api
+  ui: ui
+  orders: orders
+  auth: auth
+  icons: icons
+  billing: billing
+  users: users
+  db: db
+edges:
+  web -> ui
+  web -> orders
+  api -> orders
+  api -> auth
+  ui -> icons
+  orders -> billing
+  billing -> orders
+  auth -> users
+  billing -> db
+  users -> db

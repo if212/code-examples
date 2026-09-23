@@ -1,0 +1,8 @@
+# After: the file keeps its own look (an edit, no restyle asked) and pins ELK in d2-config.
+vars: {d2-config: {layout-engine: elk}}
+direction: down
+web: Web app {style.fill: "#E0F2FE"}
+api: Orders API {style.fill: "#E0F2FE"; style.bold: true}
+db: "Orders DB\nPostgres" {shape: cylinder}
+web -> api: HTTPS
+api -> db: writes

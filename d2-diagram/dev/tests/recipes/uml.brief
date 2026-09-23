@@ -1,0 +1,13 @@
+# request: "UML class sketch: an Order is composed of one or more LineItems. Focus on
+#  Order."
+type: class
+reader: engineers reading the design doc
+width: 800
+direction: down
+focus: Order
+out: payments
+nodes:
+  Order: Order {fields: id total()}
+  LineItem: LineItem {fields: sku qty}
+edges:
+  LineItem -> Order: contains {dst: diamond-filled}

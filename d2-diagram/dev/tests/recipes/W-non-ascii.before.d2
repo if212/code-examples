@@ -1,0 +1,7 @@
+# unescape
+# Before: typographic characters (an arrow, an accent, a long dash) in labels.
+...@neutral-theme
+direction: down
+cafe: "Caf\u00e9 menu service" {class: service}
+prod: "Deploy \u2192 prod \u2014 blue/green" {class: [service; focal]}
+cafe -> prod: {class: flow}

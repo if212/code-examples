@@ -1,0 +1,22 @@
+...@mini-theme
+vars: {
+  team: Payments
+  d2-legend: {
+    f: Focus {class: focal}
+  }
+}
+# a comment is not a use: class: nosuch
+bob: Bob's service {class: service}
+cost: ${team} API {class: [service;focal]}
+note: "class: nosuch is only text" {class: service}
+doc: |md
+  # Notes {class: nosuch}
+| {class: service}
+db: Orders DB {class: datastore}
+bob -> cost: calls
+cost -> db: writes
+(bob -> cost)[0].class: dep
+(** -> **)[*]: {&class: nosuch-filter; style.stroke-width: 2}
+*.class: service
+db.class: null
+db.class: datastore

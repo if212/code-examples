@@ -1,0 +1,6 @@
+# Before: a fixed width too small for the label: d2 never grows a fixed box, the text spills.
+...@neutral-theme
+direction: down
+api: Checkout API {class: service}
+auth: Payment Authorization Gateway {class: [service; focal]; width: 120}
+api -> auth: {class: flow}

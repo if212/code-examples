@@ -1,0 +1,11 @@
+# After: the title wraps with \n so each line stays under about 75px.
+...@neutral-theme
+direction: down
+users: Shoppers {class: actor}
+shop: "Shop\nplatform\nservices" {
+  class: zone
+  web: Storefront {class: service}
+  api: Orders API {class: [service; focal]}
+  web -> api: REST {class: flow}
+}
+users -> shop.web: HTTPS {class: flow}

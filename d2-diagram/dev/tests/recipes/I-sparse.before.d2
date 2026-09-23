@@ -1,0 +1,54 @@
+# Before: ELK centres the narrow gateway on Orders, leaving a large empty corner beside it.
+...@neutral-theme
+
+# Doc column: top-down tiers (playbooks/architecture.md).
+direction: down
+
+# Row 1: clients, main-path client first. Row 2: the entry point, as wide
+# as the tier it routes to: ELK centres it on Orders, and a 142px box left
+# the top leaning left. If the canvas grows past the column, lower `width`;
+# with `direction: right` (slides), drop it.
+web: "Web app\nReact" {class: actor}
+mobile: "Mobile app\niOS, Android" {class: actor}
+gateway: "API gateway\nKong" {class: service}
+
+# One zone per tier, one row each. Children keep declaration order:
+# put each service above the store or external it calls.
+# One width for the whole tier keeps the row even. 140 fits label lines
+# of ~13 characters; a 15-character line touched both borders: widen or wrap.
+services: Services {
+  class: zone
+  catalog: "Catalog\nGo" {class: service; width: 140}
+  orders: "Orders\nJava" {class: [service; focal]; width: 140}
+  notify: "Notifications\nPython" {class: service; width: 140}
+  payments: "Payments\nNode.js" {class: service; width: 140}
+}
+data: Data {
+  class: zone
+  db: "Shop DB\nPostgres" {class: datastore}
+  events: "Events\nKafka" {class: queue}
+}
+# Externals: one plain zone of `external` nodes.
+# height = the Data zone's height, so both zones end on one line.
+saas: Third party {
+  class: zone
+  height: 234
+  sendgrid: SendGrid {class: [service; external]}
+  stripe: Stripe {class: [service; external]}
+}
+
+# Edges last, main path first. Label every edge of a kind or none. A label
+# sits at its edge's midpoint, which a short jog can put on the bend: the
+# store and third-party edges stay bare (their labels hit bends in Geist).
+web -> gateway: {class: flow}
+mobile -> gateway: {class: dep}
+gateway -> services.orders: REST {class: flow}
+gateway -> services.catalog: REST {class: dep}
+gateway -> services.payments: REST {class: dep}
+services.orders -> data.db: {class: dep}
+services.catalog -> data.db: {class: dep}
+services.orders -> data.events: {class: async}
+# Async consumer above its broker: `<-` keeps the edge short.
+services.notify <- data.events: {class: async}
+services.notify -> saas.sendgrid: {class: dep}
+services.payments -> saas.stripe: {class: dep}

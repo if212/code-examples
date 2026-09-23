@@ -1,0 +1,15 @@
+# request: "An Order contains one or more LineItems and pays with at most one Method; Card implements Method."
+type: class
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  Order
+  LineItem
+  Method
+  Card
+edges:
+  LineItem -> Order: contains {dst: diamond-filled, src-label: 1..*}
+  Order -> Method: pays with 0..1
+  Card -> Method {dst: triangle-hollow, dashed}

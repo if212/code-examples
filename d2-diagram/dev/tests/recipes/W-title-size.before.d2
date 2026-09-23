@@ -1,0 +1,11 @@
+# Before: a container without a zone class keeps d2's 28px title over the 16px node labels.
+...@neutral-theme
+direction: right
+client: Client app {class: actor}
+svc: Services {
+  label.near: top-left
+  orders: Orders {class: [service; focal]}
+  billing: Billing {class: service}
+}
+client -> svc.orders: {class: flow}
+client -> svc.billing: {class: dep}

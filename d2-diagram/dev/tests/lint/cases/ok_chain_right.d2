@@ -1,0 +1,13 @@
+# expect-clean: E- W-sibling-size
+# direction: right lines a chain up on one axis: a hub taller from its 3 inputs is not a ragged row
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+direction: right
+a: Orders
+b: Refunds
+c: Payouts
+hub: Ledger
+out: Reports
+a -> hub
+b -> hub
+c -> hub
+hub -> out

@@ -1,0 +1,15 @@
+# request: "Add the orders database to our existing diagram: the Orders API writes to it.
+#  Keep the diagram's look."
+type: architecture
+reader: team wiki
+width: 800
+direction: down
+focus: none
+out: auth, monitoring
+nodes:
+  web: Web app
+  api: Orders API
+  db: Orders DB\nPostgres {shape: cylinder}
+edges:
+  web -> api: HTTPS
+  api -> db: writes

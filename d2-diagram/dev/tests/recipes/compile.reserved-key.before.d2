@@ -1,0 +1,7 @@
+# Before: a d2 keyword (left, right, top, label, shape, style, icon, near, class, link ...) as a node key used in an edge.
+# expect-error: reserved keywords are prohibited in edges
+...@neutral-theme
+direction: down
+left: Left panel {class: service}
+right: Right panel {class: service}
+left -> right: {class: dep}

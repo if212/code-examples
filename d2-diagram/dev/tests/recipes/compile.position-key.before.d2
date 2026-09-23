@@ -1,0 +1,7 @@
+# Before: `top` (and `left`) at the root are position keywords that want a number.
+# expect-error: non-integer top
+...@neutral-theme
+direction: down
+top: Top bar {class: service}
+body: Page body {class: service}
+top_bar -> body: {class: dep}

@@ -1,0 +1,15 @@
+# Before: a narrow 9-step column is taller than the column is wide (aspect under 0.4).
+...@neutral-theme
+direction: down
+
+receive: Receive order {class: service}
+validate: Validate {class: service}
+reserve: Reserve stock {class: service}
+charge: Charge card {class: [service; focal]}
+pick: Pick {class: service}
+pack: Pack {class: service}
+print: Print label {class: service}
+ship: Ship {class: service}
+notify: Notify buyer {class: service}
+
+receive -> validate -> reserve -> charge -> pick -> pack -> print -> ship -> notify: {class: flow}

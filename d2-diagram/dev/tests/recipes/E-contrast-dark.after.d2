@@ -1,0 +1,7 @@
+# After: no dark-theme-id (the SVG is a light card on any page) and role classes instead of
+# raw fills. Opt-in dark mode: reference/design-system.md section 9, theme codes only.
+...@neutral-theme
+direction: down
+payments: Payments {class: service}
+ledger: "Ledger\nPostgres" {class: datastore}
+payments -> ledger: posts entries {class: dep}

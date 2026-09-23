@@ -1,0 +1,7 @@
+# Before: rendered with --bundle=false, the icon stays a URL that <img> embeds never load.
+# d2: --bundle=false
+...@neutral-theme
+direction: down
+api: Orders API {class: service; icon: "https://api.iconify.design/lucide/server.svg?color=%23475569"}
+db: "Orders DB\nPostgres" {class: datastore}
+api -> db: {class: dep}

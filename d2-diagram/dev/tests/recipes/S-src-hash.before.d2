@@ -1,0 +1,12 @@
+# Before: an unquoted # starts a comment, so the label is cut to "C". d2check applies d2 fmt
+# first, which rewrites the line to `C # SDK`: --check-fmt keeps the glued form for S-src-hash.
+# d2check: --check-fmt
+# brief: S-src.brief
+# expect: S-node-label
+...@neutral-theme
+direction: down
+sdk: C# SDK {class: actor}
+api: Orders API {class: [service; focal]}
+db: "Orders DB\nPostgres" {class: datastore}
+sdk -> api: HTTPS {class: flow}
+api -> db: "read, write" {class: dep}

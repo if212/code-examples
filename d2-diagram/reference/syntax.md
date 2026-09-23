@@ -11,10 +11,9 @@ needs the files in that dir). `d2 validate` only parses (section 17).
 | icon names, sources, colors | `${CLAUDE_SKILL_DIR}/reference/icons.md` |
 | multi-board output, PNG/PDF/GIF | `${CLAUDE_SKILL_DIR}/reference/export.md` |
 
-Contents: 1 keys, labels, quoting - 2 shapes - 3 connections - 4 containers -
-5 style - 6 positions, sizes - 7 classes - 8 vars - 9 globs - 10 imports,
-d2-config - 11 legend - 12 sql_table, class - 13 sequence - 14 grid -
-15 boards, links - 16 reserved keywords, case - 17 validate vs compile
+Contents: 1 keys, labels, quoting - 2 shapes - 3 connections - 4 containers - 5 style
+- 6 positions, sizes - 7 classes - 8 vars - 9 globs - 10 imports, d2-config - 11 legend
+- 12 sql_table, class - 13 sequence - 14 grid - 15 boards - 16 keywords, case - 17 validate
 
 ## 1. Keys, labels, quoting, comments
 
@@ -185,8 +184,7 @@ start -> zone.api -> zone.worker
 
 | element (ELK) | good | avoid |
 |---|---|---|
-| container label | `top-left` (default: inside top-center; dagre: above the box; layout.md) | `outside-top-*`, `outside-bottom-*`: some ELK edges turn diagonal |
-| container icon | `icon.near: top-right` + label `top-left` | icon and label in one corner |
+| container label, icon | label `top-left`, icon `top-right` (layout.md section 5) | `outside-*` titles; icon and label in one corner |
 | leaf with icon | default (label top) or `label.near: bottom-center` | `icon.near: top-left`: hits the label |
 | 16 px dot | `label.near: outside-top-center` | default or `outside-right-center`: the edge leaves from the label |
 
@@ -214,11 +212,16 @@ api -> db: writes {class: async}
 ```
 
 - A class holds any field (`shape`, `style`, `width`, `label.near`, `icon`)
-  and applies to nodes and edges. Unknown class names are silently ignored.
+  and applies to nodes and edges. Names are case-insensitive; a name that
+  nothing defines (a typo, the other theme's class) is silently ignored:
+  semcheck reports it (`S-src-class`).
 - `class: [a; b]`: the LATER class wins a conflict. The object's own map and
   any matching glob (section 9) beat every class, whatever the line order.
   But a class `label` beats the shorthand label (`x: Text {class: c}` shows
   the class label): keep labels out of classes.
+- Assigning again (a later line, a steps board): one class REPLACES the classes
+  (a cylinder set by the old class becomes a box); a list on an object that
+  already has a class is IGNORED: `db.class: null; db.class: [datastore; focal]`.
 - Never name a class `link`: importing a file that defines one crashes d2.
 
 ## 8. Vars
@@ -324,8 +327,8 @@ pg: Postgres {shape: cylinder}
 
 Draws a "Legend" card right of the diagram: one row per object (shape and
 style swatch), one line sample per edge. Edge endpoints are rows too: hide
-them with `style.opacity: 0`. Reuse the real classes (`f: Focus {class:
-focus}`) so the swatches match.
+them with `style.opacity: 0`. When to add one, with the theme's classes:
+design-system.md section 8.
 
 ## 12. sql_table and class
 
@@ -372,7 +375,7 @@ return type. Inheritance: hollow `triangle` head (section 3).
 
 ```d2
 shape: sequence_diagram
-user: User {shape: person}
+user: User
 app: Web App
 auth: Auth Server
 user -> app: Log in
@@ -386,7 +389,7 @@ refresh: "alt: token expired" {
 ```
 
 - Actor columns follow first appearance: declare every actor first, in
-  order, with a label (and shape). Messages run down in source order.
+  order, with a label, all one box shape. Messages run down in source order.
 - Span (activation bar): a message to or from `actor.<any key>` (`app.t1`).
 - Group: a map of messages whose label is the fragment title, so prefix it
   (`alt:`, `loop:`, `opt:`). Keys inside refer to the top-level actors.
@@ -443,18 +446,19 @@ target-arrowhead`, plus every style key (`fill stroke opacity shadow 3d ...`).
 
 | Keyword as a key, column or endpoint | Result |
 |---|---|
-| `a -> left`, `a -> link` | render error (prohibited in edges) |
-| `left: Panel`, `width: X`, `shadow: X` | render error |
+| `a -> left`, `a -> link`, `Shape -> b` | render error (prohibited in edges) |
+| `left: Panel`, `width: X`, `shadow: X`, `Shape: {...}` | render error |
 | `label: X`, `link: X`, `icon: X`, `near: X`, `class: X` | compiles as a property: NO node |
+| capitalized at the root: `Shape: Circle`, `Label: X`, `Left: Panel` | compiles: NO node, no error |
 
 Fix: rename (`left_panel: Left`) or quote at every use (`"left": Left`,
 `a -> "left"`; `d2 fmt` keeps the quotes). Safe keys: `right bottom center
 source target start end input output data`.
 
 Case: IDs are case-insensitive (`API` and `api` are one node; unlabeled, it
-shows the first spelling). Keywords are lowercase-only: `a.Shape: cylinder`,
-`a.Label: X` and `{Near: ...}` are silently ignored; `a.style.Fill` and
-`a.Style.fill` fail.
+shows the first spelling). A keyword in capitals is still read as that
+keyword, and then dropped: `a.Shape: cylinder`, `a.Label: X` and `{Near:
+...}` are silently ignored; `a.style.Fill` and `a.Style.fill` fail.
 
 ## 17. validate vs compile
 
@@ -469,9 +473,8 @@ shows the first spelling). Keywords are lowercase-only: `a.Shape: cylinder`,
 | missing import or local icon, undefined `${var}` | pass | error |
 | unquoted `$` `[` `}`, unclosed `{` | error | error |
 | `#` or `{` in an unquoted label, labels inside a chain | pass | pass: text lost, merged node |
-| `Shape`, `Label`, `Near` (capitalized), unknown class | pass | pass: ignored |
+| capitalized keyword (`a.Shape`, root `Label: X`); a class nothing defines | pass | pass: ignored (the class: `S-src-class`) |
 | root `**` glob with d2-config or setting `class`; imported class `link` | pass | error or crash |
 
-`d2 fmt` rewrites `a -> b {class: c}` as `a -> b: {class: c}`: re-read the
-file after fmt before scripted string edits. `d2 fmt --check` exits 1 when a
-file is unformatted.
+`d2 fmt` (d2check runs it) rewrites `a -> b {class: c}` as `a -> b: {class: c}`:
+re-read the file before scripted edits. `d2 fmt --check` exits 1 if unformatted.

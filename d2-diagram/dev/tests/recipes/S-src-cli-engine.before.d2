@@ -1,0 +1,14 @@
+# Before: no theme import and no layout-engine: d2 falls back to dagre (curved edges) and
+# nothing carries a role class.
+# brief: arch.brief
+# expect: W-curved-edge
+direction: down
+web: Web app
+api: Orders API
+db: "Orders DB\nPostgres" {shape: cylinder}
+events: "Order events\nKafka" {shape: queue}
+mailer: Mailer
+web -> api: HTTPS
+api -> db
+api -> events: {style.stroke-dash: 4}
+events -> mailer: {style.stroke-dash: 4}

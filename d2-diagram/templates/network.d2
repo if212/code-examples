@@ -1,0 +1,72 @@
+# Network template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Arrows = allowed traffic, from the side that opens the connection,
+# labelled with the port (playbooks/infrastructure.md). One zone per subnet,
+# AZ and CIDR in its title: an AZ frame is one more nesting level (~100px
+# wider) and needs an ELK flag.
+direction: down
+
+# One width for every node, so every subnet is 328px and the AZ columns
+# line up (natural cylinders made the data subnets 327 and 334px).
+classes: {
+  n: {width: 104; height: 56}
+  w: {width: 104}
+}
+
+users: Internet users {class: actor}
+vpc: "VPC 10.0.0.0/16, us-east-1" {
+  class: boundary
+  # As wide as the columns it serves: 4 straight edges (natural: 4 labels on bends).
+  igw: Internet gateway {class: service; width: 520}
+  # Both AZs wired alike, so each tier sits on one row. AZ b is declared
+  # mirrored: ingress runs down the outer columns and the top is centred
+  # (in the same order the gateway sat 62px left of centre).
+  pub_a: "Public 1a\n10.0.1.0/24" {
+    class: zone
+    alb: "ALB\nnode 1a" {class: [service; n]}
+    nat: "NAT\ngateway 1a" {class: [service; n]}
+  }
+  pub_b: "Public 1b\n10.0.2.0/24" {
+    class: zone
+    nat: "NAT\ngateway 1b" {class: [service; n]}
+    alb: "ALB\nnode 1b" {class: [service; n]}
+  }
+  app_a: "Private 1a\n10.0.11.0/24" {
+    class: zone
+    api: "orders-api\nFargate 1a" {class: [service; n]}
+    worker: "worker\nFargate 1a" {class: [service; n]}
+  }
+  app_b: "Private 1b\n10.0.12.0/24" {
+    class: zone
+    worker: "worker\nFargate 1b" {class: [service; n]}
+    api: "orders-api\nFargate 1b" {class: [service; n]}
+  }
+  # No cross-AZ edge (replication drawn as one: 1572px tall): say it in the labels.
+  data_a: "Data 1a\n10.0.21.0/24" {
+    class: zone
+    db: "Postgres\nprimary" {class: [datastore; w]}
+    cache: "Redis\nprimary" {class: [datastore; w]}
+  }
+  data_b: "Data 1b\n10.0.22.0/24" {
+    class: zone
+    cache: "Redis\nreplica" {class: [datastore; w]}
+    db: "Postgres\nstandby" {class: [datastore; w]}
+  }
+}
+
+# Ingress = the focus path (flow); data access dep; egress secondary, written
+# `upper <- lower` (as `->` it crossed twice and struck 2 subnet titles).
+users -> vpc.igw: "HTTPS :443" {class: flow}
+vpc.igw -> vpc.pub_a.alb: ":443" {class: flow}
+vpc.igw -> vpc.pub_b.alb: ":443" {class: flow}
+vpc.pub_a.alb -> vpc.app_a.api: ":8080" {class: flow}
+vpc.pub_b.alb -> vpc.app_b.api: ":8080" {class: flow}
+vpc.app_a.api -> vpc.data_a.db: ":5432" {class: dep}
+vpc.app_b.api -> vpc.data_b.db: ":5432" {class: dep}
+vpc.app_a.worker -> vpc.data_a.cache: ":6379" {class: dep}
+vpc.app_b.worker -> vpc.data_b.cache: ":6379" {class: dep}
+vpc.pub_a.nat <- vpc.app_a.worker: egress {class: secondary}
+vpc.pub_b.nat <- vpc.app_b.worker: egress {class: secondary}
+vpc.igw <- vpc.pub_a.nat: egress {class: secondary}
+vpc.igw <- vpc.pub_b.nat: egress {class: secondary}

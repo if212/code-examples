@@ -1,0 +1,39 @@
+# request: "Org chart of the data team for the team wiki. M. Garcia is Head of
+#  Data; four groups report to her: Data engineering (A. Kim, eng manager;
+#  Ingestion, Warehouse and Streaming teams), Analytics (R. Osei, analytics
+#  lead; Finance BI, Product analytics, Self-serve BI), ML platform (L. Novak,
+#  eng manager; Feature store, Training, Model serving) and Governance
+#  (S. Patel, governance lead; Access and PII, Data quality, Data catalog)."
+type: tree
+reader: data team wiki
+width: 800
+direction: down
+focus: head
+out: individual engineers, open roles, dotted-line reports
+nodes:
+  head: M. Garcia\nHead of Data
+  eng: Data engineering
+  eng.lead: A. Kim\nEng manager
+  eng.ingest: Ingestion
+  eng.warehouse: Warehouse
+  eng.streaming: Streaming
+  analytics: Analytics
+  analytics.lead: R. Osei\nAnalytics lead
+  analytics.finance: Finance BI
+  analytics.product: Product analytics
+  analytics.selfserve: Self-serve BI
+  ml: ML platform
+  ml.lead: L. Novak\nEng manager
+  ml.features: Feature store
+  ml.training: Training
+  ml.serving: Model serving
+  gov: Governance
+  gov.lead: S. Patel\nGovernance lead
+  gov.access: Access and PII
+  gov.quality: Data quality
+  gov.catalog: Data catalog
+edges:
+  head -- eng
+  head -- analytics
+  head -- ml
+  head -- gov

@@ -1,0 +1,30 @@
+# request: "For the auth ADR, show our old setup next to the new one. Today the React
+#  web app calls the Rails Shop API, which reads users from Postgres and keeps
+#  server sessions in Memcached. After the change the web app logs in with Auth0,
+#  the Shop API verifies the JWTs against Auth0 instead of looking up sessions,
+#  and Memcached goes away. Mark what is added, removed and changed."
+type: compare
+reader: engineers reviewing the auth ADR
+width: 800
+direction: down   # two panels side by side, each top-down
+focus: after.api
+out: token refresh, logout, the login redirect details, admin users
+nodes:
+  before: Before: server sessions
+  before.web: Web app\nReact
+  before.api: Shop API\nRails
+  before.db: Users DB\nPostgres {shape: cylinder}
+  before.sessions: Sessions\nMemcached {shape: cylinder}
+  after: After: OIDC tokens
+  after.web: Web app\nReact
+  after.api: Shop API\nJWT auth
+  after.db: Users DB\nPostgres {shape: cylinder}
+  after.idp: Login\nAuth0 {external}
+edges:
+  before.web -> before.api
+  before.api -> before.db
+  before.api -> before.sessions
+  after.web -> after.api
+  after.api -> after.db
+  after.api -> after.idp
+  after.web -> after.idp

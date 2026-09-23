@@ -1,0 +1,22 @@
+[
+ {"id": "W01", "request": "Can you draw a flowchart of our Kafka topics and which services consume them?", "expect": "architecture", "alt": [], "call": "GO"},
+ {"id": "W02", "request": "Show the request flow for the /checkout endpoint through our middleware stack.", "expect": "sequence", "alt": [], "call": "GO"},
+ {"id": "W03", "request": "How does traffic from the ALB reach the pods in our EKS cluster?", "expect": "walkthrough", "alt": [], "call": "GO"},
+ {"id": "W04", "request": "Retry logic for failed Stripe webhooks, with the dead-letter queue.", "expect": "flowchart", "alt": [], "call": "GO"},
+ {"id": "W05", "request": "Diagram the states our checkout process goes through.", "expect": "state", "alt": ["flowchart"], "call": "GO"},
+ {"id": "W06", "request": "Draw the folder hierarchy of the design-system package with what each folder is for.", "expect": "tree", "alt": ["OUT"], "call": "GO"},
+ {"id": "W07", "request": "Draw our Snowflake permission model: which roles inherit which privileges.", "expect": "depgraph", "alt": [], "call": "GO"},
+ {"id": "W08", "request": "End-to-end view of our recommendation system, from event collection to serving.", "expect": "pipeline", "alt": [], "call": "SPLIT", "altcall": ["GO"]},
+ {"id": "W09", "request": "Before we pick one: sketch option A (queue-based) and option B (direct calls) side by side.", "expect": "compare", "alt": [], "call": "GO"},
+ {"id": "W10", "request": "For the deck, walk through how a Terraform apply rolls a change out to our ECS services, one step at a time.", "expect": "steps", "alt": [], "call": "GO"},
+ {"id": "W11", "request": "What's the dependency order of our database migrations?", "expect": "depgraph", "alt": [], "call": "GO"},
+ {"id": "W12", "request": "Who produces to the order-events topic and who consumes from it?", "expect": "architecture", "alt": [], "call": "GO"},
+ {"id": "W13", "request": "Diagram the tool-use loop: when does the agent stop calling tools?", "expect": "flowchart", "alt": [], "call": "GO"},
+ {"id": "W14", "request": "Our Streamlit app, Cortex Analyst, the semantic model and the Snowflake tables it queries.", "expect": "llm-app", "alt": [], "call": "GO"},
+ {"id": "W15", "request": "Draw the release train: code freeze, QA sign-off, staging soak and prod deploy, week by week.", "expect": "roadmap", "alt": ["timeline"], "call": "GO"},
+ {"id": "W16", "request": "For the PCI audit: where is cardholder data stored and what can reach it over the network?", "expect": "threat-model", "alt": ["network"], "call": "GO", "altcall": ["SPLIT"]},
+ {"id": "W17", "request": "Diagram the data model of our Mongo collections and how documents reference each other.", "expect": "erd", "alt": ["class"], "call": "GO"},
+ {"id": "W18", "request": "Explain CQRS with a diagram for the onboarding wiki.", "expect": "architecture", "alt": [], "call": "GO"},
+ {"id": "W19", "request": "Which teams hand an incident to each other, from detection to the postmortem?", "expect": "swimlane", "alt": [], "call": "GO"},
+ {"id": "W20", "request": "Show our Kubernetes namespaces and the network policies between them.", "expect": "network", "alt": ["deployment"], "call": "GO"}
+]

@@ -14,7 +14,7 @@ note, one `alt` with two operands). Syntax of spans, notes and groups:
 | Part | How |
 |---|---|
 | Participants | declared first, in reading order; all `actor`; the subject `[actor; focal]`; third parties `[actor; external]` |
-| Messages | in time order, one line each, numbered `1.` `2.`; requests `dep` |
+| Messages | in time order, one line each, numbered `1.` `2.`; requests `dep`, the key path `flow` if it matters |
 | Returns | `{class: secondary; style.stroke-dash: 3}`; error returns `failure` |
 | Activation bar | send to or from `api.t` (any child key) to draw the bar on `api` |
 | Notes | `api.idem: One short line {class: note}`: a child with no edges |
@@ -36,7 +36,7 @@ note, one `alt` with two operands). Syntax of spans, notes and groups:
 - [ ] Messages in time order (`S-seq-order`); every return dashed (`S-seq-return`).
 - [ ] Fragments hold only declared participants (`S-seq-group-actor`).
 - [ ] Numbers run on; the operands of one `alt` restart at the same number.
-- [ ] One focus: `focal` on one participant, or `flow` on the messages of one path.
+- [ ] One focus: `[actor; focal]` on the participant; `flow` on its key messages optional.
 - [ ] No `person` shape, no self-message loops, labels in plain ASCII.
 
 ## Rules

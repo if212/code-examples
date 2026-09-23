@@ -1,0 +1,21 @@
+# Before: in a 1000px column the 1255px canvas shrinks to 0.80, so 14px labels display near 11px.
+# column: 1000
+...@neutral-theme
+direction: right
+
+web: Web storefront {class: actor}
+gateway: API gateway {class: service}
+orders: Order management service {class: [service; focal]}
+billing: Billing and invoicing service {class: service}
+search: Product search service {class: service}
+db: Orders database (Postgres) {class: datastore}
+ledger: Ledger database (Postgres) {class: datastore}
+index: Search index (OpenSearch) {class: datastore}
+
+web -> gateway: HTTPS {class: flow}
+gateway -> orders: REST {class: flow}
+gateway -> billing: REST {class: dep}
+gateway -> search: REST {class: dep}
+orders -> db: writes orders {class: flow}
+billing -> ledger: posts entries {class: dep}
+search -> index: queries {class: dep}

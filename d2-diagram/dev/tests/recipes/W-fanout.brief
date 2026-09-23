@@ -1,0 +1,24 @@
+# request: "The web app calls the API gateway, which routes to the auth, catalog, cart,
+#  orders and payments services. Highlight orders."
+type: architecture
+reader: team wiki
+width: 800
+direction: down
+focus: services.orders
+out: data stores
+nodes:
+  web: Web app
+  gateway: API gateway
+  services: Services
+  services.auth: Auth
+  services.catalog: Catalog
+  services.cart: Cart
+  services.orders: Orders
+  services.payments: Payments
+edges:
+  web -> gateway
+  gateway -> services.auth
+  gateway -> services.catalog
+  gateway -> services.cart
+  gateway -> services.orders
+  gateway -> services.payments

@@ -1,0 +1,16 @@
+# request: "The browser posts an order to the Orders API, which saves it. Note that the
+#  idempotency key makes a retry safe. Focus on the Orders API."
+type: sequence
+reader: test
+width: 800
+direction: down
+focus: api
+nodes:
+  browser: Browser
+  api: Orders API
+  api.idem: Idempotency key makes a retry safe {note}
+  db: Orders DB
+messages:
+  browser -> api: "1. POST /orders"
+  api -> db: "2. INSERT order"
+  api -> browser: "3. 201 Created" {return}

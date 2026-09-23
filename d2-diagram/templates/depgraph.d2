@@ -1,0 +1,44 @@
+# Dependency graph template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Dependents above their dependencies, one node per package, declared tier by
+# tier (playbooks/hierarchy.md). No tier zones: they only cost room here
+# (550x622 vs 450x422).
+direction: down
+
+# Geometry only: one box size for every package; pin hides the layout edges.
+classes: {
+  pkg: {width: 120; height: 48}
+  pin: {style.opacity: 0}
+}
+
+# The caption states what an arrow means (and the red). Hidden edges to each
+# top node keep it above them; without them it sat beside the apps (744px).
+caption: "Monorepo: arrow = imports, red = cycle" {class: caption}
+
+web: "apps/web" {class: [service; pkg]}
+api: "apps/api" {class: [service; pkg]}
+ui: ui {class: [service; pkg]}
+orders: orders {class: [service; pkg; focal]}
+auth: auth {class: [service; pkg]}
+icons: icons {class: [service; pkg]}
+billing: billing {class: [service; pkg]}
+users: users {class: [service; pkg]}
+db: db {class: [service; pkg]}
+
+caption -> web: {class: pin}
+caption -> api: {class: pin}
+
+# Two apps that import the same two packages always cross once (23 node
+# orders, 1 crossing each): keep such pairs rare. The one finding is the
+# cycle, a pair of failure edges; an edge label "cycle" added a label row.
+web -> ui: {class: dep}
+web -> orders: {class: dep}
+api -> orders: {class: dep}
+api -> auth: {class: dep}
+ui -> icons: {class: dep}
+orders -> billing: {class: failure}
+billing -> orders: {class: failure}
+auth -> users: {class: dep}
+billing -> db: {class: dep}
+users -> db: {class: dep}

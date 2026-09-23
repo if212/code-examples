@@ -1,0 +1,41 @@
+# request: "Incident timeline for the checkout outage postmortem (all times UTC,
+#  3 March): 14:02 deploy 481 reaches production; 14:05 the checkout 5xx rate hits
+#  12%; 14:09 the error-rate alert pages the on-call; 14:14 SEV-2 declared and the
+#  incident channel opened; 14:24 cause found, 481 halved the DB pool size; 14:31
+#  deploy 481 rolled back; 14:38 error rate back at baseline, 33 minutes of impact.
+#  Highlight the rollback."
+type: timeline
+reader: engineers reading the postmortem
+width: 800
+direction: down   # one row per event, time runs down
+focus: e6
+out: the date and time zone (3 March, UTC: in the page caption), follow-up actions, customer comms
+nodes:
+  t1.x: 14:02
+  d1.p: ""
+  e1: Deploy 481 reaches production
+  t2.x: 14:05
+  d2.p: ""
+  e2: Checkout 5xx rate hits 12%
+  t3.x: 14:09
+  d3.p: ""
+  e3: Error-rate alert pages the on-call
+  t4.x: 14:14
+  d4.p: ""
+  e4: SEV-2 declared, incident channel opened
+  t5.x: 14:24
+  d5.p: ""
+  e5: "Cause found: DB pool size halved in 481"
+  t6.x: 14:31
+  d6.p: ""
+  e6: Deploy 481 rolled back
+  t7.x: 14:38
+  d7.p: ""
+  e7: Error rate at baseline, 33 min of impact
+edges:
+  d1.p -- d2.p
+  d2.p -- d3.p
+  d3.p -- d4.p
+  d4.p -- d5.p
+  d5.p -- d6.p
+  d6.p -- d7.p

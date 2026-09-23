@@ -1,0 +1,8 @@
+# After: one object per near position (the two facts share one note); bottom-center adds
+# height instead of an empty side column.
+...@neutral-theme
+direction: down
+api: Orders API {class: [service; focal]}
+db: "Orders DB\nPostgres" {class: datastore}
+api -> db: writes {class: dep}
+n1: "Writes are idempotent.\nReads go to a replica." {class: note; near: bottom-center}

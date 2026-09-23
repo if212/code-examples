@@ -1,0 +1,8 @@
+# Before: a raw dark fill keeps the default dark label: dark text on dark blue.
+...@neutral-theme
+direction: down
+web: Web app {class: actor}
+api: Payments API {class: service; style.fill: "#1E3A8A"}
+db: "Ledger\nPostgres" {class: datastore}
+web -> api: {class: flow}
+api -> db: {class: dep}

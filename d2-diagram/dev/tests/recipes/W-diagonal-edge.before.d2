@@ -1,0 +1,13 @@
+# Before: api and db sit in different rows and columns, so the grid draws api -> db diagonally.
+...@neutral-theme
+grid-rows: 2
+grid-columns: 2
+horizontal-gap: 80
+vertical-gap: 60
+web: Web app {class: actor}
+db: "Orders DB\nPostgres" {class: datastore}
+api: Orders API {class: [service; focal]}
+cache: "Cache\nRedis" {class: datastore}
+web -> api: {class: flow}
+api -> db: {class: flow}
+cache -> db: {class: dep}

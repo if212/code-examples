@@ -8,8 +8,11 @@ steps): syntax.md. Sizing for docs and slides: layout.md.
 
 `<target>` is the deliverable path without its extension (`docs/checkout-flow`).
 `<flags>` is everything between `d2` and the input file on the `re-render:`
-line d2check printed: fonts, `--scale 1` and the ELK spacing flags. Never add
-`-l`, `-t` or `--pad`, because they override d2-config. The environment
+line d2check printed: fonts, `--scale 1` and the ELK spacing flags. That line
+reproduces the layout only: d2check also adds `text-rendering:
+geometricPrecision` to the SVG and sets mode 644, so a deliverable SVG always
+comes from d2check itself. Never add `-l`, `-t` or `--pad`, because they
+override d2-config. The environment
 variables `D2_LAYOUT`, `D2_THEME`, `D2_DARK_THEME`, `D2_PAD`, `D2_SKETCH` and
 `D2_CENTER` override it too, `SCALE` changes the output size, and
 `D2_WATCH=true` turns every `d2` call into a server that never exits. If
@@ -60,8 +63,10 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/d2raster.py <target>.svg --out <target>.png 
   `<img src="checkout-flow.png" width="640">`.
 - Exit 0: ship it. Exit 3 means only rsvg-convert worked: the fonts are
   substitutes with no bold or italic, so the labels do not look or fit as
-  reviewed. On exit 3 or any other failure, do not ship the PNG. Deliver
-  the SVG and say why.
+  reviewed. On exit 3 or 1 (no renderer at all), do not ship the PNG:
+  deliver the SVG, say why, and name the fix that
+  `sh ${CLAUDE_SKILL_DIR}/scripts/doctor.sh` prints.
+- Text is antialiased in grayscale, so the PNG has no colour fringes.
 - For a multi-board source, make one PNG per board SVG (section 5).
 - Do not use `d2 <target>.d2 <target>.png`. It needs d2's driver
   (section 7), it re-renders instead of using the reviewed SVG, and for
@@ -70,14 +75,16 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/d2raster.py <target>.svg --out <target>.png 
 ## 4. PDF
 
 ```sh
-node ${CLAUDE_SKILL_DIR}/scripts/raster.cjs <target>.svg --pdf <target>.pdf
+python3 ${CLAUDE_SKILL_DIR}/scripts/d2raster.py <target>.svg --out <target>.pdf
 ```
 
-Chromium prints the SVG as one vector page the size of the SVG. Text stays
-selectable and sharp at any zoom, and the fonts are embedded. On any
-non-zero exit (10: no Playwright, 11: no Chromium) there is no PDF: deliver
-the SVG and say why. d2's own `.pdf` is a screenshot inside a PDF and needs
-the driver (section 7). For a multi-board source, make one PDF per board SVG.
+Chromium (Playwright, else a Chrome binary) prints the SVG as one vector page
+the size of the SVG. Text stays selectable and sharp at any zoom, and the
+fonts are embedded. There is no approximate route: on any non-zero exit
+there is no PDF, so deliver the SVG, say why, and name the fix that
+`sh ${CLAUDE_SKILL_DIR}/scripts/doctor.sh` prints. d2's own `.pdf` is a
+screenshot inside a PDF and needs the driver (section 7). For a multi-board
+source, make one PDF per board SVG.
 
 ## 5. Multi-board sources: layers, scenarios, steps
 
@@ -118,10 +125,12 @@ writes `<target>/`:
 ## 6. Animated SVG
 
 ```sh
-d2 <flags> --animate-interval 2000 <target>.d2 <target>-animated.svg
+sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh <target>.d2 <target>-animated.svg -- --animate-interval 2000
 ```
 
-- This writes one SVG that switches board every 2 s. The order is always
+- This writes one SVG that switches board every 2 s. d2check lints and
+  rasterizes its first frame (the base board); review the boards themselves
+  with the usual d2check run (section 5). The order is always
   base, then layers, then scenarios, then steps, whatever the order in the
   file. For an animation, keep the source to the base board plus steps.
 - It plays in browsers, also inside `<img>` (Markdown images). Give each
@@ -132,8 +141,8 @@ d2 <flags> --animate-interval 2000 <target>.d2 <target>-animated.svg
   that came from a class. Reset the class, then assign the list, and undo
   the previous step's highlight the same way:
   `db.class: null; db.class: [datastore; focal]`.
-- Its name must differ from the board directory: a render to `<target>.svg`
-  deletes `<target>/` (section 5).
+- Its name must differ from the board directory: a raw `d2` render to
+  `<target>.svg` deletes `<target>/` (section 5).
 
 ## 7. d2's own PNG, PDF, PPTX and GIF
 
@@ -215,7 +224,7 @@ nohup d2 -w --browser 0 <flags> <target>.d2 D2W/watch.svg > D2W/watch.log 2>&1 &
   overwrites it in place.
 - After any change, re-run d2check and remake every other format you
   deliver: a PNG or PDF made from an older SVG is stale.
-- d2check, d2raster.py and raster.cjs write mode 644. Raw `d2` writes SVG,
+- d2check and d2raster.py write mode 644. Raw `d2` writes SVG,
   PNG, GIF, TXT and board files readable by their owner only (mode 600),
   and `cp` keeps the mode; its PDF and PPTX are 644. Run `chmod 644 <file>`
   on each raw `d2` file you deliver, or `chmod -R a+rX <target>/` for a

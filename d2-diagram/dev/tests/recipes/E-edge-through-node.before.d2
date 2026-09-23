@@ -1,0 +1,12 @@
+# Before: grid edges are straight lines between cells, so an edge that skips a cell runs
+# through the middle zone, its node and its label.
+# expect: E-edge-label-on-node W-edge-through-container
+...@neutral-theme
+grid-columns: 3
+horizontal-gap: 60
+src: Sources {class: zone; app: "App DB\nPostgres" {class: datastore}}
+ingest: Ingest {class: zone; fivetran: Fivetran {class: service}}
+wh: Warehouse {class: zone; raw: RAW {class: [datastore; focal]}}
+src.app -> ingest.fivetran: {class: flow}
+ingest.fivetran -> wh.raw: {class: flow}
+src.app -> wh.raw: CDC stream {class: async}

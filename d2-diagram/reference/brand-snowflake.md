@@ -56,7 +56,9 @@ or `--pad` by hand.
 | `sf-failure` | error, retry, alert path | Mid-Blue 2px dashed |
 
 Combine a shape role with an accent the same way as the neutral theme (last
-class wins): `{class: [sf-datastore; sf-primary]}` is a blue cylinder.
+class wins): `{class: [sf-datastore; sf-primary]}` is a blue cylinder. Only
+`sf-*` classes exist here: a neutral one (`focal`, `flow`) is silently ignored,
+and semcheck names its twin (`S-src-class`: write `sf-primary`, `sf-flow`).
 
 ## 4. Brand rules in diagrams
 
@@ -89,7 +91,8 @@ theme). A rainbow of container colors is off-brand.
 
 - One icon family per diagram (`workflows/icons.md`). Lucide concept icons
   in Mid-Blue: `sh ${CLAUDE_SKILL_DIR}/scripts/icon.sh tint 11567F icons`
-  recolors the bundled pack; `get --color 11567F` for new ones.
+  copies the bundled pack into `icons/`, recolored; `get --color 11567F` for
+  new ones.
 - Icons on `sf-primary` fills: Mid-Blue reads muddy there (3.33:1) and
   white fails (2.37:1); use a black copy (`--color 000000`, 8.87:1) or none.
 - Logo clear space: never put the logomark next to a typed "Snowflake"

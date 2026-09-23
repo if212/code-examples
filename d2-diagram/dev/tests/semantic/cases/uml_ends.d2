@@ -1,0 +1,12 @@
+vars: {d2-config: {layout-engine: elk}}
+direction: down
+Order: {shape: class; +id: UUID}
+LineItem: {shape: class; +qty: int}
+Method: {shape: class; +charge(): void}
+Card: {shape: class; -token: string}
+Order <- LineItem: contains {
+  source-arrowhead: {shape: diamond; style.filled: true}
+  target-arrowhead.label: "1..*"
+}
+Order -> Method: pays with {target-arrowhead.label: "0..1"}
+Method <- Card: {style.stroke-dash: 4; source-arrowhead: {shape: triangle; style.filled: false}}

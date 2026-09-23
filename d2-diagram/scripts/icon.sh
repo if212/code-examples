@@ -22,9 +22,11 @@
 # hex: 6 digits, no '#' (an unquoted # starts a shell comment).
 # api.iconify.design unreachable or rate limited: lucide refs fall back to
 # unpkg lucide-static (verify, get), then get copies the bundled pack.
-# Exit: 0 ok | 1 not found, no results | 2 usage | 3 network down or 429.
+# exit codes (shared by every script of the skill):
+#   0 ok | 1 not found, no results | 3 network down, rate limited (429) or no curl | 64 usage
 # Env ICONIFY_API, LUCIDE_STATIC, TERRASTRUCT override the hosts.
 #
+# examples:
 #   sh icon.sh search "shopping cart"     -> lucide:shopping-cart first
 #   sh icon.sh verify lucide:lock k8s:pod
 #   sh icon.sh get lucide:lock lucide:mail icons/
@@ -43,9 +45,14 @@ die() {
   printf '%s\n' "$*" >&2
   exit "$code"
 }
-usage() {
-  sed -n '2,/^$/p' "$0" | sed -e '/^$/d' -e 's/^# \{0,1\}//' >&2
-  exit 2
+usage() { # $1 = exit code: 0 for --help (stdout), 64 for a usage error (stderr, after $2)
+  if [ "${1:-64}" = 0 ]; then
+    sed -n '2,/^$/p' "$0" | sed -e '/^$/d' -e 's/^# \{0,1\}//'
+  else
+    printf 'icon.sh: %s - the commands:\n' "${2:-usage error}" >&2
+    sed -n '2,/^$/p' "$0" | sed -e '/^$/d' -e 's/^# \{0,1\}//' >&2
+  fi
+  exit "${1:-64}"
 }
 # http <url> [outfile]: prints the 3-digit status; 000 = host unreachable.
 # Iconify answers bursts with 429: back off and retry (2+4+8 s).
@@ -65,7 +72,7 @@ check_ref() {
     *[!a-z0-9:-]* | :* | *: | *:*:*) ;;
     *:*) return 0 ;;
   esac
-  die 2 "bad ref '$1': use prefix:name in lowercase (lucide:database) or an https URL"
+  die 64 "bad ref '$1': use prefix:name in lowercase (lucide:database) or an https URL"
 }
 
 is_hex() {
@@ -120,14 +127,14 @@ search_tt() { # $@ = words, ANDed over the icons.terrastruct.com file list
 }
 
 cmd_search() {
-  [ -n "$1" ] || usage
+  [ -n "$1" ] || usage 64 "search needs one or more words, e.g. search cart"
   words=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9-' ' ')
   pfx=$(printf '%s' "${2:-lucide,logos,k8s}" | tr -d ' ')
   max=${3:-30}
-  case "$max" in '' | *[!0-9]*) die 2 "max must be a number" ;; esac
+  case "$max" in '' | *[!0-9]*) die 64 "max must be a number, e.g. search cart lucide 10" ;; esac
   # shellcheck disable=SC2086 # split the words on purpose
   set -- $words
-  [ $# -gt 0 ] || usage
+  [ $# -gt 0 ] || usage 64 "search needs letters or digits, e.g. search cart"
   if [ "$pfx" = tt ] || [ "$pfx" = terrastruct ]; then
     out=$(search_tt "$@") || die 3 "icons.terrastruct.com unreachable"
   else
@@ -185,7 +192,7 @@ cmd_search() {
 
 # ---------------------------------------------------------------- verify
 cmd_verify() {
-  [ $# -gt 0 ] || usage
+  [ $# -gt 0 ] || usage 64 "verify needs refs, e.g. verify lucide:lock"
   rc=0 fellback=
   for ref in "$@"; do
     check_ref "$ref"
@@ -311,7 +318,7 @@ url_name() { # $1 = URL -> file name without .svg (terrastruct-<last segment>)
 cmd_get() {
   hex=$DEFAULT_HEX explicit=
   if [ "$1" = --color ]; then
-    [ $# -ge 2 ] || usage
+    [ $# -ge 2 ] || usage 64 "get --color needs a value: 6 hex digits or -"
     hex=$2 explicit=1
     shift 2
   elif [ $# -eq 3 ]; then
@@ -323,8 +330,8 @@ cmd_get() {
         ;;
     esac
   fi
-  [ "$hex" = - ] || is_hex "$hex" || die 2 "bad color '$hex': use 6 hex digits without '#', or '-'"
-  [ $# -ge 2 ] || usage
+  [ "$hex" = - ] || is_hex "$hex" || die 64 "bad color '$hex': use 6 hex digits without '#', or '-'"
+  [ $# -ge 2 ] || usage 64 "get needs refs and a target: get lucide:lock icons/"
   for dst in "$@"; do :; done # the last argument is the target
   i=0
   for ref in "$@"; do
@@ -334,7 +341,7 @@ cmd_get() {
   done
   case "$dst" in
     *.svg | *.SVG) # a file target takes exactly one ref
-      [ $# -eq 2 ] || die 2 "several refs need a directory target: get <ref>... <dir>/"
+      [ $# -eq 2 ] || die 64 "several refs need a directory target: get <ref>... <dir>/"
       fetch_one "$1" "$hex" "$dst" "$explicit"
       return
       ;;
@@ -360,8 +367,8 @@ cmd_get() {
 
 # ---------------------------------------------------------------- tint
 cmd_tint() {
-  if [ $# -lt 2 ] || [ $# -gt 3 ]; then usage; fi
-  is_hex "$1" || die 2 "bad color '$1': use 6 hex digits without '#'"
+  if [ $# -lt 2 ] || [ $# -gt 3 ]; then usage 64 "tint needs <hex> <dir> [srcdir]"; fi
+  is_hex "$1" || die 64 "bad color '$1': use 6 hex digits without '#'"
   hex=${1#\#} dst=$2 src=${3:-$PACK}
   [ -d "$src" ] || die 1 "no such directory: $src"
   mkdir -p "$dst" || exit 1
@@ -390,7 +397,7 @@ cmd=$1
 [ $# -gt 0 ] && shift
 case "$cmd" in
   search | verify | get)
-    command -v curl > /dev/null 2>&1 || die 3 "icon.sh $cmd needs curl"
+    command -v curl > /dev/null 2>&1 || die 3 "icon.sh $cmd needs curl (macOS: brew install curl; Debian/Ubuntu: sudo apt install curl); offline, 'tint' still copies the bundled pack"
     ;;
 esac
 case "$cmd" in
@@ -398,5 +405,7 @@ case "$cmd" in
   verify) cmd_verify "$@" ;;
   get) cmd_get "$@" ;;
   tint) cmd_tint "$@" ;;
-  *) usage ;;
+  -h | --help | help) usage 0 ;;
+  '') usage 64 "no command given" ;;
+  *) usage 64 "unknown command '$cmd'" ;;
 esac

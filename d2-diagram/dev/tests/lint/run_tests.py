@@ -25,7 +25,6 @@ import shutil
 import struct
 import subprocess
 import sys
-import tempfile
 import zlib
 
 sys.dont_write_bytecode = True  # no __pycache__ inside the skill's scripts/
@@ -73,7 +72,8 @@ def render(case):
     if not any(f.startswith("--scale") for f in flags):
         flags = ["--scale", "1"] + flags
     # d2check's ELK spacing defaults (ignored by dagre)
-    flags = ["--elk-nodeNodeBetweenLayers", "40", "--elk-edgeNodeBetweenLayers", "20"] + flags
+    flags = ["--elk-nodeNodeBetweenLayers", "40", "--elk-edgeNodeBetweenLayers", "20",
+             "--elk-padding", "[top=50,left=50,bottom=30,right=50]"] + flags
     r = subprocess.run(["d2"] + flags + [os.path.basename(case), svg], cwd=os.path.dirname(case),
                        capture_output=True, text=True)
     return case, svg, r.returncode, r.stderr.strip()[-200:]
@@ -180,6 +180,54 @@ def synthetic_multiline():
           "beside: union overlap=%s flagged=%s; on: flagged=%s" % (res["beside"] + res["on"][1:]))
 
 
+def synthetic_tilt():
+    """B27: a straight edge whose ends are a few degrees off axis (a leaning serpentine turn) is W-diagonal-edge"""
+    src = os.path.join(OUT, "bad_tall.svg")
+    s = open(src, encoding="utf-8").read()
+    m = re.search(r'd="M ([-\d.]+) ([-\d.]+) L ([-\d.]+) ([-\d.]+)"', s)
+    x, y0, y1 = float(m.group(1)), float(m.group(2)), float(m.group(4))
+    res = {}
+    for name, dx, dy in (("lean", 14.0, 0.0), ("long-lean", 10.0, 120.0), ("straight", 3.0, 0.0)):
+        dst = os.path.join(OUT, "synthetic_%s.svg" % name)
+        open(dst, "w", encoding="utf-8").write(s[:m.start()] + 'd="M %.1f %.1f L %.1f %.1f"' % (x, y0, x + dx, y1 + dy) + s[m.end():])
+        F, _ = d2lint.run_checks(d2lint.load(dst))
+        res[name] = [f.msg for f in F if f.code == "W-diagonal-edge"]
+    check("synthetic lean (B27)", res["lean"] and "leans 14px off vertical" in res["lean"][0] and res["long-lean"] and
+          "leans 10px off vertical over 15" in res["long-lean"][0] and not res["straight"],
+          "lean=%s long=%s straight=%s" % (res["lean"], res["long-lean"], res["straight"]))
+
+
+def marker_geometry():
+    """B23: crow's-foot <marker> paths sit in marker space (M4.8,0 4.8,18); they are not drawn geometry"""
+    svg = os.path.join(OUT, "ok_erd_crowsfoot.svg")
+    dg = d2lint.load(svg)
+    c = d2lint.content_box(dg)
+    ebox = pngstats.expected_box(svg)
+    ok = c is not None and c.x0 >= dg.vb.x0 + 20 and c.y0 >= dg.vb.y0 + 20 and ebox and min(ebox[0], ebox[1]) > 0.02
+    check("markers are not content (B23)", ok, "content %s in %s, expected box %s" % (c, dg.vb, ebox))
+
+
+def cli_exit_codes():
+    """the shared convention: 0 ok (warnings allowed), 1 unreadable, 2 findings (or warnings with --strict), 64 usage"""
+    lint = os.path.join(SCRIPTS, "d2lint.py")
+    runs = {"warnings": [os.path.join(OUT, "bad_short_label.svg")],
+            "strict": ["--strict", os.path.join(OUT, "bad_short_label.svg")],
+            "errors": [os.path.join(OUT, "bad_small_text.svg")],
+            "unreadable": [os.path.join(OUT, "no-such.svg")],
+            "usage": ["--column", "-5", os.path.join(OUT, "bad_short_label.svg")]}
+    got = {k: subprocess.run([sys.executable, lint] + v, capture_output=True).returncode for k, v in runs.items()}
+    check("d2lint exit codes", got == {"warnings": 0, "strict": 2, "errors": 2, "unreadable": 1, "usage": 64}, str(got))
+
+
+def fonts_bundle():
+    """B16: the bundled fonts stay under 1.5 MB and the brand family is the small official Lato build"""
+    fonts = os.path.join(SKILL, "assets", "fonts")
+    total = sum(os.path.getsize(os.path.join(d, f)) for d, _, fs in os.walk(fonts) for f in fs)
+    head = open(os.path.join(fonts, "lato", "Lato-Regular.ttf"), "rb").read()
+    check("fonts under 1.5 MB, Lato 1.104", total < 1500000 and b"V\x00e\x00r\x00s\x00i\x00o\x00n\x00 \x001\x00.\x001\x000\x004" in head,
+          "%d bytes" % total)
+
+
 def output_modes():
     svg = os.path.join(OUT, "bad_fanout.svg")
     sem = os.path.join(OUT, "sem.json")
@@ -251,6 +299,25 @@ def raster_cases():
         st = pngstats.analyse(crop, svg, ebox)
         check("raster: cropped PNG detected", st["verdict"] == "SUSPECT", st.get("cropped", ""))
         check("raster: good PNG passes", pngstats.analyse(det, svg, ebox)["verdict"] == "OK")
+    # cairosvg's failure on white-filled diagrams: an empty page with one black bar (a label mask). No fill colour
+    # to miss and too little black to flag - only the missing text and line colours give it away
+    wf = os.path.join(OUT, "whitefill.d2")
+    with open(wf, "w", encoding="utf-8") as fh:
+        fh.write('vars: {d2-config: {layout-engine: elk; pad: 24}}\n*.style: {fill: "#FFFFFF"; stroke: "#64748B"; '
+                 'font-color: "#1E293B"}\na: Alpha\nb: Beta\na -> b: calls {style.stroke: "#2563EB"}\n')
+    wsvg = os.path.join(OUT, "whitefill.svg")
+    subprocess.run(["d2", "--scale", "1", wf, wsvg], capture_output=True)
+    if os.path.exists(wsvg):
+        g = d2lint.load(wsvg)
+        w, h = int(round(g.W)), int(round(g.H))
+        rows = [bytearray([255] * (w * 3)) for _ in range(h)]
+        for y in range(h // 2 - 10, h // 2 + 10):
+            rows[y][(w // 2 - 20) * 3:(w // 2 + 20) * 3] = bytearray([0] * 120)
+        bar = os.path.join(OUT, "whitebar.png")
+        write_png(bar, w, h, rows)
+        st = pngstats.analyse(bar, wsvg, pngstats.expected_box(wsvg))
+        check("raster: empty page + black bar is SUSPECT", st["verdict"] == "SUSPECT" and st["lines_found"] == 0,
+              "%s lines %d/%d" % (st["verdict"], st["lines_found"], st["lines_expected"]))
     if shutil.which("rsvg-convert"):
         env = dict(os.environ, D2CHECK_ROUTE="rsvg")
         r = subprocess.run([sys.executable, d2raster, "--inspect", pre + "-rsvg=" + svg], capture_output=True, text=True, env=env)
@@ -273,6 +340,17 @@ def raster_cases():
         r = subprocess.run([sys.executable, d2raster, "--inspect", os.path.join(OUT, "op") + "=" + osvg, "--no-detail"],
                            capture_output=True, text=True)
         check("raster: translucent fills pass", r.returncode == 0, (r.stdout.strip().splitlines() or [""])[-1][:120])
+        # transparent grid cells paint nothing: a bottom row of them is not content the raster 'cropped'
+        tc = os.path.join(OUT, "transparent_cells.d2")
+        with open(tc, "w", encoding="utf-8") as fh:
+            fh.write('vars: {d2-config: {layout-engine: elk; pad: 24}}\ngrid-rows: 3\ngrid-columns: 3\n'
+                     'classes: {slot: {width: 120; height: 60; style: {fill: transparent; stroke: transparent}}}\n'
+                     'a: A\nb: B\nc: C\n' + ''.join('s%d: "" {class: slot}\n' % i for i in range(6)))
+        tsvg = os.path.join(OUT, "transparent_cells.svg")
+        subprocess.run(["d2", "--scale", "1", tc, tsvg], capture_output=True)
+        r = subprocess.run([sys.executable, d2raster, "--inspect", os.path.join(OUT, "tc") + "=" + tsvg, "--no-detail"],
+                           capture_output=True, text=True)
+        check("raster: transparent cells are not 'cropped'", r.returncode == 0, (r.stdout.strip().splitlines() or [""])[-1][:160])
         wide = os.path.join(OUT, "bad_wide_chain.svg")
         subprocess.run([sys.executable, d2raster, "--inspect", os.path.join(OUT, "wide") + "=" + wide], capture_output=True)
         det = os.path.join(OUT, "wide.2x.png")
@@ -282,6 +360,83 @@ def raster_cases():
         r = subprocess.run(["node", os.path.join(SCRIPTS, "raster.cjs"), svg, pdf], capture_output=True, text=True)
         head = open(pdf, "rb").read(5) if os.path.exists(pdf) else b""
         check("raster: pdf export", r.returncode == 0 and head == b"%PDF-", (r.stdout + r.stderr).strip()[-100:])
+        # B9: PDF through d2raster.py (python3 only in the docs), on both Chromium routes
+        for route in ("playwright", "chrome"):
+            pdf = os.path.join(OUT, "flow-%s.pdf" % route)
+            r = subprocess.run([sys.executable, d2raster, svg, "--out", pdf, "--route", route], capture_output=True, text=True)
+            head = open(pdf, "rb").read(5) if os.path.exists(pdf) else b""
+            check("raster: d2raster --out x.pdf (%s)" % route, r.returncode == 0 and head == b"%PDF-" and
+                  oct(os.stat(pdf).st_mode & 0o777) == "0o644", (r.stdout + r.stderr).strip()[-120:])
+        grayscale_text(d2raster)
+        # the chrome route under a long $TMPDIR: Chrome's socket path must stay short (it used to crash)
+        env = dict(os.environ, TMPDIR=os.path.join(OUT, "a-rather-long-temporary-directory-name-" + "x" * 40))
+        os.makedirs(env["TMPDIR"], exist_ok=True)
+        r = subprocess.run([sys.executable, d2raster, svg, "--out", os.path.join(OUT, "longtmp.png"), "--route", "chrome"],
+                           capture_output=True, text=True, env=env)
+        check("raster: chrome route, long TMPDIR", r.returncode == 0, (r.stdout + r.stderr).strip()[-120:])
+    # pngstats as a command: 0 OK, 2 BLANK/SUSPECT, 1 unreadable, 64 usage
+    ps = os.path.join(SCRIPTS, "pngstats.py")
+    got = [subprocess.run([sys.executable, ps] + a, capture_output=True).returncode for a in
+           ([col, svg], [os.path.join(OUT, "blank.png"), svg], [os.path.join(OUT, "no-such.png")], [])]
+    check("pngstats exit codes", got == [0, 2, 1, 64], str(got))
+
+
+def grayscale_text(d2raster):
+    """B17: text is antialiased in grayscale - black text on white leaves no coloured pixel (LCD AA gave ~70%)"""
+    src = os.path.join(OUT, "gray.d2")
+    with open(src, "w", encoding="utf-8") as fh:
+        fh.write('vars: {d2-config: {layout-engine: elk; pad: 24}}\n*.style: {fill: "#FFFFFF"; stroke: "#FFFFFF"; '
+                 'font-color: "#000000"}\na: "Gateway services\\nPOST /orders?id=42"\n')
+    svg = os.path.join(OUT, "gray.svg")
+    subprocess.run(["d2", "--scale", "1", src, svg], capture_output=True)
+    for route in ("playwright", "chrome"):
+        png = os.path.join(OUT, "gray-%s.png" % route)
+        r = subprocess.run([sys.executable, d2raster, svg, "--out", png, "--scale", "1", "--route", route], capture_output=True,
+                           text=True)
+        if r.returncode:
+            check("raster: grayscale text (%s)" % route, False, (r.stdout + r.stderr).strip()[-120:])
+            continue
+        w, h, bpp, rows = pngstats.decode_png(png)
+        ink = colored = 0
+        for row in rows:
+            for x in range(w):
+                p = row[x * bpp:x * bpp + 3]
+                if min(p) < 250:
+                    ink += 1
+                    colored += max(p) - min(p) > 8
+        check("raster: grayscale text (%s)" % route, ink > 200 and colored == 0, "%d of %d ink px coloured" % (colored, ink))
+
+
+def overflow_sizes():
+    """E-label-overflow names a size that clears the label, on each shape, with the fonts d2check uses:
+    render a fixed size that is too small, apply every suggested width/height, the finding must go"""
+    ff = subprocess.run(["sh", os.path.join(SCRIPTS, "font-flags.sh")], capture_output=True, text=True).stdout.split()
+    d = os.path.join(OUT, "overflow")
+    os.makedirs(d, exist_ok=True)
+
+    def msgs(text, name):
+        with open(os.path.join(d, name + ".d2"), "w", encoding="utf-8") as fh:
+            fh.write("vars: {d2-config: {layout-engine: elk; pad: 24}}\n" + text)
+        subprocess.run(["d2"] + ff + ["--scale", "1", name + ".d2", name + ".svg"], cwd=d, capture_output=True)
+        r = subprocess.run([sys.executable, os.path.join(SCRIPTS, "d2lint.py"), "--json", os.path.join(d, name + ".svg")],
+                           capture_output=True, text=True)
+        return [f["message"] for f in json.loads(r.stdout)["findings"] if f["code"] == "E-label-overflow"]
+
+    bad = []
+    for shape, size in (("queue", "width: 90"), ("queue", "width: 130"), ("cylinder", "height: 60"),
+                        ("cylinder", "height: 90"), ("diamond", "width: 100"), ("hexagon", "width: 90"),
+                        ("rectangle", "width: 60"), ("parallelogram", "width: 90"), ("document", "height: 40")):
+        name = "%s-%s" % (shape, size.replace(": ", ""))
+        text = 'q: "Queue\\nKafka topic" {shape: %s; %s}\n' % (shape, size)
+        m = msgs(text, name)
+        sizes = re.findall(r"(width|height): (\d+) or more", m[0]) if m else []
+        if not sizes:
+            bad.append("%s: %s" % (name, m[0] if m else "no finding"))
+        for dim, val in sizes:
+            t2 = re.sub(dim + r": \d+", "%s: %s" % (dim, val), text) if dim in text else text.replace("}", "; %s: %s}" % (dim, val), 1)
+            if msgs(t2, name + "-fixed"):
+                bad.append("%s: %s %s still overflows" % (name, dim, val))
+    check("E-label-overflow sizes clear it", not bad, "; ".join(bad)[:300])
 
 
 def main():
@@ -297,7 +452,12 @@ def main():
     if not a.k:
         synthetic()
         synthetic_multiline()
+        synthetic_tilt()
+        marker_geometry()
         output_modes()
+        cli_exit_codes()
+        fonts_bundle()
+        overflow_sizes()
         contract_codes(emitted)
         if not a.no_raster:
             raster_cases()

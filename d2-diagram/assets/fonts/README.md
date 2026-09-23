@@ -22,8 +22,9 @@ sh ${CLAUDE_SKILL_DIR}/scripts/font-flags.sh --list     # family names
 ```
 
 With no argument it uses `$D2_FONT_FAMILY`, else `default`. `d2-default` prints
-nothing. An unknown family or a missing file prints a message on stderr, prints
-no flags and exits 1; d2check then falls back to d2's built-in fonts.
+nothing. An unknown family (exit 64) or a missing file (exit 1) prints a message
+on stderr and no flags; d2check then falls back to d2's built-in fonts, and
+`sh ${CLAUDE_SKILL_DIR}/scripts/doctor.sh` reports the missing file.
 
 ## Roles
 
@@ -77,10 +78,16 @@ sequence diagrams, and 4 mono faces on the ERD.
 | `ibm-plex-sans/` | `IBMPlexSans-{Regular,SemiBold,Bold}.ttf`, `OFL.txt` | 3.005 | https://github.com/IBM/plex/releases/download/%40ibm%2Fplex-sans%401.1.0/ibm-plex-sans.zip (`fonts/complete/ttf/`) |
 | `geist-mono/` | `GeistMono-{Regular,Bold}.ttf`, `OFL.txt` | 1.700 | https://github.com/vercel/geist-font/releases/download/1.8.0/geist-font-1.8.0.zip (`fonts/GeistMono/ttf/`) |
 | `geist/` | `Geist-{Regular,Bold}.ttf`, `OFL.txt` | 1.800 | same zip (`fonts/Geist/ttf/`) |
-| `lato/` | `Lato-{Regular,Bold}.ttf`, `OFL.txt` | 2.015 | https://raw.githubusercontent.com/google/fonts/main/ofl/lato/ |
+| `lato/` | `Lato-{Regular,Bold}.ttf`, `OFL.txt` | 1.104 | the Google Fonts family download (https://fonts.google.com/download/list?family=Lato lists the fonts.gstatic.com files) |
 
-The four directories hold 2.49 MB in total. Every TTF is an unmodified
+The four directories hold 1.32 MB in total (limit: 1.5 MB). Every TTF is an unmodified
 official static build; each was checked by sha256 against a fresh download.
+
+- **Lato version.** Google Fonts distributes Lato 1.104 ("Western+Polish",
+  275 glyphs, about 75 KB per face). The 2.015 release adds Cyrillic, Greek
+  and IPA and weighs 656 KB per face; labels are ASCII, so 1.104 draws every
+  character they can hold. ASCII advance widths differ from 2.015 by less
+  than 1% over a typical label.
 
 - **License.** All four families use the SIL Open Font License 1.1. Each
   directory has a verbatim copy of its license; IBM Plex's copyright line

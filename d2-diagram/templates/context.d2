@@ -1,0 +1,38 @@
+# C4 context template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# One system as ONE box: the people who use it above, the systems it calls
+# below, so every arrow points down. Nothing inside it: that is c4.d2
+# (playbooks/architecture.md, C4).
+direction: down
+
+# c4-person sizes itself by its label (192 vs 155px wide, heads unequal):
+# one class gives every person the same body and head.
+classes: {
+  person: {shape: c4-person; width: 176; height: 160}
+}
+
+customer: "Customer\n[Person]\nBuys products online" {class: [actor; person]}
+staff: "Staff\n[Person]\nManages the catalog" {class: [actor; person]}
+
+# The system reaches past the first and last system below it, so every
+# edge drops straight: 480px jogged the outer two of 4 (W-label-on-bend),
+# 700 is straight. 3 systems below: 480.
+shop: "Online shop\n[Software System]\nCatalog, cart, checkout" {class: [service; focal]; width: 700}
+
+# Neighbour systems: one row, in the order of their edges. 4 per row fit
+# (852px, 13px text; a 5th: 1057px, 10.5px). Systems that call this one go
+# in the TOP row beside the people: 4 above and 4 below stayed 852px, clean.
+stripe: "Stripe\n[Software System]\nCard payments" {class: [service; external]}
+sendgrid: "SendGrid\n[Software System]\nOrder emails" {class: [service; external]}
+easypost: "EasyPost\n[Software System]\nShipping labels" {class: [service; external]}
+erp: "ERP\n[Software System]\nInvoices and stock" {class: [service; external]}
+
+# "Verb object\n[protocol]", the verb from the side that starts the call.
+# The main user's edge is flow; batch and event integrations are async.
+customer -> shop: "Places orders\n[HTTPS]" {class: flow}
+staff -> shop: "Manages catalog\n[HTTPS]" {class: dep}
+shop -> stripe: "Charges cards\n[HTTPS]" {class: dep}
+shop -> sendgrid: "Sends receipts\n[HTTPS]" {class: dep}
+shop -> easypost: "Buys labels\n[HTTPS]" {class: dep}
+shop -> erp: "Exports orders\n[SFTP, nightly]" {class: async}

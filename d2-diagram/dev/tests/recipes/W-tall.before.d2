@@ -1,0 +1,18 @@
+# Before: 12 steps in one column display about 1400px tall in an 800px column (budget 1280).
+...@neutral-theme
+direction: down
+
+checkout: Checkout {class: service}
+deps: Install deps {class: service}
+lint: Lint {class: service}
+unit: Unit tests {class: service}
+build: Build image {class: service}
+scan: Scan image {class: service}
+push: Push image {class: service}
+staging: Deploy staging {class: service}
+smoke: Smoke tests {class: service}
+approve: Approve {class: service}
+prod: Deploy prod {class: [service; focal]}
+verify: Verify {class: service}
+
+checkout -> deps -> lint -> unit -> build -> scan -> push -> staging -> smoke -> approve -> prod -> verify: {class: flow}

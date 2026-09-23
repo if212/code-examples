@@ -1,0 +1,173 @@
+[
+{
+"id": "V01",
+"request": "How do our services talk to the message bus and to each other?",
+"expect": "architecture",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V02",
+"request": "Draw what a login goes through between the SPA, the BFF and Keycloak.",
+"expect": "sequence",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V03",
+"request": "Sketch the path a request takes from a user in Tokyo to our origin in us-east-1 through the CDN and the load balancer.",
+"expect": "walkthrough",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V04",
+"request": "Which Postgres tables does the reporting service read, and how are they joined?",
+"expect": "erd",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V05",
+"request": "We need a diagram of the approval chain for production database access: engineer requests, team lead approves, DBA grants.",
+"expect": "swimlane",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V06",
+"request": "What are the possible statuses of a payout, and which events move it along?",
+"expect": "state",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V07",
+"request": "Draw the Snowflake warehouse layers: raw, staging, marts, with the dbt runs between them.",
+"expect": "pipeline",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V08",
+"request": "Which dbt models are downstream of stg_orders?",
+"expect": "depgraph",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V09",
+"request": "Postmortem visual: what happened between 02:00 and 03:30 during the queue backlog.",
+"expect": "timeline",
+"alt": [],
+"call": "ASK"
+},
+{
+"id": "V10",
+"request": "H2 plan for the platform team, month by month.",
+"expect": "roadmap",
+"alt": [],
+"call": "ASK"
+},
+{
+"id": "V11",
+"request": "Diagram our tech stack from the browser down to the database.",
+"expect": "stack",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V12",
+"request": "Our agent architecture: planner, executor, tool registry, memory store and the model gateway.",
+"expect": "llm-app",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V13",
+"request": "Show the AWS accounts, VPCs and transit gateway routes between prod and shared services.",
+"expect": "network",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V14",
+"request": "Draw what our Helm chart deploys: deployments, services, the ingress and the Postgres StatefulSet.",
+"expect": "deployment",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V15",
+"request": "Big-picture diagram of the payments system for the finance team: who uses it and which outside services it relies on.",
+"expect": "context",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V16",
+"request": "How should the on-call engineer decide whether to fail over the primary database?",
+"expect": "flowchart",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V17",
+"request": "Show what our monorepo looks like before and after the package split.",
+"expect": "compare",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V18",
+"request": "Mind map of everything we need for the Q4 launch.",
+"expect": "tree",
+"alt": [],
+"call": "GO",
+"altcall": [
+"ASK"
+]
+},
+{
+"id": "V19",
+"request": "Draw the trust zones and data flows of the file upload service for the pen test scope.",
+"expect": "threat-model",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V20",
+"request": "What does the class hierarchy of our event handlers look like: BaseHandler, RetryingHandler and the concrete handlers?",
+"expect": "class",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V21",
+"request": "Illustrate our trunk-based workflow with short-lived feature branches and release tags.",
+"expect": "gitflow",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V22",
+"request": "C4 container view of the booking platform.",
+"expect": "c4",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V23",
+"request": "Animate how a Raft cluster elects a new leader after the old one crashes.",
+"expect": "steps",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V24",
+"request": "Graph our p99 latency by region.",
+"expect": "OUT",
+"alt": [],
+"call": "OUT"
+}
+]

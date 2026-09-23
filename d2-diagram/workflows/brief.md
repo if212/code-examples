@@ -1,14 +1,17 @@
 # Brief: decide, then list, before any D2
 
-Write `D2W/<name>.brief` first (`D2W = ${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>/`),
-shaped like section 7: the request verbatim (quoted, running on over `#` lines),
-six decisions, then every node and edge the request implies, from the request,
-not from D2. d2check runs `semcheck.py` against it on every render: typos, lost
-labels, reversed or misrouted edges and a missing focus fail instead of shipping.
+Write `D2W/<name>.brief` (`D2W = ${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>/`) before
+any D2, like section 7: the request verbatim, six decisions, every node and edge
+the request implies. d2check checks each render against it: typos, lost labels,
+reversed or misrouted edges and a missing focus fail instead of shipping.
 
 ## 1. type: what does the reader ask?
 
-| The reader asks | type | Open |
+Choose the template with `workflows/route.md` (more types than below); its
+name is the `type:`. None fits: `type: other`, drafted from the closest one.
+Two rows fit: two diagrams; ask which (section 4), or draw one, offer the other.
+
+| The reader asks | type | Playbook |
 |---|---|---|
 | What are the parts and how do they talk? | architecture | playbooks/architecture.md |
 | Where does each part run (cloud, cluster, pod)? | deployment | playbooks/architecture.md |
@@ -19,10 +22,7 @@ labels, reversed or misrouted edges and a missing focus fail instead of shipping
 | Which types exist and how do they relate? | class | playbooks/erd.md |
 | What happens next, on which condition? (process, CI/CD) | flowchart | playbooks/flowchart.md |
 | Which states can X be in, and what moves it? | state | playbooks/state.md |
-| How does the picture change, step by step? | steps | templates/steps.d2 |
-
-Start from `templates/<type>.d2` (none fits: `type: other`, the closest one). Two
-rows fit: two diagrams; ask which (section 4), or draw one and offer the other.
+| How does the picture change, step by step? | steps | playbooks/flowchart.md rule 8 |
 
 ## 2. reader, width, direction
 
@@ -31,17 +31,18 @@ rows fit: two diagrams; ask which (section 4), or draw one and offer the other.
 | README, wiki, docs page, PR (default) | 800 | down |
 | Slide | 1600 | right, up to about 5 ranks |
 | The user names a size | that size | down unless much wider than deep |
-| ERD or UML class, any medium | as above | right (parents on the left) |
+| ERD / UML class, any medium | as above | ERD right (parents left); class down (parents on top) |
 | Sequence, any medium | as above | none: actors run left to right |
 
-d2check holds the render to this width: text displays at 12px or more, height
-within 1.6x the width. Measured sizes: reference/layout.md sections 2 and 9.
+d2check holds the render to this width: text 12px or more, height within 1.6x
+the width. Sizes, and slides wider than ~950px: reference/layout.md sections 2, 9.
 
 ## 3. focus: exactly one
 
 - A node key: what the request highlights, else the new or changed part, the
   document's subject, or the failure point. It gets `focal` LAST (the last class
-  wins): `[service; focal]`; `focal-solid` on a busy canvas, `sf-primary` for Snowflake.
+  wins): `[service; focal]`; `focal-solid` on a busy canvas, `sf-primary` for
+  Snowflake. A sequence diagram focuses a participant (`[actor; focal]`).
 - A path (a flow, a lifecycle): a chain, `focus: submit -> review -> merge`;
   those edges get `class: flow`. A whole group: its key, with `class: zone-blue`
   (Snowflake has no focus group: focus the node inside it that matters most).
@@ -65,36 +66,34 @@ within 1.6x the width. Measured sizes: reference/layout.md sections 2 and 9.
 2. Keys are short, lowercase, stable (`orders`, `aws.db`), never a D2 keyword
    (reference/syntax.md section 16); the D2 uses the same keys. The dotted key
    is the grouping (`aws.db` sits in `aws`): one principle (trust boundary,
-   deployment unit, owner or stage), 2 levels at most, no one-child groups.
+   deployment unit, owner or stage), 2 levels at most (deployment: 3, cloud >
+   cluster > namespace), no one-child groups.
 3. A label is the rendered text, in the user's words; `\n` breaks it at about 22
    characters. Name the technology in the label (`Orders DB\nPostgres`), not an icon.
 4. Nothing invented silently: whatever the request does not state gets
    `{inferred}`; semcheck lists it, and the report's `Assumed:` line says it.
 5. One arrow convention per diagram: who calls whom, or where data goes.
    `<->` only for a truly two-way exchange. Label every edge of a kind or
-   none, with 3 or more characters. Quote a label containing `#`.
+   none; no 1-2 character labels except words (`no`, `ok`); quote `#` and `;`.
 
 | Attribute | On | semcheck checks |
 |---|---|---|
 | `inferred` | node, edge | listed for the report (info) |
-| `start`, `end` | node | flowchart, state: all reachable from the start; nothing leaves an end |
-| `decision` | node | 2 or more outgoing edges, every one labelled |
-| `note` | node | a title or note: exempt from reachability |
-| `group` | node | sequence: a frame (`alt`, `loop`), not an actor |
+| `start`, `end`, `decision` | node | flowchart, state: all reachable from the start, nothing leaves an end; a decision has 2+ exits, all labelled |
+| `note`, `group` | node | a title or note, exempt from reachability; sequence: a frame (`alt`, `loop`), not an actor |
 | `cols: a b`, `fields: a b` | node | erd, class: those columns or fields exist |
 | `external`, `shape: x` | node | not checked: notes for drafting |
-| `dashed`, `solid` | edge | stroke style (async, optional) |
-| `return` | edge | sequence: the reply is dashed |
-| `in: g` | edge | sequence: drawn inside group `g` |
+| `dashed`, `solid`, `return`, `in: g` | edge | stroke style (async, optional); sequence: a return is dashed, `in` = drawn inside group `g` |
 | `src: h`, `dst: h` | edge | head at that end: `triangle(-hollow)`, `arrow`, `diamond(-filled)`, `circle`, `box`, `cross`, `cf-one(-required)`, `cf-many(-required)`, `none` |
-| `count: N` | edge | exactly N parallel edges |
+| `src-label: t`, `dst-label: t`; `count: N` | edge | arrowhead label at that end (UML multiplicity, ERD role); exactly N parallel edges |
 
-A label of `*`, or none, is not checked; `""` must render empty. Sequence:
-messages in time order (`messages:` works too), no spans or actor notes. ERD,
-UML class: column to column, `orders.customer_id <-> customers.id: placed by
-{src: cf-many, dst: cf-one-required}` (playbooks/erd.md). Multi-board: all
-boards. One D2 edge into a container passes only when the brief sends one to
-each child (the fan-out recipe); else it is `S-misrouted-edge`.
+`src` is the key written first, as in d2 (`a <- b`: `a`). A label of `*`, or
+none, is not checked; `""` must render empty. Sequence: messages in time order
+(`messages:` works too), no spans, a note only if asked for (`api.idem: ...
+{note}`). ERD: `customers.id <-> orders.customer_id {src: cf-one-required, dst:
+cf-many}`; UML: `Order <- LineItem: contains {src: diamond-filled, dst-label:
+1..*}` (playbooks/erd.md). Multi-board: all boards. One D2 edge into a
+container passes only when the brief sends one to each child (fan-out).
 
 ## 6. Slips that compile, render and pass `d2 validate`
 
@@ -109,6 +108,7 @@ each child (the fan-out recipe); else it is `S-misrouted-edge`.
 | a new key inside a sequence group | the group becomes an actor | S-seq-group-actor |
 | `ingest -> sf` standing for `ingest.pipe -> sf.raw` | an arrow to the container's middle | S-misrouted-edge |
 | `{class: [focal; service]}` on the focus | a plain box: `service` wins | S-emphasis |
+| `{class: datastor}` (typo), or a class the theme lacks | the default box, no cylinder | S-src-class |
 | no theme import and no `layout-engine` | dagre: every edge curved | S-src-cli-engine |
 
 Recipes: `workflows/review-and-fix.md#<code>`. An INFO `S-missing-node` names a
@@ -162,10 +162,9 @@ aws.s3 -> aws.worker: S3 event {class: async}
 aws.worker -> aws.s3: writes 3 thumbnails {class: dep}
 ```
 
-Same keys as the brief, nodes inside their group, role classes only, `focal`
-last and on the focus alone: about 540 x 690 px, two balanced columns, text 14px.
-d2check exits 0 with `S-inferred: aws` and one W- kept (a label just under a
-corner, reads fine): `Assumed: all in AWS`, `Open: W-label-on-bend (reads fine)`.
+Same keys as the brief, role classes only, `focal` last and on the focus alone:
+536 x 667 px, text 14px. d2check exits 0 with `S-inferred: aws` and one W- kept:
+`Assumed: all in AWS`, `Open: W-label-on-bend (a label under a corner, reads fine)`.
 
 ## 8. Commands
 
@@ -174,6 +173,7 @@ By hand (exit 0 ok, 1 S- errors, 2 brief or compile problem):
 
 ```sh
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py D2W/<name>.brief <target>.d2
+python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --lint <target>.d2     # source slips only, no brief
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --explain <target>.d2  # in words, cardinality too
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --dump D2W/orig.d2     # EDITS only: brief skeleton
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig.d2 <target>.d2

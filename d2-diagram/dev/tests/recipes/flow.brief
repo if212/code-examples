@@ -1,0 +1,23 @@
+# request: "Deploy flow: on a push we build and run the tests; if they pass we deploy
+#  to prod, otherwise we notify the team. Focus on the test gate."
+type: flowchart
+reader: team wiki
+width: 800
+direction: down
+focus: gate
+out: rollbacks, approvals
+nodes:
+  push: Push {start}
+  build: Build and test
+  gate: Tests pass? {decision}
+  deploy: Deploy to prod
+  notify: Notify team
+  live: Live {end}
+  blocked: Blocked {end}
+edges:
+  push -> build
+  build -> gate
+  gate -> deploy: yes
+  gate -> notify: no
+  deploy -> live
+  notify -> blocked

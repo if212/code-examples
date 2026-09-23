@@ -1,0 +1,52 @@
+# Timeline template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# What happened when: one grid row per event - time | dot | event
+# (playbooks/change.md). grid-rows (= the event count) goes BEFORE
+# grid-columns, or the cells fill column by column.
+grid-rows: 7
+grid-columns: 3
+horizontal-gap: 20
+vertical-gap: 16
+
+classes: {
+  # A grid stretches its cells: a bare dot turns into an oval and a caption
+  # sticks to the top of its cell. A hidden one-cell grid (slot) keeps its
+  # child at its own size, centred; the slot's gaps are its padding, so a
+  # row is 20 + 2 x 16 = 52 px, the event height.
+  slot: {label: ""; grid-rows: 1; horizontal-gap: 0; vertical-gap: 16; style.opacity: 0}
+  event: {width: 400; height: 52}
+}
+
+# Times strictly increasing, one format; the date and time zone go in the
+# page caption. Impact is danger, the mitigation focal, recovery success.
+t1: {class: slot; x: "14:02" {class: caption}}
+d1: {class: slot; p: "" {class: dot}}
+e1: "Deploy 481 reaches production" {class: [service; event]}
+t2: {class: slot; x: "14:05" {class: caption}}
+d2: {class: slot; p: "" {class: dot}}
+e2: "Checkout 5xx rate hits 12%" {class: [service; event; danger]}
+t3: {class: slot; x: "14:09" {class: caption}}
+d3: {class: slot; p: "" {class: dot}}
+e3: "Error-rate alert pages the on-call" {class: [service; event]}
+t4: {class: slot; x: "14:14" {class: caption}}
+d4: {class: slot; p: "" {class: dot}}
+e4: "SEV-2 declared, incident channel opened" {class: [service; event]}
+t5: {class: slot; x: "14:24" {class: caption}}
+d5: {class: slot; p: "" {class: dot}}
+e5: "Cause found: DB pool size halved in 481" {class: [service; event]}
+t6: {class: slot; x: "14:31" {class: caption}}
+d6: {class: slot; p: "" {class: dot}}
+e6: "Deploy 481 rolled back" {class: [service; event; focal]}
+t7: {class: slot; x: "14:38" {class: caption}}
+d7: {class: slot; p: "" {class: dot}}
+e7: "Error rate at baseline, 33 min of impact" {class: [service; event; success]}
+
+# The spine: `--` draws no arrowheads, and an edge between aligned grid
+# cells is one straight line.
+d1.p -- d2.p: {class: dep}
+d2.p -- d3.p: {class: dep}
+d3.p -- d4.p: {class: dep}
+d4.p -- d5.p: {class: dep}
+d5.p -- d6.p: {class: dep}
+d6.p -- d7.p: {class: dep}

@@ -1,0 +1,16 @@
+# Before: the store hangs off one edge from the top of a deep zone, so ELK places it below the
+# whole zone and the SQL edge runs the zone's full height.
+...@neutral-theme
+direction: down
+ns: Orders namespace {
+  class: zone
+  web: Web {class: service}
+  api: API {class: [service; focal]}
+  worker: Worker {class: service}
+  jobs: Jobs {class: service}
+  web -> api: {class: flow}
+  api -> worker: {class: dep}
+  worker -> jobs: {class: dep}
+}
+pg: "Sessions DB\nPostgres" {class: datastore}
+ns.web -> pg: SQL {class: dep}

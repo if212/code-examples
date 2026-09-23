@@ -1,0 +1,15 @@
+# request: "The C# SDK calls the Orders API over HTTPS; the API reads and writes the
+#  Orders DB. Highlight the API."
+type: architecture
+reader: SDK docs
+width: 800
+direction: down
+focus: api
+out: auth
+nodes:
+  sdk: "C# SDK"
+  api: Orders API
+  db: Orders DB\nPostgres {shape: cylinder}
+edges:
+  sdk -> api: HTTPS
+  api -> db: read, write

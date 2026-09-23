@@ -1,0 +1,9 @@
+# After: each label wraps with \n, so both fit side by side between the edges.
+...@neutral-theme
+classes: {tier: {width: 200}}
+direction: down
+pending: Pending {class: [state; tier]}
+paid: Paid {class: [state; tier; focal]}
+cancelled: Cancelled {class: [state; tier; danger]}
+pending -> paid: "payment\nreceived" {class: flow}
+pending -> cancelled: "customer\ncancels" {class: failure}

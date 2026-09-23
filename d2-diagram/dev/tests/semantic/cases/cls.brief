@@ -1,0 +1,11 @@
+# request: "The app writes orders to the orders database."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  app: App
+  db: Orders DB
+edges:
+  app -> db: writes

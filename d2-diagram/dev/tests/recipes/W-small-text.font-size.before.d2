@@ -1,0 +1,7 @@
+# Before: a style.font-size below 12 shows small text even at full size.
+...@neutral-theme
+direction: down
+
+api: Orders API {class: service}
+db: "Orders DB\nPostgres" {class: datastore}
+api -> db: "writes (idempotent per order id)" {class: dep; style.font-size: 11}

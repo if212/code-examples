@@ -1,0 +1,19 @@
+# request: "Order lifecycle: pending orders are paid or cancelled; paid orders ship or are refunded."
+type: state
+reader: test
+width: 800
+direction: down
+focus: none
+nodes:
+  start: "" {start}
+  pending: Pending
+  cancelled: Cancelled {end}
+  paid: Paid
+  refunded: Refunded {end}
+  shipped: Shipped {end}
+edges:
+  start -> pending
+  pending -> cancelled: cancel
+  pending -> paid: pay
+  paid -> refunded: refund
+  paid -> shipped: ship

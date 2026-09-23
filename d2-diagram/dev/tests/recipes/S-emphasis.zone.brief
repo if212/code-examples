@@ -1,0 +1,17 @@
+# request: "Show the services behind the gateway and highlight the payments group."
+type: architecture
+reader: team wiki
+width: 800
+direction: down
+focus: pay
+out: data stores
+nodes:
+  gateway: API gateway
+  pay: Payments
+  pay.auth: Card auth
+  pay.ledger: Ledger
+  orders: Orders
+edges:
+  gateway -> pay.auth
+  gateway -> orders
+  pay.auth -> pay.ledger

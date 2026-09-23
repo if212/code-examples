@@ -1,0 +1,5 @@
+vars: {d2-config: {layout-engine: elk}}
+classes: {wide: {width: 200}}
+app: App {class: [service; wide]}
+db: Orders DB {class: db}
+app -> db: writes

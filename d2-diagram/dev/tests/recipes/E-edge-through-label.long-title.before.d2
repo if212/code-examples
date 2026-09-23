@@ -1,0 +1,11 @@
+# Before: a long one-line zone title reaches the middle of the box, where the edge enters.
+...@neutral-theme
+direction: down
+users: Shoppers {class: actor}
+shop: Shop platform services {
+  class: zone
+  web: Storefront {class: service}
+  api: Orders API {class: [service; focal]}
+  web -> api: REST {class: flow}
+}
+users -> shop.web: HTTPS {class: flow}

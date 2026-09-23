@@ -1,0 +1,15 @@
+# After: one width for every state (a local class) lines the centres up: straight edges.
+...@neutral-theme
+classes: {tier: {width: 170}}
+direction: down
+placed: Placed {class: [state; tier]}
+awaiting: Awaiting payment {class: [state; tier]}
+confirmed: Confirmed {class: [state; tier; focal]}
+shipping: Shipping {class: [state; tier]}
+held: Held {class: [state; tier]}
+placed -> awaiting: {class: flow}
+awaiting -> confirmed: {class: flow}
+confirmed -> shipping: {class: flow}
+shipping -> held: {class: dep}
+held -> confirmed: {class: dep}
+awaiting -> held: {class: dep}

@@ -1,0 +1,11 @@
+# After: class zone sets the 15px uppercase title (and the panel look).
+...@neutral-theme
+direction: right
+client: Client app {class: actor}
+svc: Services {
+  class: zone
+  orders: Orders {class: [service; focal]}
+  billing: Billing {class: service}
+}
+client -> svc.orders: {class: flow}
+client -> svc.billing: {class: dep}

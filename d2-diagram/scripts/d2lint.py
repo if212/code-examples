@@ -3,6 +3,7 @@
 
 Standard library only (Python 3.8+). Reads the SVG that d2 wrote and reports what `d2 validate`
 cannot see, measured at the size a reader sees it: displayed width = min(svg width, --column).
+d2check.sh runs it on every render; run it by hand only to lint an SVG d2check did not make.
 
 usage: python3 d2lint.py [--column 800] [--json | --compact] [--annotate ANN.svg]
                          [--json-out F.json] [--sem-json SEM.json] [--strict] [--quiet] FILE.svg...
@@ -17,7 +18,6 @@ E- must be fixed, W- fix what a reader would notice, I- information only.
                W-fanout W-edge-jog W-label-on-bend W-short-label
   consistency  W-title-size W-unclassed W-sibling-size W-seq-group-ragged W-remote-image I-sparse
 --sem-json merges semcheck's JSON report (S- codes) into the same listing and exit code.
-exit: 0 clean | 1 warnings only | 2 errors (or warnings with --strict) | 3 unreadable input
 
 How d2 output is decoded (verified on d2 v0.7.1):
   * every object is a <g class="BASE64(html-escaped id) [user classes]"> under <svg class="d2-svg">;
@@ -53,6 +53,8 @@ SLACK_PRECISE = 1.0
 SLACK_HINTED = 1.02
 # 1-2 character edge labels that are real words (decision branches etc.) are not flagged
 SHORT_LABEL_WORDS = {"no", "ok", "on", "up", "go", "in", "to", "by", "if", "or", "as", "is", "at", "of", "do", "so"}
+ICON_TOUCH_PX = 1.0      # glyph ink this close to icon ink counts as a collision (a descender resting on the icon)
+TILT_PX = 8.0            # a straight segment drifting more than this sideways off its axis reads as a lean
 
 # print order: severity first, then the review rubric (legible, accurate, clean routing, direction, focus, clutter)
 CODE_ORDER = [
@@ -69,6 +71,11 @@ SEV_ORDER = {"error": 0, "warn": 1, "info": 2}
 
 def anchor(code):
     return ANCHOR + code.lower()
+
+
+def floor1(v):
+    """round down to 0.1: 9.99px shows as 9.9, never as a 10.0 that is still under the 10px limit"""
+    return math.floor(v * 10 + 1e-6) / 10
 
 
 # ----------------------------------------------------------------------------
@@ -206,6 +213,47 @@ def densify(pts, step=2.0):
     if pts:
         out.append(pts[-1])
     return out
+
+
+def grow_to_fit(poly, pts, strokes, axis, now, margin=3.0):
+    """the size along axis (0 = width, 1 = height) at which every point sits inside the outline, margin px from
+    it, with no inner stroke (cylinder rim, queue end cap) within margin px. d2 grows a shape one of two ways:
+    the middle stretches while rims and caps keep their depth (rectangle, cylinder, queue, step), or the whole
+    shape scales (diamond, hexagon, oval). The larger of the two answers is enough either way. None: no fit."""
+    xs, ys = [q[0] for q in poly], [q[1] for q in poly]
+    c = (min(xs) + max(xs)) / 2 if axis == 0 else (min(ys) + max(ys)) / 2
+    x0, y0 = min(q[0] for q in pts) - margin, min(q[1] for q in pts) - margin
+    x1, y1 = max(q[0] for q in pts) + margin, max(q[1] for q in pts) + margin
+
+    def fits(move, with_strokes):
+        sp = [move(q) for q in poly]
+        if not all(point_in_poly(q[0], q[1], sp) and dist_to_poly(q[0], q[1], sp) >= margin for q in pts):
+            return False
+        return not with_strokes or not any(x0 < u < x1 and y0 < v < y1 for u, v in map(move, strokes))
+
+    def stretch(d):  # each half moves d/2 away from the centre line
+        if axis == 0:
+            return lambda q: (q[0] + (d / 2 if q[0] > c else -d / 2), q[1])
+        return lambda q: (q[0], q[1] + (d / 2 if q[1] > c else -d / 2))
+
+    def scale(f):
+        if axis == 0:
+            return lambda q: ((q[0] - c) * f + c, q[1])
+        return lambda q: (q[0], (q[1] - c) * f + c)
+
+    def least(ok, lo, hi):  # smallest value in (lo, hi] with ok(value), or None
+        if not ok(hi):
+            return None
+        for _ in range(24):
+            mid = (lo + hi) / 2
+            lo, hi = (lo, mid) if ok(mid) else (mid, hi)
+        return hi
+
+    d = least(lambda v: fits(stretch(v), True), 0.0, 8.0 * max(now, 40.0))
+    f = least(lambda v: fits(scale(v), False), 1.0, 8.0)
+    if d is None or f is None:
+        return None
+    return max(now + d, now * f)
 
 
 def poly_len(pts):
@@ -418,6 +466,7 @@ class FontMetrics:
     def __init__(self, data):
         self.upem = 1000
         self.adv = {}
+        self.ink_box = {}  # codepoint -> (xMin, yMin, xMax, yMax) of the glyph outline, font units
         self.default_adv = 500
         self._parse(data)
 
@@ -441,6 +490,20 @@ class FontMetrics:
             self.adv[cp] = advs[gid] if gid < nh else advs[-1]
         if advs:
             self.default_adv = sum(advs) / len(advs)
+        # where each glyph actually has ink (TrueType outlines: each glyf record starts with its bbox)
+        try:
+            ng = struct.unpack(">H", tabs["maxp"][4:6])[0]
+            lo = tabs["loca"]
+            if struct.unpack(">h", tabs["head"][50:52])[0] == 1:
+                offs = struct.unpack(">%dI" % (ng + 1), lo[:4 * (ng + 1)])
+            else:
+                offs = [v * 2 for v in struct.unpack(">%dH" % (ng + 1), lo[:2 * (ng + 1)])]
+            gl = tabs["glyf"]
+            for cp, gid in cmap.items():
+                if gid < ng and offs[gid + 1] - offs[gid] >= 10:
+                    self.ink_box[cp] = struct.unpack(">hhhh", gl[offs[gid] + 2:offs[gid] + 10])
+        except (KeyError, struct.error, IndexError):
+            self.ink_box = {}  # CFF or unusual font: glyph extents are estimated
 
     @staticmethod
     def _cmap(c):
@@ -723,8 +786,10 @@ class Node:
         self.z = 0
         self.in_seq = False
         self.remote_image = False  # shape: image with a URL: draws nothing where the SVG is shown via <img>
+        self.paints = False   # draws a visible fill, stroke or image (transparent grid cells draw nothing)
         self.seq_role = None  # actor | group | span | note (sequence diagrams)
         self.is_group = False  # translucent sequence-diagram group (drawn with class "blend")
+        self.strokes = []     # open inner strokes of the shape (cylinder rim, queue end cap)
 
     @property
     def is_container(self):
@@ -801,6 +866,24 @@ def _translate(el):
 
 def _local(tag):
     return tag.split("}", 1)[1] if "}" in tag else tag
+
+
+# subtrees that draw nothing where they sit: arrowhead <marker>s (drawn via url(#..)), masks, defs
+_NOT_DRAWN = ("marker", "mask", "defs", "clipPath", "pattern", "style", "title")
+
+
+def _iter_drawn(el):
+    """el and its descendants without the _NOT_DRAWN subtrees. A crow's-foot marker path lives in marker
+    space (M4.8,0 4.8,18): counted as drawn, it stretches the edge and the content box to the canvas corner."""
+    yield el
+    for ch in el:
+        if _local(ch.tag) not in _NOT_DRAWN:
+            yield from _iter_drawn(ch)
+
+
+def _open_path(d, pts):
+    """an unclosed stroke (no Z, ends away from its start): a cylinder's rim, a queue's end cap"""
+    return bool(pts) and not re.search(r"[Zz]", d or "") and math.hypot(pts[0][0] - pts[-1][0], pts[0][1] - pts[-1][1]) > 1.0
 
 
 def _style(el, key):
@@ -933,7 +1016,11 @@ def load(path):
             gx = x0
             for ch in s:
                 adv = (fm.width(ch, fs) if fm else fs * (0.6 if mono else 0.53)) * slack
-                if not ch.isspace():
+                ib = fm.ink_box.get(ord(ch)) if fm else None
+                if ib and ib[2] > ib[0]:  # the glyph's real outline box
+                    k = fs / fm.upem
+                    glyphs.append(Box(gx + ib[0] * k, by - ib[3] * k, gx + ib[2] * k, by - ib[1] * k))
+                elif not ch.isspace():
                     glyphs.append(Box(gx + adv * 0.06, by - glyph_top(ch) * fs, gx + adv * 0.94, by + glyph_bot(ch) * fs))
                 gx += adv
             if s.strip():
@@ -949,10 +1036,8 @@ def load(path):
 
     def shape_geometry(g, tx, ty, node, galpha):
         rects = []
-        for el in g.iter():
+        for el in _iter_drawn(g):
             tag = _local(el.tag)
-            if tag in ("mask", "defs"):
-                continue
             etx, ety = tx, ty
             ttx, tty = _translate(el)
             etx += ttx
@@ -997,12 +1082,18 @@ def load(path):
                 cls = el.get("class") or ""
                 if "sketch-overlay" in cls:
                     continue
+                if tag == "path" and node.polys and _open_path(el.get("d"), poly):
+                    node.strokes.append(poly)  # drawn across the shape's inside: must clear the label
                 if not node.sig:
                     node.sig = tag if tag != "path" else "path:" + re.sub(r"[^A-Za-z]", "", el.get("d") or "")[:24]
                     node.core = b
                 node.polys.append(poly)
                 c = color_of(el)
                 a = alpha_of(el, galpha)
+                sk = (el.get("stroke") or "").lower()
+                if tag == "image" or (c is not None and a > 0) or (galpha > 0.05 and sk not in ("", "none", "transparent")
+                                                                   and (_style(el, "stroke-width") or "1") not in ("0", "0.0")):
+                    node.paints = True
                 if c is not None and a > 0:
                     z[0] += 1
                     dg.fill_regions.append((z[0], poly, b, c, a, fill_cls(el)))
@@ -1080,7 +1171,7 @@ def load(path):
                 e.hidden = ga < 0.05
                 z[0] += 1
                 e.z = z[0]
-                for ch in el.iter():
+                for ch in _iter_drawn(el):
                     ctag = _local(ch.tag)
                     if ctag == "path" and "connection" in (ch.get("class") or ""):
                         ptx, pty = _translate(ch)
@@ -1138,7 +1229,11 @@ def load(path):
                 n.core, n.sig = n.box, "text"
             dg.nodes[oid] = n
 
-    walk(inner, 0.0, 0.0, 1.0, top=True)
+    # --animate-interval packs every board into one SVG, one <g style="animation: d2Transition-..."> per frame
+    frames = [el for el in inner if _local(el.tag) == "g" and "d2Transition" in (el.get("style") or "")]
+    if len(frames) > 1:
+        dg.warnings.append("animated SVG: %d frames; only the first (the base board) is linted" % len(frames))
+    walk(frames[0] if len(frames) > 1 else inner, 0.0, 0.0, 1.0, top=True)
 
     # hierarchy (hidden containers still own their children)
     for nid, n in dg.nodes.items():
@@ -1356,9 +1451,9 @@ def run_checks(dg, column=800.0):
         "intrinsic_size": bool(dg.width_attr),
         "column": column,
         "display_px": [round(disp_w), round(disp_h)],
-        "scale": round(scale, 3),
+        "scale": round(scale, 2),  # the same rounding as every message
         "min_font_px": min_fs,
-        "min_text_display_px": round(min_fs * scale, 1) if min_fs else None,
+        "min_text_display_px": floor1(min_fs * scale) if min_fs else None,
         "aspect": round(ar, 2),
         "nodes": len(leaves), "containers": len(containers), "edges": len(edges),
         "labels": len(texts),
@@ -1377,7 +1472,7 @@ def run_checks(dg, column=800.0):
             else:
                 need = "shown at full size: raise its font-size to >= %g" % SMALL_WARN_PX
             F.append(Finding(sev, code, "%d label(s) under %.0fpx at column %d (scale %.2f): '%s' %gpx -> %.1fpx; %s" % (
-                len(grp), limit, column, scale, short(worst.content, 24), worst.fs, worst.fs * scale, need),
+                len(grp), limit, column, scale, short(worst.content, 24), worst.fs, floor1(worst.fs * scale), need),
                 worst.box, [worst.owner]))
     if disp_h > TALL_FACTOR * column + 0.5:
         F.append(Finding("warn", "W-tall", "displays %dx%d in a %s: %d%% over the %dpx height budget (%.1fx the column)" % (
@@ -1456,9 +1551,10 @@ def run_checks(dg, column=800.0):
     for n in vis:
         for ib, ink in zip(n.icons, n.icon_ink):
             for t in texts:
-                if not ink.intersects(t.box, 0):
+                if not ink.intersects(t.box.grow(ICON_TOUCH_PX + 4), 0):
                     continue
-                hits = [g for g in (t.glyphs or [t.box]) if ink.intersects(g, 0.5)]
+                # glyph ink within ICON_TOUCH_PX of the icon's ink: a descender resting on the icon reads as a collision
+                hits = [g for g in (t.glyphs or [t.box]) if ink.intersects(g.grow(ICON_TOUCH_PX), 0)]
                 if not hits:
                     continue
                 ov = max(min(g.overlap(ink)) for g in hits)
@@ -1471,8 +1567,9 @@ def run_checks(dg, column=800.0):
                     else:
                         hint = " - icons collide on this shape: move the icon to a rectangle or drop it"
                 F.append(Finding("error", "E-icon-collision",
-                                 "icon of '%s' touches label '%s' (%d glyph(s), up to %.1fpx)%s" % (
-                                     n.id, short(t.content, 30), len(hits), ov, hint),
+                                 "icon of '%s' touches label '%s' (%d glyph(s), %s)%s" % (
+                                     n.id, short(t.content, 30), len(hits),
+                                     "up to %.1fpx" % ov if ov > 0 else "less than %gpx apart" % ICON_TOUCH_PX, hint),
                                  ib.union(t.box), [n.id, t.owner]))
             for m in leaves:
                 if m is n or is_ancestor(dg, m.id, n.id) or is_ancestor(dg, n.id, m.id):
@@ -1494,9 +1591,11 @@ def run_checks(dg, column=800.0):
             if not n.contains_pt(t.box.cx, t.box.cy, 0):
                 if (not n.icons and not n.in_seq and len(n.polys[0]) in (4, 5) and not n.box.intersects(t.box, 0)
                         and t.box.w > n.box.w * 0.9):
+                    # d2 moves a label that does not fit outside the box; ~20px a side gives it room again
                     F.append(Finding("error", "E-label-overflow",
-                                     "label '%s' is drawn outside its box '%s': a fixed width/height is too small for it" % (
-                                         short(t.content, 30), n.id), t.box.union(n.box), [n.id]))
+                                     "label '%s' is drawn outside its box '%s': drop its fixed size, or set width: %d or "
+                                     "more (now %.0f)" % (short(t.content, 30), n.id, math.ceil(t.box.w + 40), n.box.w),
+                                     t.box.union(n.box), [n.id]))
                 continue  # outside label on purpose (person, label.near outside-*)
             per = [(x, t.box.y0) for x in _frange(t.box.x0, t.box.x1, 2)] + \
                   [(x, t.box.y1) for x in _frange(t.box.x0, t.box.x1, 2)] + \
@@ -1505,9 +1604,39 @@ def run_checks(dg, column=800.0):
             poly = n.polys[0]
             out = [p for p in per if not point_in_poly(p[0], p[1], poly) and dist_to_poly(p[0], p[1], poly) > 1.5]
             if len(out) >= 2:
+                # the size at which the label clears the outline and the inner strokes (rim, end cap), per axis
+                core = n.core or n.box
+                inner = [p for s in n.strokes for p in densify(s, 2.0)]
+                grow = []
+                for axis, dim, now in ((0, "width", core.w), (1, "height", core.h)):
+                    need = grow_to_fit(poly, per, inner, axis, now)
+                    if need:
+                        grow.append((need / max(now, 1.0), "%s: %d or more (now %.0f)" % (dim, math.ceil(need), now)))
+                # a sensible size only (a diamond 4x taller is no fix), but always one if any fits
+                grow = [g for r, g in sorted(grow) if r <= 3 or g == min(grow)[1]]
+                hint = ("set " + " or ".join(grow)) if grow else "wrap it with \\n"
                 F.append(Finding("error", "E-label-overflow",
-                                 "label '%s' spills outside node '%s' (fixed width/height too small?)" % (
-                                     short(t.content, 30), n.id), t.box.union(n.box), [n.id]))
+                                 "label '%s' spills outside node '%s': drop its fixed size, or %s" % (
+                                     short(t.content, 30), n.id, hint), t.box.union(n.box), [n.id]))
+                continue
+            # the shape's own inner stroke (cylinder rim, queue end cap) drawn across the label's glyphs
+            pts = [p for s in n.strokes for p in densify(s, 1.0)]
+            hits = [(p, g) for g in (t.glyphs or t.line_boxes) for p in pts if g.grow(0.5).contains_pt(p[0], p[1])]
+            if hits:
+                sb = Box.of_points([p for s in n.strokes for p in s])
+                core = n.core or n.box
+                gl = t.glyphs or t.line_boxes
+                # d2 centres the label: growing the shape by D moves the label D/2 away from a rim or cap
+                if sb.w >= sb.h:  # a rim across the top (cylinder): the label must sit lower
+                    pen = max(max((p[1] for p in pts if g.x0 - 1 <= p[0] <= g.x1 + 1), default=g.y0) - g.y0 for g in gl)
+                    need = "set height: %d or more (now %.0f)" % (math.ceil(core.h + 2 * (pen + 3)), core.h)
+                else:             # an end cap at the side (queue): the label must sit further from it
+                    pen = max(g.x1 - min((p[0] for p in pts if g.y0 - 1 <= p[1] <= g.y1 + 1), default=g.x1) for g in gl)
+                    need = "set width: %d or more (now %.0f)" % (math.ceil(core.w + 2 * (pen + 3)), core.w)
+                F.append(Finding("error", "E-label-overflow",
+                                 "the %s of '%s' crosses its label '%s': %s, or drop the fixed size (d2 then clears it)" % (
+                                     "top rim" if sb.w >= sb.h else "end cap", n.id, short(t.content, 30), need),
+                                 t.box.union(sb), [n.id]))
 
     # --- node overlap & containment ----------------------------------------
     for i in range(len(leaves)):
@@ -1656,6 +1785,7 @@ def run_checks(dg, column=800.0):
         if e.curved:
             continue
         tot = diag = 0.0
+        lean = None  # (sideways drift, length) of the worst nearly-straight segment
         for l in e.lines:
             for k in range(len(l) - 1):
                 dx, dy = l[k + 1][0] - l[k][0], l[k + 1][1] - l[k][1]
@@ -1666,9 +1796,14 @@ def run_checks(dg, column=800.0):
                 ang = math.degrees(math.atan2(abs(dy), abs(dx)))
                 if 12 < ang < 78:
                     diag += L
+                if min(abs(dx), abs(dy)) > TILT_PX and (lean is None or min(abs(dx), abs(dy)) > lean[0]):
+                    lean = (min(abs(dx), abs(dy)), L, "vertical" if abs(dy) > abs(dx) else "horizontal")
         if tot > 0 and diag > 40 and diag / tot > 0.4:
             F.append(Finding("warn", "W-diagonal-edge", "edge %s is %.0f%% diagonal (%.0fpx)" % (e.id, 100 * diag / tot, diag),
                              e.box.grow(4), [e.id]))
+        elif lean:
+            F.append(Finding("warn", "W-diagonal-edge", "edge %s leans %.0fpx off %s over %.0fpx: its ends are not aligned" % (
+                e.id, lean[0], lean[2], lean[1]), e.box.grow(4), [e.id]))
         for cl in e.corners:
             for k in range(1, len(cl) - 2):
                 seg = math.hypot(cl[k + 1][0] - cl[k][0], cl[k + 1][1] - cl[k][1])
@@ -1762,13 +1897,21 @@ def run_checks(dg, column=800.0):
             F.append(Finding("warn", "W-title-size", "container titles outshout the %gpx node labels: %s" % (
                 mx, names("%s %gpx" % (c.id, f) for c, f in loud)), None, [c.id for c, _ in loud],
                 [union_all(t.box for t in c.labels) for c, _ in loud]))
-    cands = [n for n in vis if not n.is_text_shape and not n.is_group and n.seq_role != "span"]
+    # sql_table / class shapes take no role class: a node class would paint their rows (playbooks/erd.md)
+    cands = [n for n in vis if not n.is_text_shape and not n.is_group and n.seq_role != "span" and n.sig != "table"]
     if cands:
         bare = [n for n in cands if not n.classes]
         if bare and (len(cands) - len(bare)) * 2 >= len(cands):
             F.append(Finding("warn", "W-unclassed", "%d of %d nodes/containers carry no role class: %s" % (
                 len(bare), len(cands), names(n.id for n in bare)), None, [n.id for n in bare], [n.box for n in bare]))
+    styled = [e for e in edges if not e.lifeline]
+    bare_e = [e for e in styled if not e.classes]
+    if bare_e and len(styled) - len(bare_e) >= 2 and (len(styled) - len(bare_e)) * 2 >= len(styled):
+        F.append(Finding("warn", "W-unclassed", "%d of %d edges carry no edge class (flow, dep, async...): %s" % (
+            len(bare_e), len(styled), names(e.id for e in bare_e)), None, [e.id for e in bare_e],
+            [e.box.grow(3) for e in bare_e]))
     rows = {}
+    linked = {frozenset((e.src, e.dst)) for e in real}
     for n in leaves:
         if n.is_text_shape or n.in_seq or n.core is None or n.sig == "table":
             continue
@@ -1779,8 +1922,13 @@ def run_checks(dg, column=800.0):
         for n in lst:
             if n.id in used:
                 continue
-            row = [m for m in lst if m.id not in used and (abs(m.core.y0 - n.core.y0) <= 2 or abs(m.core.cy - n.core.cy) <= 2
-                                                         or abs(m.core.y1 - n.core.y1) <= 2)]
+            row = [n]
+            for m in lst:  # side by side, and not one step of a chain (direction: right lines a chain up)
+                if m.id in used or m is n or not (abs(m.core.y0 - n.core.y0) <= 2 or abs(m.core.cy - n.core.cy) <= 2
+                                                 or abs(m.core.y1 - n.core.y1) <= 2):
+                    continue
+                if not any(frozenset((m.id, r.id)) in linked for r in row):
+                    row.append(m)
             used.update(m.id for m in row)
             hs = [m.core.h for m in row]
             if len(row) >= 2 and max(hs) - min(hs) > 8:
@@ -1997,9 +2145,31 @@ def compact(F, n_err, n_warn, n_info):
     return lines
 
 
+EPILOG = """exit codes (shared by every script of the skill):
+  0   no errors (warnings are listed but pass, unless --strict)
+  1   hard failure: an input could not be read or is not a d2 SVG
+  2   findings: E- or S- errors (with --strict, warnings too)
+  64  usage error
+examples:
+  python3 d2lint.py --column 800 out/flow.svg          one report per SVG, with a verdict
+  python3 d2lint.py --json out/flow.svg > lint.json    machine-readable report
+  python3 d2lint.py --compact --annotate ann.svg out/flow.svg
+                                                       d2check's listing + numbered boxes in ann.svg"""
+
+
+class ArgParser(argparse.ArgumentParser):
+    """argparse with the skill's exit convention: a usage error exits 64, not 2 (2 means findings)"""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        self.exit(64, "%s: error: %s (run with --help for the options)\n" % (self.prog, message))
+
+
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Geometric and legibility lint for d2-rendered SVGs (stdlib only).")
-    ap.add_argument("svg", nargs="+")
+    ap = ArgParser(prog="d2lint.py", description="Geometric and legibility lint for SVGs rendered by d2 (stdlib only). "
+                   "Each finding names its recipe in workflows/review-and-fix.md.",
+                   epilog=EPILOG, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("svg", nargs="+", metavar="FILE.svg", help="SVG written by d2 (one per board)")
     ap.add_argument("--column", type=float, default=800, help="doc column width in px the diagram is read in (default 800)")
     ap.add_argument("--json", action="store_true", help="print JSON instead of text")
     ap.add_argument("--compact", action="store_true", help="d2check listing: codes with recipe anchors + numbered findings")
@@ -2008,16 +2178,21 @@ def main(argv=None):
                     "(single input only)")
     ap.add_argument("--sem-json", metavar="SEM.json", help="merge a semcheck --json report (S- codes)")
     ap.add_argument("--strict", action="store_true", help="exit 2 on warnings too")
-    ap.add_argument("--quiet", action="store_true", help="omit I- findings")
+    ap.add_argument("--quiet", action="store_true", help="omit I- findings and the notes on stderr")
     a = ap.parse_args(argv)
+    if not 50 <= a.column <= 20000:
+        ap.error("--column wants the doc column width in px, e.g. 800 (got %g)" % a.column)
     worst = 0
+    unreadable = False
     all_out = []
     for p in a.svg:
         try:
             dg = load(p)
         except Exception as e:
-            print("d2lint: %s: cannot parse (%s)" % (p, e), file=sys.stderr)
-            worst = max(worst, 3)
+            reason = e.strerror if isinstance(e, OSError) and e.strerror else str(e)
+            print("d2lint: %s: cannot read it as a d2 SVG (%s); lint the SVG that d2 or d2check.sh wrote" % (p, reason),
+                  file=sys.stderr)
+            unreadable = True
             continue
         F, summary = run_checks(dg, a.column)
         if a.sem_json:
@@ -2026,7 +2201,8 @@ def main(argv=None):
             except Exception as e:
                 print("d2lint: cannot read semcheck report %s (%s)" % (a.sem_json, e), file=sys.stderr)
         for w in dg.warnings:
-            print("d2lint: note: %s: %s" % (p, w), file=sys.stderr)
+            if not a.quiet:
+                print("d2lint: note: %s: %s" % (p, w), file=sys.stderr)
         F = dedupe(F)
         if a.quiet:
             F = [f for f in F if f.sev != "info"]
@@ -2060,15 +2236,13 @@ def main(argv=None):
             verdict = "FAIL" if n_err or (a.strict and n_warn) else ("PASS-with-warnings" if n_warn else "PASS")
             print("  verdict: %s (%d error(s), %d warning(s))" % (verdict, n_err, n_warn))
         if n_err or (a.strict and n_warn):
-            worst = max(worst, 2)
-        elif n_warn:
-            worst = max(worst, 1)
+            worst = 2
     if a.json:
         print(json.dumps(all_out if len(all_out) != 1 else all_out[0], indent=1))
     if a.json_out:
         with open(a.json_out, "w", encoding="utf-8") as fh:
             json.dump(all_out if len(all_out) != 1 else all_out[0], fh, indent=1)
-    return worst
+    return 1 if unreadable else worst
 
 
 if __name__ == "__main__":

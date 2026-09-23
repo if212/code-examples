@@ -4,8 +4,7 @@
 usage:
   contrast.py FG BG [FG BG ...]      ratio for each color pair
   contrast.py --check THEME.d2 ...   audit every class and the theme-overrides
-                                     defaults; exit 1 on any failure, 2 on a
-                                     usage error or an unreadable file
+                                     defaults of a theme file
 
 Rules (--check):
   text                   font-color >= 4.5:1 on what it sits on: the class fill,
@@ -16,7 +15,17 @@ Rules (--check):
                          title mark the region), a node whose fill alone reaches
                          3.0:1, and any class marked with a `# decorative` comment
 Works on `d2 fmt` output in both the compact and the expanded layout.
+
+exit codes (shared by every script of the skill):
+  0   pass (every pair meets its minimum)
+  1   hard failure: a theme file cannot be read
+  2   findings: a contrast failure (--check), or a pair below 4.5:1
+  64  usage error
+examples:
+  python3 contrast.py --check neutral-theme.d2       audit a theme after editing its colors
+  python3 contrast.py 475569 FFFFFF                  one pair: 7.58, passes
 """
+import os
 import re
 import sys
 
@@ -157,6 +166,10 @@ def check(path):
     codes = dict(THEME0, **{k: v for k, v in over.items() if v})
     canvas = codes['N7']
     classes = {k: v for k, v in top.get('classes', {}).items() if not k.startswith('__') and isinstance(v, dict)}
+    if not classes and not over:  # a diagram, not a theme: nothing would be checked, so say so instead of PASS
+        print(f'contrast.py: {path} has no classes and no theme-overrides - --check audits a theme file, '
+              f'e.g. python3 contrast.py --check neutral-theme.d2', file=sys.stderr)
+        raise SystemExit(64)
 
     def st(cls, key):
         s = cls.get('style', {})
@@ -230,30 +243,43 @@ def check(path):
 
 
 def main(argv):
-    if not argv or argv[0] in ('-h', '--help'):
+    if argv and argv[0] in ('-h', '--help'):
         print(__doc__.strip())
         return 0
+    if not argv:
+        print('usage: contrast.py --check THEME.d2 [...] | contrast.py FG BG [FG BG ...] (see --help)', file=sys.stderr)
+        return 64
     if argv[0] == '--check':
         if len(argv) < 2:
-            print('usage: contrast.py --check THEME.d2 [...]', file=sys.stderr)
-            return 2
-        for p in argv[1:]:  # a missing file is a usage error (2), not a contrast failure (1)
+            print('usage: contrast.py --check THEME.d2 [...] - name the theme file(s) to audit', file=sys.stderr)
+            return 64
+        for p in argv[1:]:  # a missing file is a hard failure (1), not a contrast finding (2)
             try:
                 open(p, encoding='ascii', errors='replace').close()
             except OSError as err:
                 print(f'contrast.py: cannot read {p}: {err.strerror}', file=sys.stderr)
-                return 2
-        return 1 if sum(check(p) for p in argv[1:]) else 0
+                return 1
+        return 2 if sum(check(p) for p in argv[1:]) else 0
+    for a in argv:
+        if a.startswith('-') and not a.startswith('#'):
+            print(f'contrast.py: unknown option {a} - use --check THEME.d2, or color pairs FG BG (see --help)', file=sys.stderr)
+            return 64
+        if a.endswith('.d2') or os.path.isfile(a):
+            print(f'contrast.py: {a} is a file - audit a theme with: python3 contrast.py --check {a}', file=sys.stderr)
+            return 64
     if len(argv) % 2:
-        print('usage: contrast.py FG BG [FG BG ...]', file=sys.stderr)
-        return 2
+        print('usage: contrast.py FG BG [FG BG ...] - colors come in pairs, e.g. 475569 FFFFFF', file=sys.stderr)
+        return 64
+    low = False
     for fg, bg in zip(argv[::2], argv[1::2]):
-        a, b = hexcolor(fg), hexcolor(bg)
+        a, b = hexcolor(fg if fg.startswith('#') else '#' + fg), hexcolor(bg if bg.startswith('#') else '#' + bg)
         if not a or not b:
-            print(f'not a hex color: {fg if not a else bg}', file=sys.stderr)
-            return 2
-        print(f'{a} on {b}: {ratio(a, b):.2f}')
-    return 0
+            print(f'contrast.py: not a hex color: {fg if not a else bg} (use RRGGBB or #RRGGBB)', file=sys.stderr)
+            return 64
+        r = ratio(a, b)
+        low = low or r < 4.5
+        print(f'{a} on {b}: {r:.2f}{"" if r >= 4.5 else "  below 4.5:1 (text); " + ("ok for strokes" if r >= 3 else "below 3:1 (strokes)")}')
+    return 2 if low else 0
 
 
 if __name__ == '__main__':

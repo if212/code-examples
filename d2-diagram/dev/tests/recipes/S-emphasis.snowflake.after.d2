@@ -1,0 +1,13 @@
+# After: the focus moves to the node that matters most inside the group (sf-primary).
+...@snowflake-brand
+direction: right
+fivetran: Fivetran {class: sf-external}
+sf: Snowflake {
+  class: sf-container
+  raw: RAW {class: sf-datastore}
+  staging: STAGING {class: sf-datastore}
+  marts: MARTS {class: sf-primary}
+  raw -> staging: dbt {class: sf-flow}
+  staging -> marts: dbt {class: sf-flow}
+}
+fivetran -> sf.raw: {class: sf-edge}

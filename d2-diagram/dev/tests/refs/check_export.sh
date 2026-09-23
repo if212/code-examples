@@ -10,7 +10,7 @@
 #   --native also runs the Playwright driver install and the d2 PPTX/GIF
 #   exports. It downloads about 170 MB unless PLAYWRIGHT_BROWSERS_PATH already
 #   holds chromium-1134.
-# Exit: 0 no FAIL | 1 a FAIL | 2 usage
+# Exit: 0 no FAIL | 1 a FAIL, or d2 or export.md missing | 64 usage (the skill's shared convention)
 
 # Doc lines are literal text (SC2016), $FLAGS splits into flags on purpose
 # (SC2086), and pass/fail always return 0, so "a && pass || fail" is safe.
@@ -19,25 +19,32 @@ NATIVE=
 case "$1" in
   '') ;;
   --native) NATIVE=1 ;;
-  *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
+  -h | --help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 64 ;;
 esac
 S=$(cd "$(dirname "$0")/../../.." && pwd)
 DOC=$S/reference/export.md
-[ -f "$DOC" ] || { echo "check_export: $DOC missing" >&2; exit 2; }
-command -v d2 > /dev/null 2>&1 || { echo "check_export: d2 not on PATH" >&2; exit 2; }
+[ -f "$DOC" ] || { echo "check_export: $DOC missing" >&2; exit 1; }
+command -v d2 > /dev/null 2>&1 || { echo "check_export: d2 not on PATH - install it: sh $S/scripts/doctor.sh" >&2; exit 1; }
 unset D2_LAYOUT D2_THEME D2_DARK_THEME D2_PAD D2_SKETCH D2_CENTER D2_WATCH SCALE
-T=$(mktemp -d "${TMPDIR:-/tmp}/check_export.XXXXXX") || exit 2
+T=$(mktemp -d "${TMPDIR:-/tmp}/check_export.XXXXXX") || exit 1
 WPID=
 # a watcher killed mid-compile still writes its SVG: give it a second before rm
 trap '[ -z "$WPID" ] || { kill "$WPID" 2> /dev/null; sleep 1; }; rm -rf "$T"' EXIT
-trap 'exit 2' INT TERM
+trap 'exit 130' INT TERM
 umask 022
 D2_WORK=$T/work
 export D2_WORK
 
-FLAGS="--scale 1 --elk-nodeNodeBetweenLayers 40 --elk-edgeNodeBetweenLayers 20"
+# d2check's render flags: $FLAGS for direct use (globbing is off: the padding has brackets),
+# $FLAGS_SH (padding quoted) where <flags> is pasted into a command line that sh -c runs
+set -f
+PAD='[top=50,left=50,bottom=30,right=50]'
+FLAGS="--scale 1 --elk-nodeNodeBetweenLayers 40 --elk-edgeNodeBetweenLayers 20 --elk-padding $PAD"
+FLAGS_SH="--scale 1 --elk-nodeNodeBetweenLayers 40 --elk-edgeNodeBetweenLayers 20 --elk-padding '$PAD'"
 if [ -f "$S/scripts/font-flags.sh" ]; then
-  FLAGS="$FLAGS $(sh "$S/scripts/font-flags.sh" default 2> /dev/null | tr '\n' ' ')"
+  FF=$(sh "$S/scripts/font-flags.sh" default 2> /dev/null | tr '\n' ' ')
+  FLAGS="$FLAGS $FF" FLAGS_SH="$FLAGS_SH $FF"
 fi
 HAVE_CHECK=
 [ -f "$S/scripts/d2check.sh" ] && HAVE_CHECK=1
@@ -58,7 +65,7 @@ doc() {
 cmd() {
   nm=$(basename "$2")
   printf '%s\n' "$1" | sed -e "s|[\$]{CLAUDE_SKILL_DIR}|$S|g" -e "s|<target>|$2|g" \
-    -e "s|<flags>|$FLAGS|g" -e "s|D2W|$D2_WORK/$nm|g" -e "s|<name>|$nm|g"
+    -e "s|<flags>|$FLAGS_SH|g" -e "s|D2W|$D2_WORK/$nm|g" -e "s|<name>|$nm|g"
 }
 run() { (cd "$T" && sh -c "$1") > "$T/run.log" 2>&1; }
 svgw() { sed -n 's/.*<svg[^>]*width="\([0-9]*\)".*/\1/p' "$1" | head -n 1; }
@@ -157,6 +164,21 @@ if doc "$L" && doc 'add `--salt <name>` after it'; then
   fi
 fi
 
+# ---- header: the re-render line reproduces the layout, not d2check's post-processing
+if doc 'reproduces the layout only' && doc 'geometricPrecision` to the SVG and sets mode 644' && [ -n "$HAVE_CHECK" ]; then
+  mkdir -p "$T/rr" && cp "$ONE.d2" "$T/rr/demo.d2"
+  (cd "$T/rr" && sh "$S/scripts/d2check.sh" --no-raster demo.d2 checked.svg) > "$T/rr.log" 2>&1
+  rr=$(sed -n 's/^re-render: //p' "$T/rr.log" | sed 's/ checked\.svg$/ again.svg/')
+  (cd "$T/rr" && sh -c "$rr") > /dev/null 2>&1
+  a=$(grep -o 'viewBox="[^"]*"' "$T/rr/checked.svg" | head -n 1) b=$(grep -o 'viewBox="[^"]*"' "$T/rr/again.svg" 2> /dev/null | head -n 1)
+  if [ -n "$a" ] && [ "$a" = "$b" ] && grep -q geometricPrecision "$T/rr/checked.svg" && ! grep -q 'text{text-rendering:geometricPrecision}' "$T/rr/again.svg" &&
+    [ "$(mode "$T/rr/checked.svg")" = 644 ] && [ "$(mode "$T/rr/again.svg")" = 600 ]; then
+    pass "re-render line: same layout ($a); no geometricPrecision rule, mode 600 (d2check: rule added, 644)"
+  else
+    fail "re-render line: '$rr' gave '$b' vs '$a'"
+  fi
+fi
+
 # ---- section 3: PNG
 L='python3 ${CLAUDE_SKILL_DIR}/scripts/d2raster.py <target>.svg --out <target>.png --scale 2'
 if doc "$L"; then
@@ -177,10 +199,10 @@ if doc "$L"; then
 fi
 
 # ---- section 4: PDF
-L='node ${CLAUDE_SKILL_DIR}/scripts/raster.cjs <target>.svg --pdf <target>.pdf'
+L='python3 ${CLAUDE_SKILL_DIR}/scripts/d2raster.py <target>.svg --out <target>.pdf'
 if doc "$L"; then
-  if [ ! -f "$S/scripts/raster.cjs" ]; then
-    skip "PDF: scripts/raster.cjs not there yet (WP1)"
+  if [ ! -f "$S/scripts/d2raster.py" ]; then
+    skip "PDF: scripts/d2raster.py not there yet (WP1)"
   elif run "$(cmd "$L" "$ONE")" && head -c 5 "$ONE.pdf" | grep -q '%PDF-'; then
     got=$(python3 - "$ONE.pdf" "$W" << 'EOF'
 import re, sys
@@ -271,11 +293,12 @@ else
 fi
 
 # ---- section 6: animated SVG (and the naming rule: the board dir survives)
-L='d2 <flags> --animate-interval 2000 <target>.d2 <target>-animated.svg'
+L='sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh <target>.d2 <target>-animated.svg -- --animate-interval 2000'
 if doc "$L" && run "$(cmd "$L" "$FLOW")" && grep -q '@keyframes' "$FLOW-animated.svg"; then
-  [ -f "$FLOW/2.svg" ] && pass "animated SVG: one file with keyframes; <target>/ untouched" ||
+  [ -f "$FLOW/2.svg" ] && pass "animated SVG via d2check: one file with keyframes, exit 0; <target>/ untouched" ||
     fail "animated render deleted <target>/"
-  [ "$(mode "$FLOW-animated.svg")" = 600 ] || fail "animated SVG mode is not 600"
+  [ "$(mode "$FLOW-animated.svg")" = 644 ] || fail "animated SVG mode is not 644"
+  grep -q 'only the first (the base board) is linted' "$T/run.log" || fail "d2check did not lint the first frame only"
 else
   fail "animated SVG: $(tail -n 1 "$T/run.log")"
 fi

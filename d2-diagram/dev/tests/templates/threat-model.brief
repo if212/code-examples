@@ -1,0 +1,33 @@
+# request: "Data-flow diagram for the STRIDE review of checkout, with the trust
+#  boundaries: DMZ, internal and data. The customer's browser sends
+#  credentials to the login service and a card token to the checkout
+#  service, both over HTTPS; they pass them on over mTLS to Auth and
+#  Payments. Auth reads the password hash from the users DB; Payments sends
+#  the token and amount to Stripe over HTTPS and writes the charge id to the
+#  payments DB. The review is about the card token; number the processes."
+type: threat-model
+reader: security reviewers in the STRIDE session
+width: 800
+direction: down
+focus: internal.pay
+out: card entry in the browser (Stripe.js), sessions, logging, admin tools
+nodes:
+  browser: Customer browser
+  dmz: DMZ
+  dmz.login: 1. Login
+  dmz.checkout: 2. Checkout
+  internal: Internal
+  internal.auth: 3. Auth
+  internal.pay: 4. Payments
+  data: Data
+  data.users: Users DB\nPostgres {shape: cylinder}
+  data.ledger: Payments DB\nPostgres {shape: cylinder}
+  stripe: Stripe\n3rd party {external}
+edges:
+  browser -> dmz.login: credentials\nHTTPS
+  browser -> dmz.checkout: card token\nHTTPS
+  dmz.login -> internal.auth: credentials\nmTLS
+  dmz.checkout -> internal.pay: card token\nmTLS
+  data.users -> internal.auth: password hash\nSQL
+  internal.pay -> stripe: token, amount\nHTTPS
+  internal.pay -> data.ledger: charge id\nSQL

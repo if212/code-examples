@@ -1,0 +1,11 @@
+# Before: a container without a zone class keeps d2's centred title, and the incoming edge
+# runs straight through it.
+...@neutral-theme
+direction: down
+users: Shoppers {class: actor}
+shop: Shop {
+  web: Storefront {class: service}
+  api: Orders API {class: [service; focal]}
+  web -> api: REST {class: flow}
+}
+users -> shop.web: HTTPS {class: flow}

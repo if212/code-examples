@@ -1,0 +1,751 @@
+[
+{
+"id": "R01",
+"request": "draw how our auth works",
+"expect": "sequence",
+"alt": [],
+"call": "ASK",
+"altcall": [
+"GO"
+]
+},
+{
+"id": "R02",
+"request": "can you explain the checkout with a diagram",
+"expect": "sequence",
+"alt": [],
+"call": "ASK"
+},
+{
+"id": "R03",
+"request": "how does a request get from the browser to the database and back?",
+"expect": "walkthrough",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R04",
+"request": "what happens when a user clicks Pay? include the Stripe webhook",
+"expect": "sequence",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R05",
+"request": "explain how Kafka consumer groups work, for the onboarding doc",
+"expect": "architecture",
+"alt": [
+"steps"
+],
+"call": "GO"
+},
+{
+"id": "R06",
+"request": "how does our search work end to end?",
+"expect": "pipeline",
+"alt": [
+"walkthrough",
+"sequence",
+"architecture"
+],
+"call": "SPLIT",
+"altcall": [
+"ASK"
+]
+},
+{
+"id": "R07",
+"request": "make an architecture diagram of this repo for the README",
+"expect": "architecture",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R08",
+"request": "high-level overview of the whole platform for new hires",
+"expect": "context",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R09",
+"request": "diagram everything in src/",
+"expect": "architecture",
+"alt": [
+"depgraph"
+],
+"call": "ASK"
+},
+{
+"id": "R10",
+"request": "system design diagram for a URL shortener, interview style",
+"expect": "architecture",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R11",
+"request": "how do our microservices talk to each other? which calls are sync and which go through Kafka",
+"expect": "architecture",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R12",
+"request": "draw the internals of the payments service (controllers, domain, adapters) for the design doc",
+"expect": "architecture",
+"alt": [
+"c4",
+"stack"
+],
+"call": "GO"
+},
+{
+"id": "R13",
+"request": "architecture of our support chatbot: Streamlit UI, Cortex Search, the LLM, and the feedback table",
+"expect": "llm-app",
+"alt": [
+"architecture"
+],
+"call": "GO"
+},
+{
+"id": "R14",
+"request": "MCP setup: Claude Desktop, our MCP server, its tools, and the Postgres behind it",
+"expect": "llm-app",
+"alt": [
+"architecture"
+],
+"call": "GO"
+},
+{
+"id": "R15",
+"request": "who owns what? map our services to teams from CODEOWNERS",
+"expect": "architecture",
+"alt": [
+"tree"
+],
+"call": "GO"
+},
+{
+"id": "R16",
+"request": "can you do a flowchart of how our services connect?",
+"expect": "architecture",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R17",
+"request": "sequence diagram of our architecture",
+"expect": "sequence",
+"alt": [
+"architecture"
+],
+"call": "ASK"
+},
+{
+"id": "R18",
+"request": "C4 context diagram for billing",
+"expect": "context",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R19",
+"request": "container diagram in C4 style for the architecture review",
+"expect": "c4",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R20",
+"request": "C4 dynamic diagram of the signup flow",
+"expect": "walkthrough",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R21",
+"request": "diagram the k8s setup",
+"expect": "deployment",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R22",
+"request": "turn docker-compose.yml into a diagram",
+"expect": "deployment",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R23",
+"request": "draw our AWS infra from the terraform in infra/",
+"expect": "deployment",
+"alt": [
+"network"
+],
+"call": "SPLIT",
+"altcall": [
+"GO"
+]
+},
+{
+"id": "R24",
+"request": "VPC layout: public and private subnets across two AZs, NAT, ALB, RDS",
+"expect": "network",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R25",
+"request": "how does traffic get from the internet to our pods?",
+"expect": "walkthrough",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R26",
+"request": "show the DR setup: active-passive across us-east-1 and us-west-2",
+"expect": "deployment",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R27",
+"request": "which services run on ECS, which on Lambda, and which are still on the old EC2 boxes?",
+"expect": "deployment",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R28",
+"request": "network diagram for the on-prem to AWS VPN",
+"expect": "network",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R29",
+"request": "show the data flow from Kafka to the warehouse",
+"expect": "pipeline",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R30",
+"request": "draw our ELT: Fivetran to raw, dbt staging and marts, then Looker",
+"expect": "pipeline",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R31",
+"request": "medallion architecture (bronze/silver/gold) for a slide",
+"expect": "pipeline",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R32",
+"request": "CDC from Postgres into Snowflake via Debezium and Kafka Connect",
+"expect": "pipeline",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R33",
+"request": "RAG pipeline for our chatbot",
+"expect": "pipeline",
+"alt": [
+"llm-app"
+],
+"call": "GO"
+},
+{
+"id": "R34",
+"request": "lineage for the revenue dashboard: which models feed it?",
+"expect": "depgraph",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R35",
+"request": "diagram the nightly_billing Airflow DAG",
+"expect": "depgraph",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R36",
+"request": "ML training pipeline: features, training, eval gate, model registry, deploy",
+"expect": "pipeline",
+"alt": [
+"flowchart"
+],
+"call": "GO"
+},
+{
+"id": "R37",
+"request": "how does data get into Snowflake and who can see it?",
+"expect": "pipeline",
+"alt": [],
+"call": "SPLIT"
+},
+{
+"id": "R38",
+"request": "sequence diagram of the OAuth PKCE login",
+"expect": "sequence",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R39",
+"request": "API request lifecycle: gateway, auth middleware, rate limiter, handler, DB",
+"expect": "sequence",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R40",
+"request": "how the agent calls tools",
+"expect": "sequence",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R41",
+"request": "event-driven saga for order placement with compensations",
+"expect": "sequence",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R42",
+"request": "webhook delivery with retries, exponential backoff and a DLQ",
+"expect": "flowchart",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R43",
+"request": "show the race between two workers grabbing the same job and why we need the lock",
+"expect": "sequence",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R44",
+"request": "cache-aside: read path vs write path",
+"expect": "sequence",
+"alt": [
+"compare"
+],
+"call": "SPLIT"
+},
+{
+"id": "R45",
+"request": "trace GET /product/:id across the BFF and the three backends; they are called in parallel",
+"expect": "sequence",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R46",
+"request": "ER diagram from the migrations folder",
+"expect": "erd",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R47",
+"request": "draw our data model",
+"expect": "erd",
+"alt": [
+"class"
+],
+"call": "GO"
+},
+{
+"id": "R48",
+"request": "star schema for the sales mart",
+"expect": "erd",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R49",
+"request": "how do order, customer, invoice and payment relate?",
+"expect": "erd",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R50",
+"request": "class diagram of the plugin system: interfaces and base classes",
+"expect": "class",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R51",
+"request": "domain model for the booking context: aggregates, entities, value objects",
+"expect": "class",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R52",
+"request": "ERD for the microservices",
+"expect": "erd",
+"alt": [
+"architecture"
+],
+"call": "ASK"
+},
+{
+"id": "R53",
+"request": "document the DynamoDB single-table design",
+"expect": "erd",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R54",
+"request": "our release process",
+"expect": "flowchart",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R55",
+"request": "draw the CI pipeline from .github/workflows/ci.yml",
+"expect": "flowchart",
+"alt": [
+"depgraph"
+],
+"call": "GO"
+},
+{
+"id": "R56",
+"request": "flowchart for triaging a PagerDuty alert",
+"expect": "flowchart",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R57",
+"request": "decision tree: which database should a new service use?",
+"expect": "flowchart",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R58",
+"request": "parse_config() is confusing, can you draw its logic?",
+"expect": "flowchart",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R59",
+"request": "how does the agent loop work: plan, act, observe, repeat until done",
+"expect": "flowchart",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R60",
+"request": "multi-agent: the orchestrator hands off to a researcher and a writer, then a reviewer loops until approved",
+"expect": "flowchart",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R61",
+"request": "access request approval: requester, manager, security, then auto-provisioning",
+"expect": "swimlane",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R62",
+"request": "on-call escalation: primary, then secondary after 10 min, then the EM",
+"expect": "swimlane",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R63",
+"request": "user onboarding flow: signup, verify email, create workspace, invite team",
+"expect": "flowchart",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R64",
+"request": "our git branching strategy: main, release branches, hotfixes merged back",
+"expect": "gitflow",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R65",
+"request": "state diagram of the checkout process",
+"expect": "state",
+"alt": [
+"flowchart"
+],
+"call": "GO"
+},
+{
+"id": "R66",
+"request": "state of an order",
+"expect": "state",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R67",
+"request": "PR lifecycle: draft, ready, changes requested, approved, merged, closed",
+"expect": "state",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R68",
+"request": "what states can a job be in, and what moves it between them?",
+"expect": "state",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R69",
+"request": "circuit breaker states for the payments client",
+"expect": "state",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R70",
+"request": "subscription billing: trialing, active, past_due, canceled, and what triggers each",
+"expect": "state",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R71",
+"request": "UML for the order service",
+"expect": "class",
+"alt": [],
+"call": "ASK"
+},
+{
+"id": "R72",
+"request": "compare before and after the migration off the monolith",
+"expect": "compare",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R73",
+"request": "what does this PR change architecturally?",
+"expect": "compare",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R74",
+"request": "current vs target state of the data platform, for the ADR",
+"expect": "compare",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R75",
+"request": "walk me through a blue/green deploy step by step",
+"expect": "steps",
+"alt": [
+"compare"
+],
+"call": "GO"
+},
+{
+"id": "R76",
+"request": "animate what happens during leader election when a node dies",
+"expect": "steps",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R77",
+"request": "module dependency graph for packages/ - any cycles?",
+"expect": "depgraph",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R78",
+"request": "which services depend on users-service?",
+"expect": "depgraph",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R79",
+"request": "visualize the terraform module graph",
+"expect": "depgraph",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R80",
+"request": "Snowflake role hierarchy: which roles inherit from which",
+"expect": "depgraph",
+"alt": [
+"tree"
+],
+"call": "GO"
+},
+{
+"id": "R81",
+"request": "a layer diagram of our platform: infra, data, ML, apps",
+"expect": "stack",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R82",
+"request": "our tech stack for the onboarding doc",
+"expect": "stack",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R83",
+"request": "org chart for the data team",
+"expect": "tree",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R84",
+"request": "Snowflake object hierarchy: account, databases, schemas, tables, stages",
+"expect": "tree",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R85",
+"request": "show the repo structure",
+"expect": "OUT",
+"alt": [
+"tree"
+],
+"call": "OUT",
+"altcall": [
+"GO"
+]
+},
+{
+"id": "R86",
+"request": "mind map of hackathon ideas",
+"expect": "tree",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R87",
+"request": "incident timeline for yesterday's outage, for the postmortem",
+"expect": "timeline",
+"alt": [],
+"call": "ASK"
+},
+{
+"id": "R88",
+"request": "roadmap for Q3 and Q4 across the platform, data and AI workstreams",
+"expect": "roadmap",
+"alt": [],
+"call": "ASK"
+},
+{
+"id": "R89",
+"request": "migration plan in phases with milestones and a cutover",
+"expect": "roadmap",
+"alt": [],
+"call": "GO",
+"altcall": [
+"ASK"
+]
+},
+{
+"id": "R90",
+"request": "a Gantt chart for the sprint with dates and durations",
+"expect": "roadmap",
+"alt": [],
+"call": "ASK"
+},
+{
+"id": "R91",
+"request": "threat model for file uploads: draw the trust boundaries",
+"expect": "threat-model",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R92",
+"request": "where does PII flow in the signup path?",
+"expect": "threat-model",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "R93",
+"request": "add the Redis cache to the architecture diagram, don't redraw the rest",
+"expect": "EDIT",
+"alt": [],
+"call": "EDIT"
+},
+{
+"id": "R94",
+"request": "the diagram is too tall for the README, can you make it fit",
+"expect": "EDIT",
+"alt": [],
+"call": "EDIT"
+},
+{
+"id": "R95",
+"request": "make a slide version of the pipeline diagram",
+"expect": "EDIT",
+"alt": [],
+"call": "EDIT"
+},
+{
+"id": "R96",
+"request": "same diagram but in Snowflake colors",
+"expect": "EDIT",
+"alt": [],
+"call": "EDIT"
+},
+{
+"id": "R97",
+"request": "chart p95 latency per endpoint for last week",
+"expect": "OUT",
+"alt": [],
+"call": "OUT"
+},
+{
+"id": "R98",
+"request": "compare Postgres, DynamoDB and Snowflake for our use case",
+"expect": "OUT",
+"alt": [],
+"call": "OUT"
+},
+{
+"id": "R99",
+"request": "mock up the new settings page",
+"expect": "OUT",
+"alt": [],
+"call": "OUT"
+}
+]

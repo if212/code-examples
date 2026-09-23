@@ -1,0 +1,9 @@
+# Before: both branch labels are centred on the short horizontal run between the two targets.
+...@neutral-theme
+classes: {tier: {width: 200}}
+direction: down
+pending: Pending {class: [state; tier]}
+paid: Paid {class: [state; tier; focal]}
+cancelled: Cancelled {class: [state; tier; danger]}
+pending -> paid: payment received {class: flow}
+pending -> cancelled: customer cancels {class: failure}

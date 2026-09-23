@@ -1,0 +1,19 @@
+# Before: the consumer sits in the services row above its broker; data.events -> services.notify
+# runs against the reading direction and ELK sends it around the whole diagram.
+...@neutral-theme
+direction: down
+web: Web app {class: actor}
+services: Services {
+  class: zone
+  orders: Orders {class: [service; focal]}
+  notify: Notifications {class: service}
+}
+data: Data {
+  class: zone
+  db: "Orders DB\nPostgres" {class: datastore}
+  events: "Order events\nKafka" {class: queue}
+}
+web -> services.orders: {class: flow}
+services.orders -> data.db: {class: dep}
+services.orders -> data.events: {class: async}
+data.events -> services.notify: {class: async}

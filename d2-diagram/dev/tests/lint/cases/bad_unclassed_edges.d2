@@ -1,0 +1,18 @@
+# expect: W-unclassed
+# expect-text: edges carry no edge class
+# expect-clean: E-
+# every node and three edges carry a class; the fourth edge was forgotten (default style, italic label)
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+classes: {
+  svc: {style: {fill: "#FFFFFF"; stroke: "#475569"}}
+  flow: {style: {stroke: "#1D4ED8"; italic: false; font-size: 14}}
+}
+a: A {class: svc}
+b: B {class: svc}
+c: C {class: svc}
+d: D {class: svc}
+e: E {class: svc}
+a -> b: calls {class: flow}
+b -> c: reads {class: flow}
+c -> d: writes {class: flow}
+d -> e: notifies

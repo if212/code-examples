@@ -1,0 +1,12 @@
+# a cylinder participant: its drawn x must come from the whole path (d2 draws it with V commands)
+shape: sequence_diagram
+web: Web app
+api: Orders API
+bill: Billing
+mail: Mailer
+db: Orders DB {shape: cylinder}
+web -> api.t: POST /orders
+api.t -> bill: charge
+bill -> mail: receipt
+api.t -> db: INSERT order
+db -> api.t: ok {style.stroke-dash: 3}

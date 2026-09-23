@@ -1,0 +1,6 @@
+# expect: E-label-overflow
+# expect-text: top rim
+# expect-text: set height:
+# a fixed height leaves no room under the cylinder's top rim: the rim strikes through the label
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+db: "Orders DB\nPostgres 16" {shape: cylinder; height: 90}

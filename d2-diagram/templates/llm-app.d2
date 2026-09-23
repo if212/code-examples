@@ -1,0 +1,51 @@
+# LLM app template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Top-down: the user, the app that orchestrates every call (the focus), then
+# everything the app calls in one row, the vector index at the bottom where
+# the online query and the offline indexing job meet (playbooks/architecture.md).
+direction: down
+
+# Geometry only: one width for the leaf row keeps it even and narrow.
+classes: {
+  w: {width: 120}
+}
+
+user: "Support agent\nSlack" {class: actor}
+
+# The hub is as wide as the row it calls, so its four edges drop straight
+# (at its natural width they jogged: 3 labels on bends).
+app: "Assistant API\nFastAPI" {class: [service; focal]; width: 580}
+
+# Row order = edge order below. The model is external unless self-hosted.
+llm: "LLM\nClaude API" {class: [service; w; external]}
+tools: Tools {
+  class: zone
+  grid-rows: 3
+  vertical-gap: 10
+  horizontal-gap: 12
+  tickets: "Ticket lookup" {class: [service; w]}
+  orders: "Order status" {class: [service; w]}
+  refunds: "Issue refund" {class: [service; w]}
+}
+memory: "Chat history\nRedis" {class: [datastore; w]}
+# The retriever sits next to the indexing job: the index below spans both.
+retriever: "Retriever\nhybrid, top-8" {class: [service; w]}
+index: Nightly indexing {
+  class: zone
+  docs: "Help center\nZendesk" {class: [service; w; external]}
+  embed: "Embed job\nAirflow" {class: [service; w]}
+}
+vectors: "Vector index\npgvector" {class: datastore; width: 260}
+
+# A request and its answer are ONE <-> edge, "prompt / reply": two opposite
+# edges drew twice the lines and widened the canvas by 28px. Tools are
+# called by the app, never by the model. Main path flow, offline upsert async.
+user -> app: question {class: flow}
+app <-> llm: "prompt / reply" {class: flow}
+app <-> tools: "call / result" {class: dep}
+app <-> memory: history {class: dep}
+app -> retriever: query {class: flow}
+retriever -> vectors: "top-8 search" {class: flow}
+index.docs -> index.embed: articles {class: dep}
+index.embed -> vectors: upsert {class: async}

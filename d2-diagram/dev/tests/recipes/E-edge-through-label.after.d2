@@ -1,0 +1,11 @@
+# After: class zone moves the title to the top-left corner, clear of edges entering from above.
+...@neutral-theme
+direction: down
+users: Shoppers {class: actor}
+shop: Shop {
+  class: zone
+  web: Storefront {class: service}
+  api: Orders API {class: [service; focal]}
+  web -> api: REST {class: flow}
+}
+users -> shop.web: HTTPS {class: flow}

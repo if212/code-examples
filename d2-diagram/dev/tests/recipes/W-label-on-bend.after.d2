@@ -1,0 +1,12 @@
+# After: an invisible third child (reference/layout.md section 3) makes Paid the middle one,
+# so the main path runs straight down and its label sits on a straight run.
+...@neutral-theme
+classes: {ghost: {style.opacity: 0}}
+direction: down
+pending: Pending {class: state}
+ghost: "" {class: ghost; width: 120}
+paid: Paid {class: [state; focal]}
+cancelled: Cancelled {class: [state; danger]}
+pending -> ghost: {class: ghost}
+pending -> paid: payment received {class: flow}
+pending -> cancelled: customer cancels {class: failure}

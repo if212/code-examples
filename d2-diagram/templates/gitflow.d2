@@ -1,0 +1,76 @@
+# Gitflow template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Which branch is cut from where and merges back where (playbooks/change.md):
+# one grid row per branch, one column per moment, time runs right. Each
+# commit sits in a hidden slot (a grid stretches a bare dot into an oval).
+# Branch and merge lines are diagonal by design: expect one W-diagonal-edge
+# per cut or merge line, and nothing else. A line never crosses a commit.
+classes: {
+  frame: {label: ""; grid-rows: 5; grid-columns: 8; horizontal-gap: 16; vertical-gap: 16}
+  # name width = the longest branch name + about 24
+  name: {label: ""; width: 112; grid-rows: 1; horizontal-gap: 0; vertical-gap: 16; style.opacity: 0}
+  slot: {label: ""; width: 60; height: 52; grid-rows: 1; horizontal-gap: 20; vertical-gap: 16; style.opacity: 0}
+  tag: {width: 56; height: 28}
+  # Branch names verbatim: plain text, not caption (it uppercases them).
+  branch: {shape: text}
+}
+
+# The frame's gaps are its padding and keep the tags off its border.
+# grid-rows = 1 tag row + the branches; grid-columns = 1 name + the moments.
+git: {
+  class: [zone; frame]
+  # Tags in their own row above main: a label on a dot would move the dot.
+  t0: "" {class: tag; style.opacity: 0}
+  t1: "1.0" {class: [service; tag]}
+  t2: "" {class: tag; style.opacity: 0}
+  t3: "" {class: tag; style.opacity: 0}
+  t4: "" {class: tag; style.opacity: 0}
+  t5: "1.1" {class: [service; tag]}
+  t6: "" {class: tag; style.opacity: 0}
+  t7: "1.1.1" {class: [service; tag]}
+  m0: {class: name; n: main {class: [service; branch]}}
+  m1: {class: slot; c: "" {class: dot}}
+  m2: {class: slot}
+  m3: {class: slot}
+  m4: {class: slot}
+  m5: {class: slot; c: "" {class: dot}}
+  m6: {class: slot}
+  m7: {class: slot; c: "" {class: dot}}
+  h0: {class: name; n: hotfix/1.1.1 {class: [service; branch]}}
+  h1: {class: slot}
+  h2: {class: slot}
+  h3: {class: slot}
+  h4: {class: slot}
+  h5: {class: slot}
+  h6: {class: slot; c: "" {class: dot}}
+  h7: {class: slot}
+  r0: {class: name; n: release/1.1 {class: [service; branch]}}
+  r1: {class: slot}
+  r2: {class: slot}
+  r3: {class: slot; c: "" {class: dot}}
+  r4: {class: slot; c: "" {class: dot}}
+  r5: {class: slot}
+  r6: {class: slot}
+  r7: {class: slot}
+  # The branch everyone works from is the focus: its line is flow (blue).
+  d0: {class: name; n: develop {class: [service; branch]}}
+  d1: {class: slot; c: "" {class: dot}}
+  d2: {class: slot; c: "" {class: dot}}
+  d3: {class: slot}
+  d4: {class: slot; c: "" {class: dot}}
+  d5: {class: slot; c: "" {class: dot}}
+  d6: {class: slot}
+  d7: {class: slot; c: "" {class: dot}}
+}
+
+# Lines are `--` (no arrowheads): branch lines first, then cuts and merges.
+git.d1.c -- git.d2.c -- git.d4.c -- git.d5.c -- git.d7.c: {class: flow}
+git.m1.c -- git.m5.c -- git.m7.c: {class: dep}
+git.r3.c -- git.r4.c: {class: dep}
+git.d2.c -- git.r3.c: {class: dep}
+git.r4.c -- git.m5.c: {class: dep}
+git.r4.c -- git.d5.c: {class: dep}
+git.m5.c -- git.h6.c: {class: dep}
+git.h6.c -- git.m7.c: {class: dep}
+git.h6.c -- git.d7.c: {class: dep}

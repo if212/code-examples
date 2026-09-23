@@ -1,0 +1,13 @@
+# Before: the focus is a group, drawn as a plain zone like every other group.
+...@neutral-theme
+direction: down
+gateway: API gateway {class: service}
+orders: Orders {class: service}
+pay: Payments {
+  class: zone
+  auth: Card auth {class: service}
+  ledger: Ledger {class: service}
+  auth -> ledger: {class: dep}
+}
+gateway -> pay.auth: {class: dep}
+gateway -> orders: {class: dep}

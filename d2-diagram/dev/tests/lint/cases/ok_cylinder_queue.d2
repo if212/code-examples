@@ -1,0 +1,7 @@
+# expect-clean: E-
+# d2 sizes cylinders and queues to clear their rim and end cap when nothing is fixed
+vars: {d2-config: {layout-engine: elk; pad: 24}}
+db: "Orders DB\nPostgres 16" {shape: cylinder}
+db3: "Orders DB\nPostgres 16\nprimary copy" {shape: cylinder}
+q: "Queue\nKafka topic" {shape: queue}
+db -> q -> db3
