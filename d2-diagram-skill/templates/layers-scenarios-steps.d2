@@ -1,0 +1,22 @@
+api -> service -> db
+
+layers: {
+  alt: {
+    edge -> queue -> worker
+  }
+}
+
+scenarios: {
+  outage: {
+    service -> cache
+  }
+}
+
+steps: {
+  "1": {
+    user -> api: begin
+  }
+  "2": {
+    api -> service: process
+  }
+}

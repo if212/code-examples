@@ -1,0 +1,22 @@
+client -> api -> db
+
+layers: {
+  queue_mode: {
+    client -> queue -> worker -> db
+  }
+}
+
+scenarios: {
+  degraded: {
+    api -> cache
+  }
+}
+
+steps: {
+  "1": {
+    client -> api: start
+  }
+  "2": {
+    api -> db: fetch
+  }
+}

@@ -1,0 +1,8 @@
+shape: sequence_diagram
+
+client -> gateway: request
+gateway -> service: validate
+service -> db: query
+db -> service: result
+service -> gateway: response
+gateway -> client: ok

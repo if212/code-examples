@@ -1,0 +1,18 @@
+vars: {
+  d2-config: {
+    layout-engine: dagre
+    theme-id: 101
+  }
+}
+
+users: Users
+gateway: API Gateway
+auth: Auth Service
+billing: Billing Service
+db: Postgres
+db.shape: cylinder
+
+users -> gateway
+gateway -> auth
+gateway -> billing
+billing -> db

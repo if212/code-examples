@@ -1,0 +1,14 @@
+User: {
+  shape: class
+  +id: UUID
+  +email: string
+  +createSession(): Session
+}
+
+Session: {
+  shape: class
+  +id: UUID
+  +userId: UUID
+}
+
+User -> Session: has many

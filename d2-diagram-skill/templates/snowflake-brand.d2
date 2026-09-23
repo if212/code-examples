@@ -1,0 +1,119 @@
+# Snowflake brand theme for D2 diagrams (brand layer, not product-UI tokens).
+# Usage: copy this file next to your .d2, then at the top of your diagram:
+#   ...@snowflake-brand
+# Then tag elements:      some_node.class: sf-primary
+# Rules and rationale:    reference/16-snowflake-brand.md in the d2-diagram skill.
+
+vars: {
+  sf-blue: "#29B5E8"      # Snowflake Blue - signature. Fills/strokes ONLY, never label text.
+  sf-mid-blue: "#11567F"  # structure: default strokes, container titles, icon accent
+  sf-midnight: "#000000"  # text on light backgrounds
+  sf-gray: "#5B5B5B"      # de-emphasis: annotations, legends
+  sf-star: "#71D3DC"      # secondary accents - use AT MOST ONE per diagram
+  sf-orange: "#FF9F36"
+  sf-purple: "#7D44CF"
+  sf-pink: "#D45B90"
+}
+
+classes: {
+  # Default node look: white fill, structural blue stroke, midnight text.
+  sf-node: {
+    style: {
+      fill: "#FFFFFF"
+      stroke: ${sf-mid-blue}
+      font-color: ${sf-midnight}
+      border-radius: 4
+    }
+  }
+
+  # The focal element(s). Signature blue carries the brand; midnight text
+  # (white on #29B5E8 fails contrast, black passes).
+  sf-primary: {
+    style: {
+      fill: ${sf-blue}
+      stroke: ${sf-mid-blue}
+      font-color: ${sf-midnight}
+      border-radius: 4
+      bold: true
+    }
+  }
+
+  # Containers: gray frame, structural-blue bold title.
+  sf-container: {
+    style: {
+      fill: "#FFFFFF"
+      stroke: ${sf-gray}
+      font-color: ${sf-mid-blue}
+      border-radius: 6
+      bold: true
+    }
+  }
+
+  # De-emphasized / legacy / external elements.
+  sf-muted: {
+    style: {
+      fill: "#FFFFFF"
+      stroke: ${sf-gray}
+      font-color: ${sf-gray}
+      border-radius: 4
+      stroke-dash: 3
+    }
+  }
+
+  # Secondary accents - pick AT MOST ONE class below per diagram, for the one
+  # element the eye must find (hot path, warning, the new component).
+  sf-accent-orange: {
+    style: {
+      fill: ${sf-orange}
+      stroke: ${sf-orange}
+      font-color: ${sf-midnight}
+      border-radius: 4
+      bold: true
+    }
+  }
+  sf-accent-star: {
+    style: {
+      fill: ${sf-star}
+      stroke: ${sf-mid-blue}
+      font-color: ${sf-midnight}
+      border-radius: 4
+      bold: true
+    }
+  }
+  sf-accent-pink: {
+    style: {
+      fill: ${sf-pink}
+      stroke: ${sf-pink}
+      font-color: ${sf-midnight}
+      border-radius: 4
+      bold: true
+    }
+  }
+  # Purple is the one dark secondary: white text, not midnight.
+  sf-accent-purple: {
+    style: {
+      fill: ${sf-purple}
+      stroke: ${sf-purple}
+      font-color: "#FFFFFF"
+      border-radius: 4
+      bold: true
+    }
+  }
+
+  # Edges.
+  sf-edge: {
+    style: {
+      stroke: ${sf-mid-blue}
+      font-color: ${sf-midnight}
+    }
+  }
+  # The primary data path: signature blue, heavier stroke.
+  sf-flow: {
+    style: {
+      stroke: ${sf-blue}
+      stroke-width: 3
+      font-color: ${sf-midnight}
+      bold: true
+    }
+  }
+}

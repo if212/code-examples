@@ -1,0 +1,13 @@
+frontend: Frontend
+backend: Backend
+db: Postgres
+db.shape: cylinder
+
+frontend -> backend: HTTP
+backend -> db: SQL
+
+cloud: {
+  cache: Redis
+  worker: Worker
+  worker -> cache
+}

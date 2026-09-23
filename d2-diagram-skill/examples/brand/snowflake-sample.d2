@@ -1,0 +1,26 @@
+# First: cp ../../templates/snowflake-brand.d2 into this directory (or run from a dir containing it).
+...@snowflake-brand
+direction: right
+
+user: User code {
+  class: sf-node
+  # icon: <copy from skill assets/icons/ if wanted>
+}
+
+client: snowflake-snowpark-python {
+  class: sf-container
+  df: DataFrame API { class: sf-node }
+  planner: Query plan builder { class: sf-node }
+  df -> planner: lazy evaluation { class: sf-edge }
+}
+
+legacy: Legacy connector { class: sf-muted }
+
+sf: Snowflake execution engine { class: sf-primary }
+
+throttle: Rate-limit alert { class: sf-accent-orange }
+
+user -> client.df: { class: sf-edge }
+legacy -> sf: { class: sf-edge }
+client.planner -> sf: generates SQL { class: sf-flow }
+sf -> throttle: { class: sf-edge }
