@@ -1,0 +1,19 @@
+# request: "Draw what the handoff asks for, for the team wiki."
+# source: handoff.md "Show how the web app reaches the order service through the API
+#   gateway; orders are saved in Postgres. Highlight the order service.
+type: architecture
+reader: team wiki page
+width: 800
+direction: down
+focus: api.orders, web -> api.gw -> api.orders  # "Highlight the order service", "the web app reaches the order service through the API gateway"
+out: auth, monitoring
+nodes:
+  web: Web app
+  api: Backend
+  api.gw: API gateway
+  api.orders: Order service
+  api.db: Orders DB\nPostgres {shape: cylinder}
+edges:
+  web -> api.gw: HTTPS {inferred}
+  api.gw -> api.orders: forwards
+  api.orders -> api.db: stores orders

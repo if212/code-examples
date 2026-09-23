@@ -1,0 +1,27 @@
+# Before: one 108-character line: the card is wider than the 800px column, so the whole figure
+# shrinks and the code shows under 13px (one card at 800px holds 86 characters a line).
+...@neutral-theme
+grid-rows: 2
+vertical-gap: 16
+
+store: "orders/store.go" {
+  class: code-file
+  src: |`go
+    func (s *Store) ByCustomer(ctx context.Context, cid string) ([]Order, error) {
+        rows, err := s.db.QueryContext(ctx, "SELECT id, total, status FROM orders WHERE customer_id = $1", cid) // <1>
+        if err != nil {
+            return nil, err
+        }
+        defer rows.Close() // <2>
+        return scanOrders(rows)
+    }
+  `| {class: code}
+}
+
+notes: {
+  class: callouts
+  grid-rows: 1
+  grid-columns: 2
+  n1: "1. The customer id is a bind\nparameter, never spliced in" {class: callout}
+  n2: "2. The rows go back to the\npool on every return path" {class: callout}
+}

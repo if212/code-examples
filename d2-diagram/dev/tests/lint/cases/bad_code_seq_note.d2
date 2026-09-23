@@ -1,0 +1,14 @@
+# post: svgpost
+# expect: E-code-overflow
+# A JSON code block as a sequence note: d2 sizes the note as one line of prose, so the code runs
+# past it. The fix is no block: a short message label (POST /orders {sku, qty}).
+...@neutral-theme
+shape: sequence_diagram
+classes: {box: {width: 120}}
+app: Mobile app {class: [actor; box]}
+api: Orders API {class: [actor; box]}
+app -> api: "1. POST /orders" {class: dep}
+app.req: |`json
+  {"sku": "A-42", "qty": 2, "coupon": "SPRING"}
+`| {style: {stroke: "#CBD5E1"; stroke-width: 1; font-size: 14}}
+api -> app: "2. 201 Created" {class: secondary}

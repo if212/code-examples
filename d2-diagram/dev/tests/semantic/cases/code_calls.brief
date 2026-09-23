@@ -1,0 +1,17 @@
+# request: "Which services does PlaceOrder() in orders/service.go call, in order? It
+#  reserves the items with the Inventory API, then inserts the order into the Orders
+#  DB. Show the function's code too."
+type: code-calls
+reader: engineers reading the orders design doc
+width: 800
+direction: down
+focus: none
+out: error wrapping, retries
+nodes:
+  code: orders/service.go
+  code.src: * {code}   # orders/service.go:21-26, verbatim
+  inventory: Inventory API
+  db: Orders DB {shape: cylinder}
+edges:
+  code -> inventory: 1. reserve
+  code -> db: 2. insert

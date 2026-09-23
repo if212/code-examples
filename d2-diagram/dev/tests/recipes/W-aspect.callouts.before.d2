@@ -1,0 +1,21 @@
+# Before: a four-line snippet over two callouts side by side (grid-rows: 1, grid-columns: 2): the
+# figure is a strip, 650x257 (aspect 2.53).
+...@neutral-theme
+grid-rows: 2
+vertical-gap: 16
+q: "rag/search.sql" {
+  class: code-file
+  src: |`sql
+    SELECT id, body
+    FROM chunks
+    ORDER BY embedding <-> $1 -- <1>
+    LIMIT 5; -- <2>
+  `| {class: code}
+}
+notes: {
+  class: callouts
+  grid-rows: 1
+  grid-columns: 2
+  n1: "1. <-> is pgvector's distance:\nthe nearest chunks first" {class: callout}
+  n2: "2. Only the five best\nchunks reach the prompt" {class: callout}
+}

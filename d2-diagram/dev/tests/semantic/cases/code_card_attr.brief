@@ -1,0 +1,12 @@
+# request: "For the PR description: show list_orders.sql and highlight the keyset
+#  condition that replaced OFFSET."
+type: code-annotated
+reader: reviewers of the paging PR
+width: 800
+direction: down
+focus: q  # "highlight the keyset condition"
+out: the old query, OFFSET paging
+nodes:
+  q: * {code}         # the {code} attribute on the card, not on its block
+  q.src: *
+edges:

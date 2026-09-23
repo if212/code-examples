@@ -1,0 +1,12 @@
+# post: svgpost
+# expect: W-code-wide
+# expect-text: sets font-size 12: code is 14px
+# expect-clean: E- W-small-text
+# A code block set to 12px shows under 13px at full scale (12px is no W-small-text yet): code is 14px.
+...@neutral-theme
+cfg: "config/retry.ts" {
+  class: code-file
+  src: |`ts
+    export const retries = Number(process.env.RETRIES ?? 3);
+  `| {class: code; style.font-size: 12}
+}

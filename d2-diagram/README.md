@@ -8,8 +8,8 @@ shown, plus the D2 source to change it later.
 Claude does not just write D2 and hope. For every diagram it:
 
 1. writes a short **brief**: who reads it, where (README column, slide), what to
-   highlight (only what the request asks for), and every box and arrow the
-   request implies;
+   highlight (only what the request, or a handoff document you point it at,
+   asks for), and every box and arrow the request implies;
 2. starts from a **template** matched to the request (architecture, sequence,
    ERD, state machine, ...) and a **design system** (role classes, one accent
    colour, bundled fonts);
@@ -36,7 +36,7 @@ stays at 12px or more and the height within 1.25x the column width.
 
 | Part | What it gives you |
 |---|---|
-| Templates | 23 finished starting diagrams, one per question a reader asks ([the catalog](#templates)); [workflows/route.md](workflows/route.md) routes a request to one |
+| Templates | 27 finished starting diagrams, one per question a reader asks ([the catalog](#templates)); [workflows/route.md](workflows/route.md) routes a request to one |
 | Design system | [templates/neutral-theme.d2](templates/neutral-theme.d2): role classes (`service`, `datastore`, `focal`, `zone`, `flow`, ...), light-only, contrast-checked; plus a Snowflake brand theme |
 | Playbooks | Nine sets of per-type rules that make the difference: [playbooks/](playbooks/) |
 | d2check | One command: format, ASCII check, render, post-process (labels off bends, keys and tables restyled), lint, semantic check, faithful PNGs, a clear summary with exit codes |
@@ -91,7 +91,7 @@ mkdir -p ~/.claude/skills && cp -R d2-diagram ~/.claude/skills/
 mkdir -p .claude/skills && cp -R d2-diagram .claude/skills/
 
 # from the packaged zip (its root folder is d2-diagram/)
-unzip d2-diagram.zip -d ~/.claude/skills/
+mkdir -p ~/.claude/skills && unzip d2-diagram.zip -d ~/.claude/skills/
 ```
 
 Upgrading, including from the earlier d2-diagram skill: delete the old folder
@@ -172,7 +172,8 @@ result: exit 0 - clean: read the PNGs and walk the rubric before delivering
 (Under a skill path with spaces, `re-render:` spells out each font path.)
 Without a brief, d2check still runs the source checks (a misspelled class, an
 unpinned layout engine, mixed icon families). The SVG lands next to the source; review PNGs and other working files go to
-`${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>/`, never next to your files. Useful
+`${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>/`, never next to your files (the
+report's Re-render line sets `D2_WORK`, so a later run finds the brief). Useful
 options: `--column 1600` (slides), `--brief FILE` (semantic check),
 `--check-fmt`, `--strict`, `--json`; `sh "$SK"/scripts/d2check.sh --help`
 lists them all.
@@ -217,11 +218,16 @@ routing, from the question a request asks rather than the word it uses (a
 | `timeline.d2` | What happened when, in what order? | "Timeline for the postmortem: 09:02 deploy, 09:05 alerts, 09:31 rollback." |
 | `roadmap.d2` | What ships when, per stream? | "Roadmap slide: these items per quarter for the web and data teams." |
 | `gitflow.d2` | Which branch is cut from where, and where does it merge back? | "Our branching model: main, develop, release and hotfix branches." |
+| `code-annotated.d2` | What do these lines of code do? | "Annotate our POST /orders handler for the README: validation, the idempotency key, the event." |
+| `code-calls.d2` | What does this code reach, and in what order? | "Show what checkout() calls, numbered in the code and on the arrows." |
+| `code-compare.d2` | What changed in this code, and why? | "Our list_orders query before and after keyset paging, for the PR." |
+| `code-walkthrough.d2` | Which code runs at each step of one request? | "GET /orders/42 through the auth middleware, the handler and the SQL, with the code." |
 
 Past a template's budget (about 15 boxes at 800px), Claude splits the
-picture into an overview and a detail, or into step boards. Two questions in
-one request become two diagrams. Requests and labels are English; labels
-are plain ASCII.
+picture into an overview and a detail, or into step boards, and draws them
+all; ask for one picture ("in one diagram") and it groups parts instead,
+listing what it left out. Two questions in one request become two diagrams.
+Requests and labels are English; labels are plain ASCII.
 
 ## Fonts and themes
 

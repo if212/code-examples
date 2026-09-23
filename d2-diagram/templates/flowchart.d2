@@ -34,8 +34,9 @@ fulfil: Fulfilment {
   ship: Hand to carrier {class: [service; compact; step]}
 }
 # Both ends on the last rank. The row ends at the right, so the success end
-# sits there and the failure end at the left (declared first): the story
-# ends bottom-right, on success.
+# sits there and the failure end at the left: its EDGES are declared first
+# (at the root, edge order places siblings; node order does not): the
+# story ends bottom-right, on success.
 cancelled: Order cancelled {class: [danger; compact; step; terminal]}
 shipped: Shipped {class: [success; compact; step; terminal]}
 # A node with a side exit gets a ghost on the far side, its edge labelled like

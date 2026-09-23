@@ -14,20 +14,28 @@ usage:
   semcheck.py --explain IN.d2|OUT.svg                the drawn diagram as plain sentences
   semcheck.py --dump IN.d2|OUT.svg                   the drawn graph as a brief skeleton (edits)
   semcheck.py --compare OLD NEW                      meaning-level diff of two versions
+  semcheck.py --sync-labels BRIEF IN.d2              reword BRIEF's labels as drawn (keys and edges stay)
   semcheck.py --hint "<d2 error text>" | -           one fix line per known d2 compile error
   semcheck.py --field KEY BRIEF                      print one brief header value (e.g. width)
   semcheck.py --render-hints IN.d2                   what d2check's ELK spacing depends on (sql_table,
                                                      bottom-title)
 options: --target BOARD (one board of a multi-board file), --json
 
+A code block (playbooks/code.md) is `key: * {code}` in the brief: its code is never compared, and
+S-code-marker pairs each numbered badge in the code with one callout or edge "N. ..." (1..N, top down),
+and keeps <-> on the before block, <+> on the after block.
 The focus: line is grounded: `focus: none` (the default), or keys/chains followed by the request's own
-words, `focus: aws.worker  # "Highlight the worker"` (Snowflake: `# brand` grounds one sf-primary).
+words, `focus: aws.worker  # "Highlight the worker"` (Snowflake: `# brand` grounds one sf-primary). A
+`# source: handoff.md "<passage>"` line quotes a document the user handed over as the request: its words
+ground a focus and count as asked, like the request's.
 Nodes inside a `key` container, the native legend and `title` nodes are chrome: never in the inventory.
 exit (differs from the other scripts of the skill): 0 clean (warnings allowed) | 1 S- errors |
-  2 missing or unusable input, compile error, no d2, or usage; --compare: 0 identical, 1 changes listed
+  2 missing or unusable input, compile error, no d2, or usage; --compare: 0 identical, 1 changes listed;
+  --sync-labels: 0 every label now as drawn, 1 some kept (listed: a cut or empty label - fix the .d2)
 Every finding ends with its recipe: workflows/review-and-fix.md#<code>.
 """
 import base64
+import difflib
 import html
 import json
 import os
@@ -74,7 +82,7 @@ HEADER_KEYS = ('type', 'reader', 'width', 'direction', 'focus', 'out', 'layout',
 SECTIONS = {'nodes': 'nodes', 'edges': 'edges', 'messages': 'edges', 'relationships': 'edges',
             'transitions': 'edges'}
 NODE_ATTRS = ('shape', 'external', 'inferred', 'emphasis', 'start', 'end', 'decision', 'group',
-              'note', 'cols', 'fields')
+              'note', 'cols', 'fields', 'code')
 EDGE_ATTRS = ('dashed', 'solid', 'return', 'in', 'src', 'dst', 'src-label', 'dst-label', 'count', 'inferred')
 HEADS = ('triangle', 'triangle-hollow', 'arrow', 'diamond', 'diamond-filled', 'circle',
          'circle-filled', 'box', 'box-filled', 'cross', 'cf-one', 'cf-one-required', 'cf-many',
@@ -374,6 +382,7 @@ def parse_brief(path):
     inv = {'path': path, 'type': 'other', 'nodes': {}, 'edges': [], 'meta': {}, 'notes': [],
            'focus_nodes': [], 'focus_edges': [], 'has_focus': False, 'focus_comment': None, 'focus_line': 0}
     section, request, in_request, quoted, open_q = None, [], False, False, False
+    sources, block = [], None      # `# source:` passages (T3) and the comment block being read
     try:
         fh = open(path, encoding='utf-8')
     except OSError as e:
@@ -383,29 +392,39 @@ def parse_brief(path):
     for lineno, raw in enumerate(lines, 1):
         where = f'{path}:{lineno}'
         st = raw.strip()
-        m = re.match(r'^#\s*request\s*:\s*(.*)$', st, re.I)
+        m = re.match(r'^#\s*(request|source)\s*:\s*(.*)$', st, re.I)
         if m:
-            first = m.group(1).strip()
-            request, in_request = [first], True
-            quoted = first.startswith('"')
+            first = m.group(2).strip()
+            if m.group(1).lower() == 'request':
+                request = block = [first]
+                quoted = first.startswith('"')
+            else:                   # `# source: handoff.md "<the passage drawn from>"`
+                block = [first]
+                sources.append(block)
+                quoted = '"' in first
+            in_request = True
             open_q = quoted and first.count('"') % 2 == 1
             continue
-        # a quoted request continues on any `#` line until its closing quote; an unquoted one only
-        # on indented `#   ...` lines, so a plain comment after the request is not swallowed
+        # a quoted request (or source passage) continues on any `#` line until its closing quote; an
+        # unquoted one only on indented `#   ...` lines, so a plain comment after it is not swallowed
         if in_request and st.startswith('#') and (open_q or (not quoted and re.match(r'^#(\s{2,}|\t)', st))):
             txt = st[1:].strip()
-            request.append(txt)
+            block.append(txt)
             if open_q and txt.count('"') % 2 == 1:
                 open_q = False
             continue
+        if in_request and open_q:
+            inv['notes'].append('a `# request:` or `# source:` quote is never closed: end it with `"`')
+            open_q = False
         in_request = False
         line = strip_comment(raw)
         if not line.strip():
             continue
         s = line.strip()
         low = s.lower()
-        if low.endswith(':') and low[:-1].strip() in SECTIONS:
-            section = SECTIONS[low[:-1].strip()]
+        sm = re.match(r'^([a-z]+)\s*:\s*(none|-)?$', low)
+        if sm and sm.group(1) in SECTIONS:      # `edges:`, also `edges: none` for an empty section
+            section = SECTIONS[sm.group(1)]
             continue
         hm = re.match(r'^([A-Za-z][\w-]*)\s*:\s*(.*)$', s)
         if hm and not raw[:1].isspace() and hm.group(1).lower() in HEADER_KEYS:
@@ -428,6 +447,9 @@ def parse_brief(path):
                 raise BriefError(f"{where}: '{hm.group(1)}' is not a header key ({', '.join(HEADER_KEYS[:6])}) - "
                                  f"did you forget the `nodes:` line above it?")
             raise BriefError(f"{where}: {s!r} is outside a nodes:/edges: section")
+        if re.search(r':\s*\|{1,2}`?[\w+#.-]*\s*$', s):
+            raise BriefError(f"{where}: {s!r} starts a code block: the code goes in the .d2, the brief lists the "
+                             f"block as `card.src: * {{code}}` with its source in a comment (`# routes/orders.ts:14-24`)")
         if section == 'edges':
             for e in parse_edge_line(s, where):
                 e['line'] = lineno
@@ -440,8 +462,20 @@ def parse_brief(path):
             inv['nodes'][nk] = {'key': key, 'label': label, 'attrs': attrs, 'line': lineno}
     if request:
         inv['meta']['request'] = unquote(' '.join(x for x in request if x))
-        if open_q:
-            inv['notes'].append('the `# request:` quote is never closed: end the request with `"`')
+    if open_q:
+        inv['notes'].append('a `# request:` or `# source:` quote is never closed: end it with `"`')
+    inv['sources'] = []
+    for b in sources:   # `name "passage"`: the quoted text is the passage, a quote before a colon ("Goal":) is
+        text = ' '.join(x for x in b if x)      # part of the name; no quotes at all: the whole text
+        segs = [m for m in re.finditer(r'"([^"]*)"(\s*:)?', text) if not m.group(2)]
+        passage, name = ' '.join(m.group(1) for m in segs), text
+        for m in reversed(segs):
+            name = name[:m.start()] + ' ' + name[m.end():]
+        if not passage.strip():
+            passage, name = text, ''
+        inv['sources'].append((re.sub(r'\s+', ' ', name.replace('"', '')).strip(' ,:'), passage.strip()))
+    if inv['sources']:
+        inv['meta']['source'] = ' '.join(p for _, p in inv['sources'])
     # containers implied by dotted keys and edge endpoints are expected nodes too
     for e in inv['edges']:
         for end in (e['src'], e['dst']):
@@ -493,11 +527,19 @@ def request_terms(text):
     return terms
 
 
-def uncovered_request_terms(inv):
-    req = inv['meta'].get('request')
+def asked(inv):
+    """The words the user asked with: the `# request:` plus any `# source:` passage (a handoff or goal
+    document the user supplied or pointed at, quoted verbatim)"""
+    return ' '.join(x for x in (inv['meta'].get('request'), inv['meta'].get('source')) if x)
+
+
+def uncovered_request_terms(inv, g=None):
+    req = asked(inv)
     if not req:
         return []
     hay = [inv['meta'].get(k, '') for k in ('out', 'focus', 'reader', 'type', 'title')]
+    # a word the request quotes from the code ('Idempotency-Key', 'OFFSET') is on the picture, in the code
+    hay += [n['code']['text'] for n in (g or {}).get('nodes', {}).values() if n.get('code')]
     for k, v in inv['nodes'].items():
         hay += [v['key'], v['label'] or '', str(v['attrs'].get('cols', '')), str(v['attrs'].get('fields', ''))]
     for e in inv['edges']:
@@ -523,15 +565,102 @@ def _text_of(t):
     return (spans if spans else [''.join(t.itertext())])
 
 
+def _badge_texts(el):
+    """the <text> elements inside svgpost's numbered badges (drawn for code markers and callouts)"""
+    return {id(t) for b in el.iter(NS + 'g') if 'code-badge' in (b.get('class') or '').split()
+            for t in b.iter(NS + 'text')}
+
+
+def callout_number(el):
+    """a `callout` node that svgpost restyled keeps its number in a badge: 'N', else None"""
+    if 'callout' not in (el.get('class') or '').split()[1:]:
+        return None
+    b = next((k for k in el if k.tag == NS + 'g' and 'code-badge' in (k.get('class') or '').split()), None)
+    return ''.join(b.itertext()).strip() if b is not None else None
+
+
 def _texts(el):
-    out = []
+    out, skip = [], _badge_texts(el)
     for x in el.iter():
         tag = x.tag.split('}')[-1]
-        if tag == 'text':
+        if tag == 'text' and id(x) not in skip:
             out.append(' '.join(_text_of(x)))
         elif tag == 'foreignObject':
             out.append(' '.join(t.strip() for t in x.itertext() if t.strip()))
+    num = callout_number(el)
+    if num and out:       # "N. text", as the brief writes it
+        out = [num + '. ' + ' '.join(out)]
     return [norm_label(t) for t in out if t is not None]
+
+
+# ---------------------------------------------------------------------------
+# code blocks (playbooks/code.md): a marker is a trailing comment `// <N>`, `# <+>`, `-- <!>` (or the end of
+# a real comment); svgpost's code step turns <N> into a numbered badge and <+> <-> <!> into line bands
+# ---------------------------------------------------------------------------
+
+CODE_MARKER_RE = re.compile(r'(?:^|\s)<(\d{1,2}|[-+!])>\s*(?:\*/)?\s*$')
+CODE_COMMENT_RE = re.compile(r'//|#|--|;|%|/\*')
+CODE_MARKER_ONLY_RE = re.compile(r'\s*(?://|#|--|;|%|/\*)\s*<(?:\d{1,2}|[-+!])>\s*(?:\*/)?\s*$')
+CODE_TAIL_RE = re.compile(r'\s+<(?:\d{1,2}|[-+!])>\s*(?:\*/)?\s*$')
+
+
+def _translate_of(el):
+    m = re.search(r'translate\(\s*([-\d.eE+]+)[ ,]+([-\d.eE+]+)?\s*\)', el.get('transform') or '')
+    return (float(m.group(1)), float(m.group(2) or 0)) if m else (0.0, 0.0)
+
+
+def raw_marker(line):
+    """the marker a code line ends with, as d2 drew it: a trailing `<N>`, `<+>`, `<->` or `<!>` after a
+    comment start; else None"""
+    m = CODE_MARKER_RE.search(line)
+    return m.group(1) if m and CODE_COMMENT_RE.search(line[:m.start() + 1]) else None
+
+
+def strip_markers(line):
+    """a code line without its marker comment (or the marker at the end of a real comment)"""
+    return CODE_TAIL_RE.sub('', CODE_MARKER_ONLY_RE.sub('', line)).rstrip()
+
+
+def code_of(g):
+    """a node's code block as svgpost left it (post: True) or as d2 drew it: its lines, the numbered badges
+    and line bands (kind, y), or - not restyled - the markers still in its lines; None: not a code block"""
+    cg = next((k for k in g if k.tag == NS + 'g' and 'light-code' in (k.get('class') or '').split()), None)
+    if cg is None:
+        return None
+    ox, oy = _translate_of(cg)
+    fm = re.search(r'font-size:\s*([\d.]+)', cg.get('style') or '')
+    fs = float(fm.group(1)) if fm else 16.0
+    lines, ys, badges, bands, box = [], [], [], [], None
+    for k in cg:
+        if not isinstance(k.tag, str):
+            continue
+        tag, cls = k.tag.split('}')[-1], (k.get('class') or '').split()
+        if tag == 'g' and 'code-badge' in cls:
+            circ = next(k.iter(NS + 'circle'), None)
+            num = ''.join(''.join(t.itertext()) for t in k.iter(NS + 'text')).strip()
+            badges.append((num, (float(circ.get('cy') or 0) if circ is not None else 0.0) + oy))
+        elif tag == 'g':
+            ix, iy = _translate_of(k)
+            for t in k:
+                if t.tag == NS + 'text':
+                    yv = t.get('y') or '0'
+                    ys.append((float(yv[:-2]) * fs if yv.endswith('em') else float(yv)) + oy + iy)
+                    lines.append(''.join(t.itertext()).replace('\xa0', ' ').rstrip('\n'))
+        elif tag == 'rect' and 'code-band' in cls:
+            if k.get('width') != '3':       # the tint, not its 3px bar
+                bands.append((next((c[5:] for c in cls if c.startswith('code-') and c != 'code-band'), ''),
+                              float(k.get('y') or 0) + oy))
+        elif box is None and tag in ('rect', 'path'):
+            b = _bbox_of(k)
+            if b:
+                box = (b[0] + ox, b[1] + oy, b[2] + ox, b[3] + oy)
+    post = cg.get('data-codepost') is not None
+    marks = [] if post else [(raw_marker(x), y) for x, y in zip(lines, ys) if raw_marker(x)]
+    def count(kind, mark):
+        return sum(1 for k, _ in bands if k == kind) if post else sum(1 for m, _ in marks if m == mark)
+    return {'lines': lines, 'ys': ys, 'badges': badges if post else [(m, y) for m, y in marks if m.isdigit()],
+            'hl': count('hl', '!'), 'add': count('add', '+'), 'del': count('del', '-'),
+            'post': post, 'box': box, 'text': '\n'.join(strip_markers(x) for x in lines)}
 
 
 PATH_TOK_RE = re.compile(r'[A-Za-z]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?')
@@ -579,8 +708,9 @@ def path_points(d):
 def _bbox_of(el):
     tag = el.tag.split('}')[-1]
     try:
-        if tag == 'rect':
-            x, y, w, h = (float(el.get(a)) for a in ('x', 'y', 'width', 'height'))
+        if tag == 'rect':       # x and y default to 0 (svgpost writes a code block's body without them)
+            x, y = (float(el.get(a) or 0) for a in ('x', 'y'))
+            w, h = (float(el.get(a)) for a in ('width', 'height'))
             return (x, y, x + w, y + h)
         if tag in ('ellipse', 'circle'):
             cx, cy = float(el.get('cx')), float(el.get('cy'))
@@ -706,14 +836,25 @@ def parse_svg(path, board=''):
                 bbox = _bbox_of(prim)
                 style = {'fill': prim.get('fill'), 'stroke': prim.get('stroke'),
                          'style': prim.get('style') or '', 'shape_tag': prim.tag.split('}')[-1]}
-        text_pos, lines = [], []
+        code = code_of(g)
+        if code is not None:    # a code block: its text is code, not a label (the brief writes `key: * {code}`)
+            style['text_pos'] = []
+            nodes[norm_key(ident)] = {'id': ident, 'texts': [], 'lines': [], 'bbox': code['box'], 'style': style,
+                                      'order': order, 'classes': classes, 'board': board, 'code': code}
+            return
+        text_pos, lines, skip = [], [], _badge_texts(g)
         for t in g.iter(NS + 'text'):
+            if id(t) in skip:
+                continue
             parts = _text_of(t)
             lines.append(parts)
             try:
                 text_pos.append((norm_label(''.join(t.itertext())), float(t.get('x')), float(t.get('y'))))
             except (TypeError, ValueError):
                 pass
+        num = callout_number(g)
+        if num and lines and lines[0]:
+            lines[0] = [num + '. ' + lines[0][0]] + lines[0][1:]
         style['text_pos'] = text_pos
         nodes[norm_key(ident)] = {'id': ident, 'texts': _texts(g), 'lines': lines, 'bbox': bbox, 'style': style,
                                   'order': order, 'classes': classes, 'board': board}
@@ -877,6 +1018,9 @@ HINTS = [
      'and labels containing `#`'),
     (r'maps must be terminated with \}',
      'unbalanced `{`: often an unquoted `#` that commented out the closing brace, or a label containing `{`'),
+    (r'unexpected text after \S+ block string',
+     'a `|` (or `||`) in the code closed the block early: write the block with the backtick delimiters, '
+     '|`lang ... `| (playbooks/code.md section 1)'),
     (r'block string must be terminated',
      'close the |md ... | block with a `|` line (or use shape: text with a plain label)'),
 ]
@@ -919,6 +1063,8 @@ def hint_lines(text):
         # runnable as printed: the skill's own path instead of ${CLAUDE_SKILL_DIR}
         msg = re.sub(r'\$\{CLAUDE_SKILL_DIR\}/([\w./-]*)', lambda mm: shlex.quote(os.path.join(SKILL_DIR, mm.group(1))), msg)
         out.append('hint: ' + msg.replace('{tok}', tok))
+    if any('backtick delimiters' in h for h in out):     # the unclosed block d2 then reports is the same pipe
+        out = [h for h in out if 'close the |md' not in h]
     return out
 
 
@@ -1730,7 +1876,7 @@ def emphasis_rules(inv, g, comp_nodes, comp_end, inv_end, focus_keys, sf, rep):
     named = inv['focus_nodes'] or inv['focus_edges']
     # (b) grounding: the comment after focus: quotes the request
     if inv['has_focus'] and named:
-        req = said(inv['meta'].get('request'))
+        req = said(asked(inv))
         cm = (inv.get('focus_comment') or '').strip()
         quotes = re.findall(r'"([^"]+)"', cm) or ([cm] if cm else [])
         where = f"{os.path.basename(inv['path'])}:{inv.get('focus_line') or '?'}"
@@ -1747,7 +1893,7 @@ def emphasis_rules(inv, g, comp_nodes, comp_end, inv_end, focus_keys, sf, rep):
             bad = [q for q in quotes if not said(q) or said(q) not in req]
             if bad:
                 rep.add('error', 'S-emphasis', f"{where}: the focus comment quotes {ql(short(bad[0], 40))}, which the "
-                        f"request does not say: quote its exact words, or write focus: none")
+                        f"request does not say (nor a # source:): quote it exactly, or write focus: none")
     # (a) invented emphasis: styled focal or main path, but the focus does not name it
     if inv['has_focus'] or brief_file:
         fnode = [f for f in FOCAL_NODE]
@@ -1850,6 +1996,108 @@ def key_rules(typ, g, comp_nodes, rep):
                 f'and a key ({kinds})')
 
 
+def code_nodes(nodes, k):
+    """the code blocks at key k: k itself, or the block of the code-file card k"""
+    n = nodes.get(k)
+    if not n:
+        return []
+    if n.get('code'):
+        return [k]
+    return [c for c, m in nodes.items() if m.get('code') and parent_of(c) == k] if 'code-file' in n['classes'] else []
+
+
+def code_card(nodes, k):
+    """the code-file card around the code block k, else None"""
+    p = parent_of(k)
+    return p if p and 'code-file' in nodes.get(p, {}).get('classes', []) else None
+
+
+def reads_before(p, q):
+    """box p reads before box q: side by side (half the shorter height shared), the left one; else the upper"""
+    ov = min(p[3], q[3]) - max(p[1], q[1])
+    if ov >= 0.5 * min(p[3] - p[1], q[3] - q[1]):
+        return p[0] < q[0]
+    return p[1] < q[1]
+
+
+def diff_sides(code, rep):
+    """S-code-marker: <-> marks lines of the before side, <+> lines of the after side (playbooks/code.md
+    section 2): one kind a block, and the block with removed lines reads first (left of it, or above it)"""
+    marked = [n for n in code.values() if n['code']['add'] or n['code']['del']]
+    for n in marked:
+        if n['code']['add'] and n['code']['del']:
+            rep.add('error', 'S-code-marker', f"'{n['id']}' marks removed (<->) and added (<+>) lines: one side each, "
+                    f"<-> on the before block, <+> on the after block", [n['id']], n['bbox'])
+    dels = [n for n in marked if n['code']['del'] and not n['code']['add'] and n['bbox']]
+    for a in (n for n in marked if n['code']['add'] and not n['code']['del'] and n['bbox']):
+        for d in dels:
+            if reads_before(a['bbox'], d['bbox']):
+                rep.add('error', 'S-code-marker', f"the added lines (<+>) are in '{a['id']}', which reads before "
+                        f"'{d['id']}' with the removed ones (<->): swap the markers - <-> on the before side, <+> "
+                        f"on the after side", [a['id'], d['id']])
+
+
+def code_rules(g, rep):
+    """S-code-marker: each numbered badge in the code has exactly one partner, a callout "N. ..." or an edge
+    "N. verb" leaving the code's card; the numbers run 1..N down the code; no marker is left in the code
+    as text (the lexer did not read it as a comment)"""
+    nodes = g['nodes']
+    code = {k: n for k, n in nodes.items() if n.get('code')}
+    if not code:
+        return
+    badges = []                                # (number, y, node)
+    for k, n in code.items():
+        c = n['code']
+        badges += [(int(num), y, n) for num, y in c['badges'] if num.isdigit()]
+        for i, line in enumerate(c['lines']):
+            m = CODE_MARKER_RE.search(line) if c['post'] else None
+            if m:
+                rep.add('error', 'S-code-marker', f"line {i + 1} of the code in '{n['id']}' still shows the marker "
+                        f"<{m.group(1)}>: the lexer did not read it as a comment - write it as a comment of the "
+                        f"language (// # --), or drop it", [n['id']], n['bbox'])
+    diff_sides(code, rep)
+    partners = []                              # (number, what, object id)
+    for k, n in nodes.items():
+        if 'callout' in n['classes']:
+            m = re.match(r'^(\d{1,2})\.\s', next((t for t in n['texts'] if t), ''))
+            if m:
+                partners.append((int(m.group(1)), f"callout '{n['id']}'", n['id']))
+            else:
+                rep.add('error', 'S-code-marker', f"callout '{n['id']}' has no number: start its label with \"N. \" "
+                        f"to match badge N in the code", [n['id']], n['bbox'])
+    cards = set(code) | {code_card(nodes, k) for k in code if code_card(nodes, k)}
+    for e in g['edges']:
+        tail = norm_key(e['dst'] if e['op'] == '<-' else e['src'])
+        m = re.match(r'^(\d{1,2})\.\s', e['label'] or '')
+        if tail in cards and m:
+            partners.append((int(m.group(1)), f"edge '{e['src']} {e['op']} {e['dst']}' ({short(e['label'], 24)})", e['id']))
+    have, want = Counter(b[0] for b in badges), Counter(p[0] for p in partners)
+    for num in sorted(have):
+        if have[num] > 1:
+            rep.add('error', 'S-code-marker', f"badge {num} is in the code {have[num]} times: one marker per number "
+                    f"(a call made twice is one badge)", [b[2]['id'] for b in badges if b[0] == num])
+        if num not in want:
+            rep.add('error', 'S-code-marker', f"badge {num} in the code has no partner: add the callout or the edge "
+                    f"\"{num}. ...\" that explains it, or drop the marker <{num}>", [b[2]['id'] for b in badges if b[0] == num])
+    for num in sorted(want):
+        if want[num] > 1:
+            rep.add('error', 'S-code-marker', f"{num}. is used {want[num]} times ("
+                    f"{'; '.join(p[1] for p in partners if p[0] == num)}): one callout or edge per badge",
+                    [p[2] for p in partners if p[0] == num])
+        if num not in have:
+            what = next(p for p in partners if p[0] == num)
+            rep.add('error', 'S-code-marker', f"{what[1]} is numbered {num} but the code has no marker <{num}>: end "
+                    f"the line it explains with a marker comment, e.g. // <{num}>", [what[2]])
+    nums = sorted(set(have) | set(want))
+    if nums and nums != list(range(1, len(nums) + 1)):
+        rep.add('error', 'S-code-marker', f"the numbers are {', '.join(map(str, nums))}: number the markers 1 to "
+                f"{len(nums)}, without gaps")
+    down = [b[0] for b in sorted(badges, key=lambda b: b[1])]
+    if down != sorted(down):
+        rep.add('error', 'S-code-marker', f"down the code the badges read {', '.join(map(str, down))}: number them "
+                f"in reading order, 1 on the first marked line", [b[2]['id'] for b in badges])
+
+
 def diff(inv, g, rep):
     typ = inv['type']
     chrome = chrome_keys(g['nodes'])
@@ -1933,6 +2181,22 @@ def diff(inv, g, rep):
                 + why, [n['id']], n['bbox'])
 
     for k, v in expected.items():
+        if k in comp_nodes and (v['attrs'].get('code') or comp_nodes[k].get('code')):
+            n = comp_nodes[k]
+            inner = code_nodes(comp_nodes, k)
+            if v['attrs'].get('code') and not n.get('code') and inner:
+                rep.add('error', 'S-node-label', f"'{v['key']}' is the card; its code block is "
+                        f"'{comp_nodes[inner[0]]['id']}': write `{v['key']}: <its title>` and "
+                        f"`{comp_nodes[inner[0]]['id']}: * {{code}}` in the brief", [n['id']], box(k))
+            elif v['attrs'].get('code') and not n.get('code'):
+                got = ' / '.join(t for t in n['texts'] if t)
+                rep.add('error', 'S-node-label', f"'{v['key']}': the brief says a code block, the diagram shows "
+                        f"{ql(got) if got else 'a ' + (n['style'].get('shape_tag') or 'shape') + ' without code'}: "
+                        f"write {leaf_of(v['key'])}: |`lang ... `| {{class: code}}", [n['id']], box(k))
+            elif v['label'] is not None and not v['attrs'].get('code'):
+                rep.add('error', 'S-node-label', f"'{v['key']}': the brief says {ql(v['label'])}, the diagram shows a "
+                        f"code block: write `{v['key']}: * {{code}}` in the brief", [n['id']], box(k))
+            continue
         if k in comp_nodes and v['label'] is not None:
             ok, got = label_ok(v['label'], comp_nodes[k]['texts'])
             if not ok:
@@ -2304,7 +2568,12 @@ def diff(inv, g, rep):
             rep.add('error', 'S-emphasis', f"focus '{fk}' is not a node key in the brief", [fk])
             continue
         n = comp_nodes.get(k)
-        if n and is_group(k):
+        code_here = code_nodes(comp_nodes, k)
+        if n and code_here:
+            if not any(comp_nodes[c]['code']['hl'] for c in code_here):
+                rep.add('error', 'S-emphasis', f"focus '{n['id']}' is code: end the line(s) the request asks about "
+                        f"with a <!> marker comment, e.g. // <!> (playbooks/code.md section 2)", [n['id']], n['bbox'])
+        elif n and is_group(k):
             if sf:
                 rep.add('error', 'S-emphasis', f"focus '{n['id']}' is a group, and Snowflake has no focus group: "
                         f"make the node inside it that matters most the focus (sf-primary)", [n['id']], n['bbox'])
@@ -2334,6 +2603,14 @@ def diff(inv, g, rep):
             rep.add('error', 'S-emphasis', f"main-path edge '{a} -> {b}': " + last_class_msg(c, FOCAL_EDGE, edge=True),
                     [c['id']])
     emphasis_rules(inv, g, comp_nodes, comp_end, inv_end, focus_keys, sf, rep)
+    if inv['has_focus'] or inv['path'].endswith('.brief'):
+        for k, n in comp_nodes.items():      # a <!> band is emphasis: the focus names the block or its card
+            if n.get('code') and n['code']['hl'] and k not in focus_keys and code_card(comp_nodes, k) not in focus_keys:
+                card = comp_nodes.get(code_card(comp_nodes, k))
+                rep.add('error', 'S-emphasis', f"'{n['id']}' has a highlighted line (<!>) but the brief's focus names "
+                        f"neither it nor its card: drop the <!> marker, or focus: {card['id'] if card else n['id']}  "
+                        f"# \"<the request's words>\"", [n['id']], n['bbox'])
+    code_rules(g, rep)
     emph = [k for k, v in inv_nodes.items() if v['attrs'].get('emphasis')]
     if emph:
         def sig(n):
@@ -2369,7 +2646,7 @@ def diff(inv, g, rep):
     key_rules(typ, g, comp_nodes, rep)
 
     # --- inferred items must be disclosed in the report
-    inferred = [v['key'] for v in inv_nodes.values() if v['attrs'].get('inferred')] + \
+    inferred = [v['key'] for v in inv_nodes.values() if v['attrs'].get('inferred') and not v['attrs'].get('code')] + \
                [f"{e['src']} {e['op']} {e['dst']}" + (f" ({e['label']})" if e['label'] else '')
                 for e in inv['edges'] if e['attrs'].get('inferred')]
     if inferred:
@@ -2383,6 +2660,8 @@ def diff(inv, g, rep):
 
 def display_name(g, k):
     n = g['nodes'].get(norm_key(k))
+    if n and n.get('code'):
+        return f"{leaf_of(k)} (code, {len(n['code']['lines'])} lines)"
     t = [x for x in (n['texts'] if n else []) if x]
     if not t and g['lifelines'] and parent_of(k):      # unnamed sequence span = activation of its actor
         return display_name(g, parent_of(k)) + ' (active)'
@@ -2465,6 +2744,10 @@ def dump(g, src=None):
         else 'state' if 'dot' in classes else 'flowchart' if 'decision' in classes else 'architecture'
     if len(g.get('boards', [])) > 1 and re.search(r'^\s*steps\s*:', text, re.M):
         typ = 'steps'
+    blocks = [n for n in g['nodes'].values() if n.get('code')]
+    if blocks and not seq:      # the code templates, told apart by what sits around the code
+        typ = ('code-annotated' if any('callout' in n['classes'] for n in g['nodes'].values()) else
+               'code-calls' if len(blocks) == 1 else 'code-compare' if not g['edges'] else 'code-walkthrough')
     dm = re.search(r'^direction\s*:\s*(\w+)', text, re.M)
     chrome0 = chrome_keys(g['nodes'])
     focus = [n['id'] for k, n in g['nodes'].items() if k not in chrome0 and set(n['classes']) & set(FOCAL_NODE)
@@ -2513,6 +2796,8 @@ def dump(g, src=None):
                 attrs.append('decision')
         if 'note' in cl:
             attrs.append('note')
+        if n.get('code'):
+            attrs.append('code')
         shown = _brief_quote(lab) if lab else ('""' if 'start' in attrs else '*')
         out.append(f"  {n['id']}: {shown}" + (f" {{{', '.join(attrs)}}}" if attrs else ''))
     out.append('edges:')
@@ -2558,9 +2843,25 @@ def graph_facts(g):
     return facts
 
 
+def code_edits(ga, gb):
+    """(removed, added) lines of the code blocks both versions draw, markers ignored"""
+    removed, added = [], []
+    for k in sorted(set(ga['nodes']) & set(gb['nodes'])):
+        ca, cb = ga['nodes'][k].get('code'), gb['nodes'][k].get('code')
+        if not ca or not cb or ca['text'] == cb['text']:
+            continue
+        la, lb = ca['text'].split('\n'), cb['text'].split('\n')
+        for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, la, lb, autojunk=False).get_opcodes():
+            if tag != 'equal':
+                removed += [f"code {k} line {i + 1}: {la[i].strip()!r}" for i in range(i1, i2)]
+                added += [f"code {k} line {j + 1}: {lb[j].strip()!r}" for j in range(j1, j2)]
+    return removed, added
+
+
 def compare(ga, gb):
     a, b = graph_facts(ga), graph_facts(gb)
     removed, added = sorted(a - b), sorted(b - a)
+    code_removed, code_added = code_edits(ga, gb)
 
     def fmt(f):
         if f[0] == 'node':
@@ -2569,10 +2870,93 @@ def compare(ga, gb):
         if f[5] != '-' or f[6] not in ('-', 'triangle'):
             s += f" [{f[5]} .. {f[6]}]"
         return s + (' dashed' if f[7] == 'dashed' else '') + (f" (#{f[8]})" if f[8] > 1 else '')
-    lines = ['- ' + fmt(f) for f in removed] + ['+ ' + fmt(f) for f in added]
-    lines.append(f"-- {len(removed)} removed, {len(added)} added" +
-                 (' (semantically identical)' if not (removed or added) else ''))
-    return '\n'.join(lines), 0 if not (removed or added) else 1
+    lines = ['- ' + fmt(f) for f in removed] + ['- ' + x for x in code_removed] + \
+        ['+ ' + fmt(f) for f in added] + ['+ ' + x for x in code_added]
+    n_rm, n_add = len(removed) + len(code_removed), len(added) + len(code_added)
+    lines.append(f"-- {n_rm} removed, {n_add} added" + (' (semantically identical)' if not (n_rm or n_add) else ''))
+    return '\n'.join(lines), 0 if not (n_rm or n_add) else 1
+
+
+def _relabel(raw, new, edge):
+    """A brief node or edge line with its label replaced; key, attribute block and comment kept."""
+    code = strip_comment(raw)
+    tail = raw[len(code):]                       # the spaces and the `# comment` after it
+    body, attrs = split_attrs(code.strip(), EDGE_ATTRS if edge else NODE_ATTRS, 'brief')
+    block = code.strip()[len(body):].strip() if attrs else ''
+    if edge:
+        colon = split_outside_quotes(body, re.compile(':'))
+        head = body[:colon[0].start()].rstrip() if colon else body.rstrip()
+    elif body.startswith('"'):
+        head = re.match(r'^("[^"]+")', body).group(1)
+    else:
+        head = body.split(':', 1)[0].rstrip()
+    indent = raw[:len(raw) - len(raw.lstrip())]
+    return f"{indent}{head}: {_brief_quote(new)}" + (f" {block}" if block else '') + tail
+
+
+def sync_labels(path, inv, g):
+    """T11: carry the drawn wording of node and edge labels into the brief, so a label reworded in the .d2 is
+    not typed twice. Keys, attributes, comments and structure stay; a drawn label that is empty, holds a double
+    quote, cuts the brief's short (an unquoted # or ; in the .d2), is the bare key (no label written) or
+    replaces a label the brief wants empty is kept and listed. Returns
+    (synced, kept) as (line, key, old, new or why) tuples; the brief is rewritten when something synced."""
+    lines = open(path, encoding='utf-8').read().split('\n')
+    chrome = chrome_keys(g['nodes'])
+    comp_nodes = {k: v for k, v in g['nodes'].items() if k not in chrome}
+    synced, kept = [], []
+
+    def cut(old, new):
+        o, n = norm_label(old).lower(), norm_label(new).lower()
+        return len(n) < len(o) and o.startswith(n)
+
+    def change(lineno, key, old, new, edge):
+        if not old.strip():
+            kept.append((lineno, key, old, f"the brief says it renders empty, the diagram shows {ql(new)}: fix the .d2"))
+        elif not new.strip():
+            kept.append((lineno, key, old, 'the diagram draws it with no label'))
+        elif not edge and new == split_key(key)[-1]:
+            kept.append((lineno, key, old, f"the diagram shows its key {ql(new)}: the .d2 gives it no label"))
+        elif '"' in new:
+            kept.append((lineno, key, old, f"the drawn label {ql(new)} holds a double quote: edit the brief by hand"))
+        elif cut(old, new):
+            kept.append((lineno, key, old, f"the diagram shows {ql(new)}, a cut of it (an unquoted # or ;?): fix the "
+                                          f".d2"))
+        else:
+            lines[lineno - 1] = _relabel(lines[lineno - 1], new, edge)
+            synced.append((lineno, key, old, new))
+    for k, v in inv['nodes'].items():
+        n = comp_nodes.get(k)
+        if (v['attrs'].get('_implied') or v['label'] is None or v['attrs'].get('code') or n is None or n.get('code')
+                or inv['type'] in ('erd', 'class') and '.' in k):
+            continue
+        if label_ok(v['label'], n['texts'])[0]:
+            continue
+        new = '\\n'.join(n['lines'][0]) if n['lines'] and n['lines'][0] else ''
+        change(v['line'], v['key'], v['label'], new, False)
+    span = {}          # a sequence message ends on an activation span (`api.a1`): the brief names the actor
+    if inv['type'] == 'sequence':
+        for k in comp_nodes:
+            if '.' in k and k.split('.')[0] in g['lifelines_norm'] and k not in inv['nodes']:
+                span[k] = k.split('.')[0]
+    comp_edges, inv_edges, per_line = defaultdict(list), defaultdict(list), Counter(e['line'] for e in inv['edges'])
+    for e in g['edges']:
+        a, b = norm_key(e['src']), norm_key(e['dst'])
+        comp_edges[canon_edge(span.get(a, a), e['op'], span.get(b, b))].append(e)
+    for e in inv['edges']:
+        inv_edges[canon_edge(e['src'], e['op'], e['dst'])].append(e)
+    for key, want in inv_edges.items():
+        have, w = comp_edges.get(key, []), want[0]
+        if w['label'] is None or len(want) != 1 or len(have) != 1 or label_ok(w['label'], edge_label_cands(have[0]))[0]:
+            continue
+        name = f"{w['src']} {w['op']} {w['dst']}"
+        if per_line[w['line']] > 1:
+            kept.append((w['line'], name, w['label'], 'a chain line (a -> b -> c): edit it by hand'))
+            continue
+        change(w['line'], name, w['label'], have[0]['label'], True)
+    if synced:
+        with open(path, 'w', encoding='utf-8') as fh:
+            fh.write('\n'.join(lines))
+    return synced, kept
 
 
 # ---------------------------------------------------------------------------
@@ -2627,6 +3011,8 @@ def main(argv):
     ap.add_argument('--explain', action='store_true', help='the drawn diagram as plain sentences')
     ap.add_argument('--dump', action='store_true', help='the drawn graph as a brief skeleton, for edits')
     ap.add_argument('--compare', metavar='OLD', help='meaning-level diff of OLD against DIAGRAM')
+    ap.add_argument('--sync-labels', action='store_true', help='rewrite the node and edge labels of BRIEF to '
+                    'the wording DIAGRAM draws (after rewording a label in the .d2)')
     ap.add_argument('--hint', metavar='ERROR_TEXT', help="fix line(s) for a d2 compile error ('-' reads stdin)")
     ap.add_argument('--field', metavar='KEY', help='print one header value of BRIEF (type, width, ...)')
     ap.add_argument('--lint', metavar='IN.d2', help='source slips only (quoting, classes, icons, engine): no brief')
@@ -2673,6 +3059,8 @@ def main(argv):
                     return 2
             rep, notes = Report(), []
             add_lint(rep, lint_source(a.lint, 'other', notes), a.lint, g)
+            if g:
+                code_rules(g, rep)      # needs the drawing, not the brief
         finally:
             for t in tmps:
                 shutil.rmtree(t, ignore_errors=True)
@@ -2748,7 +3136,29 @@ def main(argv):
             return 0
 
         if not (a.brief and a.diagram):
-            ap.error('usage: semcheck.py BRIEF IN.d2 [--svg OUT.svg]   (see --help)')
+            ap.error('usage: semcheck.py ' + ('--sync-labels ' if a.sync_labels else '') +
+                     'BRIEF IN.d2 [--svg OUT.svg]   (see --help)')
+        if a.sync_labels:
+            try:
+                inv = parse_brief(a.brief)
+            except BriefError as e:
+                print(f'semcheck: brief problem: {e}')
+                return 2
+            g, err = graph_for(a.svg or a.diagram, a.layout, a.target, tmps)
+            if err:
+                print(f'semcheck: {err}' if err == NO_D2 else f'semcheck: cannot compile {a.diagram}: {err}')
+                for h in hint_lines(err):
+                    print('  ' + h)
+                return 2
+            synced, kept = sync_labels(a.brief, inv, g)
+            print(f'semcheck --sync-labels {a.brief} from {a.diagram}')
+            for ln, key, old, new in synced:
+                print(f"  synced {os.path.basename(a.brief)}:{ln} {key}: {ql(old)} -> {ql(new)}")
+            for ln, key, old, why in kept:
+                print(f"  kept   {os.path.basename(a.brief)}:{ln} {key}: {ql(old)} - {why}")
+            print(f"  {len(synced)} label(s) synced, {len(kept)} kept" + (': the brief now words every label as '
+                  'drawn' if not kept else '') + ' - keep the user\'s words (workflows/brief.md section 5)')
+            return 1 if kept else 0
         try:
             inv = parse_brief(a.brief)
         except BriefError as e:
@@ -2759,7 +3169,7 @@ def main(argv):
             if not os.path.isfile(a.diagram):
                 say_err(f'semcheck: no such file: {a.diagram}')
                 return 2
-            lint = lint_source(a.diagram, inv['type'], lint_notes, inv['meta'].get('request', ''))
+            lint = lint_source(a.diagram, inv['type'], lint_notes, asked(inv))
         g, err = graph_for(a.svg or a.diagram, a.layout, a.target, tmps)
         if err:
             msg = (f'semcheck: {err}' if err == NO_D2 else
@@ -2773,7 +3183,7 @@ def main(argv):
         diff(inv, g, rep)
         notes = list(inv['notes']) + lint_notes
         # these two travel as INFO findings so they reach the d2check summary, not only this listing
-        miss = uncovered_request_terms(inv)
+        miss = uncovered_request_terms(inv, g)
         if miss:
             rep.add('info', 'S-missing-node', 'the request names ' + ', '.join(repr(t) for t in miss[:8]) +
                     ' but no brief label, key or out: entry mentions it - add it to the brief, or list it under out:')

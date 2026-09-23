@@ -1,0 +1,73 @@
+# post: svgpost
+# expect-clean: E-
+# svgpost's code step (test_svgpost.sh): one short snippet per language, eight lexers; every token fill is
+# one of the four role colours (text, keyword, literal, comment), none bold.
+...@neutral-theme
+grid-columns: 1
+vertical-gap: 16
+
+go: |`go
+  // Create stores one order.
+  func (h *Handler) Create(ctx context.Context, o Order) (int64, error) {
+      if o.Qty <= 0 {
+          return 0, ErrBadQty // rejected
+      }
+      return h.db.Insert(ctx, "orders", o, 3)
+  }
+`| {class: code}
+ts: |`ts
+  // Retry with backoff.
+  export async function fetchJson<T>(url: string): Promise<T> {
+    const res = await fetch(url, { retries: 3 });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as T;
+  }
+`| {class: code}
+py: |`python
+  @app.post("/orders")
+  def create(order: Order) -> dict:
+      """Store one order."""
+      if order.qty <= 0:
+          raise ValueError("qty must be > 0")  # 422
+      return {"id": db.insert(order), "ok": True}
+`| {class: code}
+sql: |`sql
+  -- Paid orders in the last 7 days
+  SELECT o.id, o.total, c.email
+  FROM orders AS o
+  JOIN customers AS c ON c.id = o.customer_id
+  WHERE o.status = 'paid'
+    AND o.created_at > now() - INTERVAL '7 days'
+  LIMIT 100;
+`| {class: code}
+yaml: |`yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: orders-api  # one per env
+  spec:
+    replicas: 3
+    paused: false
+`| {class: code}
+json: |`json
+  {
+    "id": "ord_981",
+    "status": "pending",
+    "total": 42.5,
+    "paid": false,
+    "items": null
+  }
+`| {class: code}
+bash: |`bash
+  # Deploy the API
+  export TAG=v1.4.2
+  docker build -t "api:$TAG" . && docker push "api:$TAG"
+  kubectl rollout status deploy/orders-api | tail -1
+`| {class: code}
+hcl: |`hcl
+  resource "aws_s3_bucket" "logs" {
+    bucket        = "shop-logs-prod"
+    force_destroy = false # keep data
+    count         = 2
+  }
+`| {class: code}

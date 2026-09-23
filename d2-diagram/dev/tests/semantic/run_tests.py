@@ -4,7 +4,8 @@
     python3 dev/tests/semantic/run_tests.py [-k SUBSTRING] [-v]
 
 Cases run in parallel. Every .d2 that a codeset or dump case needs is rendered ONCE first and
-checked through `--svg` (as d2check does); runs, hints and the compile paths still render in
+checked through `--svg` (as d2check does; a code_*.d2 case is finished by svgpost.py too, whose code
+step draws the badges and bands semcheck reads); runs, hints and the compile paths still render in
 semcheck itself. NEUTRAL_THEME=/path overrides the theme used for the brief.md worked example
 (default: templates/neutral-theme.d2). Exit 0 = all pass.
 """
@@ -34,8 +35,8 @@ S-reversed-edge S-edge-kind S-duplicate-edge S-node-label S-node-label-case S-ed
 S-duplicate-label S-missing-column S-erd-anchor S-erd-cardinality S-seq-order S-seq-return S-seq-group
 S-seq-group-actor S-seq-actor-order S-state-start S-unreachable S-end-has-exit S-decision S-dead-end
 S-emphasis S-inferred S-src-hash S-src-semicolon S-src-icon-family S-src-cli-engine S-arrowhead
-S-src-class S-key S-src-direction'''.split())
-# FIXPLAN I1 (round 4): S-key and S-src-direction are new
+S-src-class S-key S-src-direction S-code-marker'''.split())
+# FIXPLAN I1 (round 4): S-key and S-src-direction are new; code snippets (CODE-SPEC 4.3): S-code-marker
 
 # (brief, diagram, exact set of error+warning codes)
 CODESETS = [
@@ -150,6 +151,29 @@ CODESETS = [
     ('flow_scope.brief', 'flow_scope.d2', set()),
     ('flow_scope.brief', 'flow_scope_bare.d2', {'S-decision', 'S-missing-edge', 'S-unreachable'}),
     ('flow_scope2.brief', 'flow_scope2.d2', {'S-decision'}),
+    # T3: a `# source:` passage (a handoff or goal document the user supplied) grounds the focus like the
+    # request; without it the same focus quote is ungrounded
+    ('source.brief', 'focus_good.d2', set()),
+    ('source_missing.brief', 'focus_good.d2', {'S-emphasis'}),
+    # code snippets (CODE-SPEC 4.3): `key: * {code}` is a code block, never compared by its text; each badge
+    # N pairs with one callout or one edge "N. verb" leaving its card, 1..N down the code; no marker left
+    ('code_annotated.brief', 'code_annotated.d2', set()),
+    ('code_calls.brief', 'code_calls.d2', set()),
+    ('code_annotated.brief', 'code_marker_missing.d2', {'S-code-marker'}),
+    ('code_annotated.brief', 'code_marker_dup.d2', {'S-code-marker'}),
+    ('code_annotated.brief', 'code_marker_order.d2', {'S-code-marker'}),
+    ('code_marker_gap.brief', 'code_marker_gap.d2', {'S-code-marker'}),
+    ('code_marker_left.brief', 'code_marker_left.d2', {'S-code-marker'}),
+    ('code_notcode.brief', 'code_calls.d2', {'S-node-label'}),        # {code} on a node drawn as a box
+    ('code_hl.brief', 'code_hl.d2', {'S-emphasis'}),                  # a <!> band without the focus
+    ('code_hl_focus.brief', 'code_hl.d2', set()),                     # ... with the focus on its card
+    ('code_edges_none.brief', 'code_hl.d2', set()),                   # `edges: none` is an empty section
+    ('code_card_attr.brief', 'code_hl.d2', {'S-node-label'}),         # {code} on the card, not its block
+    # <-> on the before block, <+> on the after block: swapped sides or both in one block are slips
+    ('code_compare.brief', 'code_compare.d2', set()),
+    ('code_compare.brief', 'code_compare_swap.d2', {'S-code-marker'}),         # side by side, swapped
+    ('code_compare.brief', 'code_compare_stack_swap.d2', {'S-code-marker'}),   # stacked, swapped
+    ('code_compare.brief', 'code_compare_mixed.d2', {'S-code-marker'}),        # a unified diff in one block
 ]
 
 # (name, argv, expected exit, substrings that must appear, substrings that must not)
@@ -161,6 +185,19 @@ RUNS = [
     ('compare: refactor shows exactly one change', ['--compare', 'arch_good.d2', 'arch_refactor.d2'], 1,
      ["+ edge aws.kafka -> aws.billing : 'consumes'", '-- 1 removed, 1 added'], []),
     ('compare: identical', ['--compare', 'arch_good.d2', 'arch_good.d2'], 0, ['semantically identical'], []),
+    ('compare: a code edit is listed line by line', ['--compare', 'code_calls.d2', 'code_calls_edit.d2'], 1,
+     ["- code code.src line 5: 'return s.db.Insert(ctx, o)'",
+      "+ code code.src line 5: 'return s.db.Insert(ctx, o.WithStatus(StatusPending))'", '-- 1 removed, 1 added'], []),
+    ('compare: markers are not code', ['--compare', 'code_calls.d2', 'code_calls_nomark.d2'], 0,
+     ['semantically identical'], ['code code.src']),
+    ('dump: a code block is `key: * {code}`, no code text', ['--dump', 'code_calls.d2'], 0,
+     ['  code.src: * {code}', 'type: code-calls', '  code -> db: 2. insert'], ['func', 'Reserve']),
+    ('brief: code pasted into the brief is named, not parsed as nodes', ['--field', 'type', 'code_in_brief.brief'],
+     2, ['starts a code block', '`card.src: * {code}`'], ['listed twice']),
+    ('brief: {code} on a card names its block', ['code_card_attr.brief', 'code_hl.d2', '--svg', 'SVG:code_hl.d2'], 1,
+     ["'q' is the card; its code block is 'q.src'"], []),
+    ('lint: S-code-marker needs no brief (--lint --svg)', ['--lint', 'code_marker_left.d2', '--svg', 'SVG:code_marker_left.d2'],
+     1, ['S-code-marker', 'still shows the marker <1>'], []),
     ('explain: cardinality in words', ['--explain', 'erd_good.d2'], 0,
      ['one customers row has zero or many orders rows', 'one orders row has exactly one customers row'], []),
     ('explain: nullable FK reads zero or one', ['--explain', 'erd_nullable.d2'], 0,
@@ -264,6 +301,13 @@ RUNS = [
     ('brief header: a quoted request continues on plain # lines', ['--json', 'reqquote.brief', 'engine_import.d2'], 0,
      ['"request": "Alpha calls Beta over gRPC; Beta answers once."'], ['arrows = request direction']),
     ('brief header: an unclosed request quote is a note', ['requnclosed.brief', 'engine_import.d2'], 0,
+     ['quote is never closed'], []),
+    ('brief header: a # source: passage is kept apart from its name (T3)', ['--json', 'source.brief',
+     'focus_good.d2'], 0, ['"source": "Show how the web app reaches the order service through the API gateway; '
+                           'orders are saved in Postgres. Highlight the order service."'], ['Goal']),
+    ('brief header: a focus quote only a handoff says, with no # source: line (T3)', ['source_missing.brief',
+     'focus_good.d2'], 1, ["which the request does not say (nor a # source:)"], []),
+    ('brief header: an unclosed # source: quote is a note (T3)', ['source_unclosed.brief', 'focus_good.d2'], 0,
      ['quote is never closed'], []),
     ('compare: a D2W copy borrows the imports of the new version', ['--compare', 'd2w/orig.d2', 'focus_good.d2'], 0,
      ['semantically identical', '# note: orig.d2 imports mini-theme.d2'], []),
@@ -375,15 +419,40 @@ HINTS = [
     ('hint_dir.d2', 'direction is up, down, right or left'),
     ('hint_unbal.d2', 'unbalanced `{`'),
     ('hint_block.d2', 'close the |md'),
+    ('hint_pipe.d2', 'backtick delimiters, |`lang ... `|'),           # a `||` in the code ends `|ts` early
     ('hint_classcomma.d2', 'separate classes with `;`'),
     ('hint_emptyval.d2', 'nothing after a colon'),
+]
+
+# T11 --sync-labels: (name, brief, diagram, drop lines holding, exit, output needles, brief lines after,
+# lines the re-check may still flag with S-node-label / S-edge-label)
+SYNCS = [
+    ('sync: reworded labels move into the brief; a cut label is kept', 'sync.brief', 'sync.d2', [], 1,
+     ["synced sync.brief:11 api.gw: 'API gateway' -> 'API gateway\\nKong'", "api.orders -> api.db: 'stores orders' "
+      "-> 'writes orders'", "kept   sync.brief:14 sdk: 'C# SDK' - the diagram shows 'C', a cut of it"],
+     ['  api.gw: API gateway\\nKong  # the edge proxy', '  api.db: Orders DB\\nPostgres 16 {shape: cylinder}',
+      '  api.gw -> api.orders: routes', '  api.orders -> api.db: writes orders', '  sdk: "C# SDK" {inferred}'],
+     ["'sdk'"]),
+    ('sync: a chain line is kept whole', 'sync_chain.brief', 'sync.d2', [], 1,
+     ["synced sync_chain.brief:12 api.orders: 'Order' -> 'Order service'", 'a chain line (a -> b -> c): edit it by hand'],
+     ['  web -> api.gw -> api.orders: via', '  api.orders: Order service'], ["'web -> api.gw'", "'api.gw -> api.orders'"]),
+    ('sync: nothing kept is exit 0', 'sync.brief', 'sync.d2', ['sdk'], 0,
+     ['4 label(s) synced, 0 kept: the brief now words every label as drawn'], ['  api.gw -> api.orders: routes'], []),
+    # slips are never synced: a node drawn with its bare key (no label written), a label the brief wants empty
+    ('sync: a bare key and a cut edge label are slips, kept', 'arch.inv', 'arch_bad.d2', [], 1,
+     ["aws.db: 'Postgres' - the diagram shows its key 'db': the .d2 gives it no label", "'charge (port 443)' - the "
+      "diagram shows 'charge', a cut of it"], ['  aws.db: Postgres {shape: cylinder}',
+      '  aws.billing -> stripe: "charge (port 443)"'], ["'aws.db'", "'aws.billing -> stripe'"]),
+    ('sync: a label the brief wants empty is kept', 'state.inv', 'state_bad.d2', [], 1,
+     ["init: '' - the brief says it renders empty, the diagram shows 'Start'"], ['  init: "" {start}',
+      '  final: "" {end}'], ["'init'", "'final'", "'pending -> pending'"]),
 ]
 
 # correct diagrams whose --dump must round-trip to a clean check
 DUMPS = ['arch_good.d2', 'seq_good.d2', 'erd_good.d2', 'state_good.d2', 'flow_good.d2', 'c4_good.d2',
          'focus_good.d2', 'steps_good.d2', 'uml_good.d2', 'grid_good.d2', 'legend.d2', 'backedge.d2',
          'state_dump.d2', 'focus_zone_good.d2', 'uml_ends.d2', 'ghost.d2', 'seq_note.d2', 'dump_zone.d2',
-         'flow_scope.d2']
+         'flow_scope.d2', 'code_annotated.d2', 'code_calls.d2']
 
 MSG_MAX = 170       # d2lint --compact (the d2check listing) cuts each finding at 170 characters
 D2_ENV = ('D2_LAYOUT', 'D2_THEME', 'D2_DARK_THEME', 'D2_PAD', 'D2_SKETCH', 'D2_CENTER', 'D2_WATCH', 'SCALE')
@@ -400,6 +469,10 @@ def render(d2file, tmp):
     out = os.path.join(tmp, os.path.basename(d2file)[:-3] + '.svg')
     env = {k: v for k, v in os.environ.items() if k not in D2_ENV}
     p = subprocess.run(['d2', '--scale', '1', d2file, out], cwd=CASES, capture_output=True, text=True, env=env)
+    if p.returncode == 0 and os.path.basename(d2file).startswith('code_') and os.path.isfile(out):
+        # d2check's svgpost step: the code step draws the badges and bands semcheck reads
+        p = subprocess.run([sys.executable, os.path.join(SKILL, 'scripts', 'svgpost.py'), '--quiet', out],
+                           capture_output=True, text=True, env=env)
     # d2 leaves an SVG behind even when bundling an icon fails: only exit 0 counts
     res = out if os.path.isfile(out) else out[:-4] if os.path.isdir(out[:-4]) else None
     return (res if p.returncode == 0 else None), p.stderr
@@ -436,6 +509,7 @@ def t_codeset(case):
 
 def t_run(case):
     name, argv, want_code, needles, forbidden = case
+    argv = [cached(a[4:])[0] or a if a.startswith('SVG:') else a for a in argv]     # SVG:x.d2 = its one render
     code, out = run(argv)
     miss = [n for n in needles if n not in out]
     bad = [n for n in forbidden if n in out]
@@ -473,6 +547,26 @@ def t_dump(d2file):
     errs = [f"{i['code']}: {i['message'][:90]}" for i in d['findings'] if i['severity'] in ('error', 'warn')]
     return code == 0 and not errs, f"{len(text.splitlines())}-line brief, exit {code}" + (f' {errs}' if errs else ''), \
         {i['code'] for i in d['findings']}
+
+
+def t_sync(case):
+    name, brief, d2, drop, want_code, needles, after, still = case
+    with tempfile.TemporaryDirectory() as tmp:
+        bp = os.path.join(tmp, brief)
+        with open(os.path.join(CASES, brief)) as src, open(bp, 'w') as dst:
+            dst.write(''.join(l for l in src if not any(d in l for d in drop)))
+        code, out = run(['--sync-labels', bp, d2])
+        text = open(bp).read().split('\n')
+        _, recheck = run(['--json', bp, d2])
+    miss = [n for n in needles if n not in out] + [f'brief line {a!r}' for a in after if a not in text]
+    try:
+        left = [f['message'] for f in json.loads(recheck)['findings'] if f['code'] in ('S-node-label', 'S-edge-label')]
+    except ValueError:
+        left = [f'no JSON: {recheck[-200:]}']
+    stray = [m for m in left if not any(x in m for x in still)]
+    ok = code == want_code and not miss and not stray
+    return ok, f'exit {code}' + (f' missing {miss}' if miss else '') + (f' label findings left {stray}' if stray else '') + \
+        ('' if ok else '\n      ' + out.strip().replace('\n', '\n      ')[:1500]), set()
 
 
 def fenced(md, lang, after_heading):
@@ -606,6 +700,7 @@ def run_all():
     verbose = '-v' in args
     jobs = [('codeset', c, t_codeset) for c in CODESETS] + [('run', c, t_run) for c in RUNS] + \
            [('hint', c, t_hint) for c in HINTS] + [('dump', c, t_dump) for c in DUMPS] + \
+           [('sync', c, t_sync) for c in SYNCS] + \
            [('example', None, t_brief_example), ('speed', None, t_speed), ('static', None, t_static),
             ('env', None, t_env), ('nod2', None, t_nod2), ('lintbox', None, t_lint_box), ('lintcyl', None, t_lint_box_cylinder),
             ('templates', None, t_templates)]
@@ -613,7 +708,7 @@ def run_all():
     def label(kind, c):
         if kind == 'codeset':
             return f'{c[1]} vs {c[0]}'
-        if kind == 'run':
+        if kind in ('run', 'sync'):
             return c[0]
         if kind in ('hint', 'dump'):
             return f'{kind} {c[0] if kind == "hint" else c}'
@@ -627,6 +722,7 @@ def run_all():
     jobs = [j for j in jobs if k in label(j[0], j[1])]
     t0 = time.time()
     need = sorted({c[1] for kind, c, _ in jobs if kind == 'codeset'} | {c for kind, c, _ in jobs if kind == 'dump'}
+                  | {a[4:] for kind, c, _ in jobs if kind == 'run' for a in c[1] if a.startswith('SVG:')}
                   | ({'focus_good.d2'} if any(kind == 'speed' for kind, _, _ in jobs) else set())
                   | ({'cls_typo.d2'} if any(kind == 'lintbox' for kind, _, _ in jobs) else set())
                   | ({'cls_cyl.d2'} if any(kind == 'lintcyl' for kind, _, _ in jobs) else set()))

@@ -1,0 +1,15 @@
+# post: svgpost
+# expect: W-code-wide
+# expect-text: (86 fit at 800px in one card): break it
+# expect-clean: E- W-small-text
+# One card with a 101-character line: the canvas is wider than the column, so the code shows at
+# 12.1px: under 13px (W-code-wide) but not yet under 12 (W-small-text). An 86-character line fits.
+...@neutral-theme
+store: "orders/store.go" {
+  class: code-file
+  src: |`go
+    func (s *Store) ByCustomer(ctx context.Context, cid string) (*sql.Rows, error) {
+        return s.db.QueryContext(ctx, "SELECT id, total, status FROM orders WHERE customer_id = $1", cid)
+    }
+  `| {class: code}
+}

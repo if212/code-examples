@@ -1,0 +1,23 @@
+# request: "For the onboarding doc, show how GET /orders/42 goes through our Express
+#  API with the code that runs at each step: the auth middleware, the orders route
+#  handler and the SQL query, down to Postgres."
+type: code-walkthrough
+reader: new engineers reading the onboarding doc
+width: 800
+direction: down
+focus: none
+out: error handling, caching, the JWT key rotation
+nodes:
+  browser: Browser {inferred}
+  auth: middleware/auth.ts
+  auth.src: * {code}      # middleware/auth.ts:3-7, verbatim
+  handler: routes/orders.ts
+  handler.src: * {code}   # routes/orders.ts:30-34, verbatim
+  query: db/find-order.sql
+  query.src: * {code}     # db/find-order.sql, whole file
+  db: Orders DB\nPostgres {shape: cylinder}
+edges:
+  browser -> auth: GET /orders/42
+  auth -> handler: ""
+  handler -> query: ""
+  query -> db: reads {inferred}

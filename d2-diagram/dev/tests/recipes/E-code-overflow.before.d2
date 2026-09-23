@@ -1,0 +1,30 @@
+# Before: the side class (280) is narrower than the code: 36 characters a line need 8.4 x 36 + 24 = 327
+# in a code-file card, so each line runs past its card (d2 never wraps code).
+...@neutral-theme
+grid-rows: 2
+grid-columns: 2
+horizontal-gap: 16
+vertical-gap: 8
+classes: {side: {width: 280}}
+
+h1: Before {class: caption}
+h2: After {class: caption}
+before: "queries/list_orders.sql" {
+  class: [code-file; side]
+  src: |`sql
+    SELECT id, total, created_at, status
+    FROM orders
+    ORDER BY created_at DESC
+    LIMIT 50 OFFSET 100000; -- <->
+  `| {class: code}
+}
+after: "queries/list_orders.sql" {
+  class: [code-file; side]
+  src: |`sql
+    SELECT id, total, created_at, status
+    FROM orders
+    WHERE created_at < $1 -- <+>
+    ORDER BY created_at DESC
+    LIMIT 50;
+  `| {class: code}
+}

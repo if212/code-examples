@@ -55,7 +55,8 @@ FROZEN = set("""E-label-overlap E-edge-label-on-node E-edge-through-node E-edge-
 E-label-overflow E-node-overlap E-child-outside E-off-canvas E-contrast E-contrast-dark W-edge-crossing W-edge-overlap
 W-edge-through-container W-edge-label-on-border W-diagonal-edge W-aspect W-remote-image W-non-ascii E-small-text
 W-small-text W-curved-edge W-tall W-title-size W-unclassed W-sibling-size W-long-edge W-fanout W-edge-jog
-W-label-on-bend W-short-label W-seq-group-ragged I-sparse W-dogleg W-label-on-lifeline""".split())
+W-label-on-bend W-short-label W-seq-group-ragged I-sparse W-dogleg W-label-on-lifeline
+E-code-overflow W-code-wide""".split())
 
 results = []
 
@@ -141,6 +142,10 @@ def lint_cases(pattern):
         msgs = " ".join(f["message"] for f in rep["findings"])
         notext = [t for t in texts if t not in msgs]
         anchors_ok = all(f["anchor"] == "workflows/review-and-fix.md#" + f["code"].lower() for f in rep["findings"])
+        # d2check's listing cuts a message at 170 characters (d2lint compact): the fix at the end of a
+        # W-code-wide or E-label-overflow message must survive the cut
+        long_ = [f["code"] for f in rep["findings"]
+                 if f["code"] in ("W-code-wide", "E-label-overflow") and len(f["message"]) > 170]
         detail = "expect=%s got=%s" % (",".join(need) or "-", ",".join(codes) or "-")
         if missing:
             detail += "  MISSING=" + ",".join(missing)
@@ -148,7 +153,9 @@ def lint_cases(pattern):
             detail += "  FORBIDDEN=" + ",".join(forbidden)
         if notext:
             detail += "  NO-TEXT=" + "|".join(notext)
-        check(name, not missing and not forbidden and not notext and anchors_ok, detail)
+        if long_:
+            detail += "  CUT=" + ",".join(long_) + " message over 170 characters"
+        check(name, not missing and not forbidden and not notext and not long_ and anchors_ok, detail)
     return emitted
 
 

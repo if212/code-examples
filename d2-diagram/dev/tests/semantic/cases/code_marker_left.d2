@@ -1,0 +1,13 @@
+# S-code-marker: INI has no trailing comments, so `; <1>` stays in the code as text
+...@mini-theme
+direction: right
+cfg: "deploy/app.ini" {
+  class: code-file
+  src: |`ini
+    [http]
+    timeout = 30 ; <1>
+    retries = 2
+  `| {class: code}
+}
+api: "Orders API" {class: service}
+cfg -> api: "1. timeout" {class: dep}

@@ -25,6 +25,7 @@ name is the `type:`. A notation with no row: the closest template, said under
 | What happens next, on which condition? (process, CI/CD) | flowchart | playbooks/flowchart.md |
 | Which states can X be in, and what moves it? | state | playbooks/state.md |
 | How does the picture change, step by step? | steps | playbooks/change.md |
+| What do these lines do / what does it reach / what changed / which code runs where? | code-annotated, code-calls, code-compare, code-walkthrough | playbooks/code.md |
 
 ## 2. reader, width, direction
 
@@ -51,6 +52,11 @@ A node and a path: comma-separated, one quote each, `focus: gate, placed ->
 checks -> gate  # "Highlight the go/no-go decision"; "If all checks pass"`.
 semcheck fails (S-emphasis) a focus whose quote is not in `# request:`, a focal
 node or `flow` edge outside the focus, and a focal node inside `zone-blue`.
+A document the user hands over as the request (a handoff, an issue, a goal doc
+they point at) is asked too: under `# request:`, quote the passage you draw
+from verbatim, after its name, one `# source:` per passage (it continues like
+the request): `# source: the handoff, "Goal": "Draw the NEW flow ..."`. A
+focus may quote it; semcheck reads both.
 
 | The request says | focus |
 |---|---|
@@ -79,10 +85,10 @@ node or `flow` edge outside the focus, and a focal node inside `zone-blue`.
 ## 4. out, and ask or assume
 
 `out:` lists what you leave out on purpose; the report's `Left out:` line
-repeats it. Past about 15 nodes on one board, split into `steps` boards or a
-second diagram. When to ask one short question or split: route.md, "Assume,
-ask, split". Everything else you decide (reader, width, direction, grouping,
-labels, protocols) goes under `Assumed:`.
+repeats it. Past about 15 nodes on one board, and when to ask one short
+question or split: route.md, "Assume, ask, split" (its one home). Everything
+else you decide (reader, width, direction, grouping, labels, protocols) goes
+under `Assumed:`.
 
 ## 5. The inventory
 
@@ -115,6 +121,7 @@ Attributes go in ONE block at the end of the line, comma-separated:
 | `note`, `group` | node | a title or note, exempt from reachability; sequence: a frame (`alt`, `loop`), not an actor |
 | `cols: a b`, `fields: a b` | node | erd, class: those columns or fields exist |
 | `external`, `shape: x` | node | not checked: notes for drafting |
+| `code` | node | a code block: label `*`, not compared; cite the source in a `# path:lines` comment |
 | `dashed`, `solid`, `return`, `in: g` | edge | stroke style (async, optional); sequence: a return is dashed, `in` = drawn inside group `g` |
 | `src: h`, `dst: h` | edge | head at that end: `triangle(-hollow)`, `arrow`, `diamond(-filled)`, `circle`, `box`, `cross`, `cf-one(-required)`, `cf-many(-required)`, `none` |
 | `src-label: t`, `dst-label: t`; `count: N` | edge | arrowhead label at that end (UML multiplicity, ERD role); exactly N parallel edges |
@@ -228,4 +235,5 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --lint <target>.d2     # source 
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --explain <target>.d2  # in words, cardinality too
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --dump D2W/orig.d2     # EDITS only: brief skeleton
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig.d2 <target>.d2
+python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --sync-labels D2W/<name>.brief <target>.d2  # reworded in the .d2
 ```

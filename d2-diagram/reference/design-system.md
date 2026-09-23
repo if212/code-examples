@@ -77,10 +77,22 @@ same sizes.
 |---|---|---|---|
 | `compact` | height 48 (default 66) | `[service; compact]`, `[note; compact]` | one-line boxes, pills and notes on a spine or in a tight rank; never a cylinder (section 7) |
 | `chip` | 104 x 32, 14px | `[service; chip; success]` | a status in a `key` row, up to about 10 characters (section 8) |
-| `tech` | nothing d2 sees: d2check draws label lines 2+ at 14px slate-600 | `"Orders\nJava" {class: [service; tech]}` | every "Name\nTechnology" node and C4 element; never a name wrapped over two lines |
+| `tech` | nothing d2 sees (it still sizes and fits lines 2+ at the title size): d2check draws them at 14px slate-600 | `"Orders\nJava" {class: [service; tech]}` | every node whose lines 2+ qualify its name: a technology or a detail ("Name\nTechnology", "Gate\nreads only the marker"), C4 elements; never a name wrapped over two lines |
 | `ghost` | 12 x 48, invisible, 14px upright label | `{class: ghost}` on a node or an edge | balancing a fork (section 7) |
 | `title` | text, 18px bold slate-900, centered above the diagram | `title: "Container diagram: Shop" {class: title}` | C4 only, at the root (section 5) |
 | `key` | one-row frame: white, 1px slate-300, radius 8, no title | `key: {class: key; ...}` | a row of `chip`s (section 8) |
+
+| Code (playbooks/code.md) | Class | Look |
+|---|---|---|
+| A code block | `code` | white body, slate-300 decorative frame, radius 8, 14px Geist Mono |
+| The card around one block, titled with its path | `code-file` | slate-50 title bar with the path in 14px mono slate-600, white body |
+| Numbered notes under a snippet | `callouts` (the grid) / `callout` (one note) | no frame; "N. text" becomes badge N and left-aligned 14px slate-900 text |
+
+d2check paints the code: teal keywords (`code-keyword`), amber-800 literals,
+slate-600 comments, slate-900 the rest, never bold; slate-700 badges; line
+bands green for added, red for removed, blue for the focus line. Inside a
+code block these are notation; section 4's hue rules and section 8's keys
+apply to shapes, lines and panels.
 
 ## 3. Combining classes
 
@@ -112,7 +124,8 @@ fails a `focal` node or `flow` edge the focus does not name (`S-emphasis`).
 - Blue: the focus (`focal`, `focal-solid`) and the one path the request
   describes (`flow`). Red only for failure (`danger`, `failure`); violet only
   for async (`queue`, `async`, `zone-violet`); green only for success
-  (`success`, `ok`); amber only for notes and `zone-amber`.
+  (`success`, `ok`), and in a compare for what is added (playbooks/change.md
+  section 2); amber only for notes and `zone-amber`.
 - Peers look alike: nodes with one parent and one base role that the request
   lists together ("web and mobile clients") share one node class and one edge
   class. Never one blue peer.
@@ -143,9 +156,9 @@ By role; the family is the bundled font (`assets/fonts/README.md`, applied by d2
 
 - Never below 14px (a 1000px SVG in an 800px column shows 14px as 11px): fix
   width with layout (direction, wrapping, splitting), not font size.
-- `tech` is the hierarchy inside a node: name first, technology smaller and
-  lighter. d2 embeds one face per label, so line 2 keeps the weight of line 1;
-  d2check changes only size and color.
+- `tech` is the hierarchy inside a node: name first, its technology or
+  detail smaller and lighter. d2 embeds one face per label, so line 2
+  keeps the weight of line 1; d2check changes only size and color.
 - No title inside the diagram: the page caption carries it. C4 is the one
   exception, its notation names the view: one `title` node, "Container
   diagram: <system>" or "System context: <system>", centered above (a
@@ -262,10 +275,10 @@ orders -> stripe: charges {class: dep}
 - A status told only by fill and text style needs its real look, which a
   swatch cannot show (a `muted` swatch is a white square), so statuses use
   chips: a `key` container whose `chip`s take the same classes as the
-  diagram's nodes, each chip naming its status. It is part of the layout: a
-  grid cell in a grid template, else a root container with `near:
-  bottom-center`, which sits under the diagram without widening it
-  (`bottom-left` puts it beside the diagram and shrinks the scale). A chip
+  diagram's nodes, each chip naming its status. It is a root container with
+  `near: bottom-center`, which sits under the diagram without widening it
+  (`bottom-left` puts it beside the diagram and shrinks the scale; one cell of
+  a grid row stretches); a rows-only grid may give it a row (roadmap). A chip
   holds about 10 characters of bold 14px; longer statuses get one wider
   class on every chip, `chipw: {width: 136}`.
 
@@ -368,8 +381,9 @@ values (`style.fill: N7` fails).
 
 - Palette names (`ink-900` ... `ink-50`, `paper`, `primary-*`, `success-*`,
   `danger-*`, `warn-*`, `async-*`) and class names are an interface
-  (`${paper}` above; d2check reads `paper`, `ink-200` to `ink-900`): change
-  values, never names. Theme globs do not reach the diagram and a glob beats
+  (`${paper}` above; d2check reads `paper`, `ink-200` to `ink-900`, and for
+  code `code-keyword`, `warn-800` and the 100/600 steps of `primary`,
+  `success` and `danger`): change values, never names. Theme globs do not reach the diagram and a glob beats
   every class: style through classes. No class named `link` (syntax.md
   section 7).
 - Informative strokes (edges, node outlines, `boundary`) need 3:1 on the
@@ -381,7 +395,8 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/contrast.py --check neutral-theme.d2
 ```
 
 Lowest today: text 4.76 (`AA2` tags, slate-500 on white), then 5.17
-(`focal-solid`); strokes 3.28 (slate-400 on `zone-violet`).
+(`focal-solid`); strokes 3.28 (slate-400 on `zone-violet`); the code palette
+(audited too) 5.80, amber-800 on the red band.
 
 ## 13. Special shapes
 

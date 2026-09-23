@@ -7,7 +7,10 @@
 # ink-200 and bold headers (post_erd), the key without shadow in an ink-300 frame, at the right when it
 # fits and below when not (post_key_right, post_key_below, post_erd), activation bars 1px, the ALT chip
 # #F8FAFC and labels off foreign lifelines (post_sequence), tech lines 14px slate (post_tech),
-# aria-hidden on invisible objects; and the CLI's help, exit codes and messages.
+# aria-hidden on invisible objects; the code step (post_code_*): token fills only the four role colours
+# (all four in the eight-language specimen), no bold token, no dark copy, no marker left in the code,
+# one badge column per block in a face the SVG embeds, the card title 12px in, one band per marked line
+# in the theme's tint, callouts as badge + left-aligned text; and the CLI's help, exit codes and messages.
 # usage: sh dev/tests/lint/test_svgpost.sh          needs d2, python3
 # exit: 0 all passed, 1 a check failed
 set -u
@@ -60,6 +63,7 @@ import d2lint, svgpost  # noqa: E402
 
 theme = open(os.path.join(SKILL, "templates", "neutral-theme.d2"), encoding="utf-8").read()
 ink = {k: v.upper() for k, v in re.findall(r'^\s*(ink-\d+|paper)\s*:\s*"(#[0-9A-Fa-f]{6})"', theme, re.M)}
+tv = {k: v.upper() for k, v in re.findall(r'^\s*([a-z][a-z0-9-]*)\s*:\s*"(#[0-9A-Fa-f]{6})"', theme, re.M)}
 rc = [0]
 
 
@@ -316,6 +320,64 @@ if post:
     want = [(None, ""), ("14px", ink["ink-600"])]
     check("post_tech: tech nodes %s, the plain node %s" % (res.get("api"), res.get("plain")),
           res.get("api") == want and res.get("db") == want and all(fs is None for fs, _ in res.get("plain", [(1, 1)])), res)
+
+# post_code_*: svgpost's code step (CODE-SPEC 4.1), read back from the finished SVG
+roles = {tv[k] for k in ("ink-900", "code-keyword", "warn-800", "ink-600")}
+for n in ("post_code_card", "post_code_callouts", "post_code_json", "post_code_specimen"):
+    post, src = load(n, "post")
+    if not post:
+        check("%s: rendered" % n, False, "no post.svg")
+        continue
+    starts = [m.start() for m in re.finditer(r'<g transform="translate\([^)]*\)" class="light-code"', src)]
+    blocks = [src[i:svgpost._group_end(src, i)] for i in starts]
+    plain = [re.sub(r'<g class="code-badge">.*?</g>', "", b, flags=re.S) for b in blocks]
+    fills = {f.upper() for b in plain for f in re.findall(r'<(?:tspan|text) fill="(#[0-9A-Fa-f]{6})"', b)}
+    bold = sum(len(re.findall(r"<tspan[^>]*text-mono-bold", b)) for b in blocks)
+    left = sorted({m for b in plain for m in re.findall(r"&lt;(\d{1,2}|[-+!])&gt;", b)})
+    cols = [len(set(re.findall(r'<g class="code-badge"><circle cx="([-\d.]+)"', b))) for b in blocks]
+    faces = re.findall(r'<g class="code-badge"><circle [^>]*/><text [^>]*?(class="[^"]*"(?: font-weight="bold")?)', src)
+    mono_bold = re.search(r"\.text-mono-bold\s*\{", src) is not None
+    face_ok = all(f == 'class="text-mono-bold"' and mono_bold or f == 'class="text-mono" font-weight="bold"' for f in faces)
+    want = fills == roles if n == "post_code_specimen" else fills <= roles
+    check("%s: %d block(s); token fills %s the four role colours; no bold token, no dark copy, no marker left; one "
+          "badge column per block; %d badge(s) in %s" % (n, len(blocks), "are exactly" if n == "post_code_specimen" else
+                                                         "within", len(faces), sorted(set(faces)) or "-"),
+          blocks and want and not bold and 'class="dark-code"' not in src and not left and all(c <= 1 for c in cols)
+          and face_ok, (sorted(fills - roles), sorted(roles - fills), bold, left, cols, faces, mono_bold))
+    for m in re.finditer(r'<g class="[^"]* code-file[^"]*">', src):
+        g = src[m.start():svgpost._group_end(src, m.start())]
+        r = re.search(r'<rect x="([-\d.]+)"', g)
+        t = re.search(r'<text x="([-\d.]+)"[^>]*style="text-anchor:(\w+)', g)
+        check("%s: the card title starts 12px in (x %s, card x %s, %s)" % (n, t and t.group(1), r and r.group(1),
+                                                                         t and t.group(2)),
+              r and t and t.group(2) == "start" and abs(float(t.group(1)) - float(r.group(1)) - 12) < 0.01)
+post, src = load("post_code_card", "post")
+if post:
+    bands = re.findall(r'<rect x="[-\d.]+" y="[-\d.]+" width="([\d.]+)" height="[\d.]+" fill="(#[0-9A-Fa-f]{6})" '
+                       r'class="code-band code-(\w+)" />', src)
+    check("post_code_card: the <!> line has one band: a %s tint and a 3px %s bar" % (tv["primary-100"], tv["primary-600"]),
+          sorted((w == "3", f.upper(), k) for w, f, k in bands) == [(False, tv["primary-100"], "hl"), (True, tv["primary-600"], "hl")],
+          bands)
+    badges = re.findall(r'<g class="code-badge"><circle cx="([-\d.]+)" cy="[-\d.]+" r="[\d.]+" fill="(#[0-9A-Fa-f]{6})" />'
+                        r'<text [^>]*fill="(#[0-9A-Fa-f]{6})"[^>]*>(\d+)</text>', src)
+    check("post_code_card: badges 1 and 2, %s with %s digits" % (tv["ink-700"], tv["paper"]),
+          [b[3] for b in badges] == ["1", "2"] and all(b[1].upper() == tv["ink-700"] and b[2].upper() == tv["paper"]
+                                                       for b in badges), badges)
+post, src = load("post_code_json", "post")
+if post:
+    faces = re.findall(r'<g class="code-badge"><circle [^>]*/><text [^>]*?(class="[^"]*"(?: font-weight="bold")?)', src)
+    check("post_code_json: no bold token, so no mono-bold face: the badge digit is text-mono drawn bold (%s)" % faces,
+          not re.search(r"\.text-mono-bold\s*\{", src) and faces == ['class="text-mono" font-weight="bold"'], faces)
+post, src = load("post_code_callouts", "post")
+if post:
+    outs = []
+    for m in re.finditer(r'<g class="[^"]* callout(?: [^"]*)?">', src):
+        g = src[m.start():svgpost._group_end(src, m.start())]
+        c = re.search(r'<g class="code-badge"><circle cx="([-\d.]+)" cy="[-\d.]+" r="([\d.]+)"', g)
+        t = re.search(r'<text x="([-\d.]+)"[^>]*style="text-anchor:start', g)
+        outs.append(bool(c and t and abs(float(t.group(1)) - (float(c.group(1)) + float(c.group(2)) + 8)) < 0.01))
+    check("post_code_callouts: %d callout(s), each badge N with its text left-aligned 8px after it" % len(outs),
+          len(outs) == 2 and all(outs), outs)
 sys.exit(rc[0])
 EOF
 r=$?

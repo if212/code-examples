@@ -1,0 +1,27 @@
+# S-code-marker: callout 3 has no marker <3> in the code
+...@mini-theme
+grid-rows: 2
+vertical-gap: 16
+
+view: "auth/views.py" {
+  class: code-file
+  src: |`python
+    @bp.post("/login")
+    def login():
+        limiter.hit(request.remote_addr)  # <1>
+        user = User.query.filter_by(email=request.form["email"]).first()
+        if user is None or not user.check_password(request.form["password"]):  # <2>
+            abort(401)
+        session["uid"] = user.id
+        return redirect(url_for("orders.index"))
+  `| {class: code}
+}
+
+notes: {
+  class: callouts
+  grid-rows: 2
+  grid-columns: 2
+  n1: "1. Rate limit per IP,\nbefore any lookup" {class: callout}
+  n2: "2. One 401 for a bad email\nor a bad password" {class: callout}
+  n3: "3. The session cookie\nholds the user id only" {class: callout}
+}

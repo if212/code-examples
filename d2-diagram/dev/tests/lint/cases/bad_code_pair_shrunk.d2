@@ -1,0 +1,18 @@
+# post: svgpost
+# expect: W-aspect W-code-wide
+# expect-text: (36 fit a side at 800px): stack it, grid-columns: 1
+# Two blocks of 50-character lines side by side: the pair is wider than the column and shrinks (code at
+# 12px), so the code-pair exemption does not apply; stack them instead (grid-columns: 1).
+...@neutral-theme
+grid-rows: 1
+horizontal-gap: 16
+
+before: |`python
+  for order in session.scalars(select(Order)).all():
+      send(order.customer.email)  # one query each
+`| {class: code}
+after: |`python
+  q = select(Order).options(joinedload(Order.user))
+  for order in session.scalars(q.limit(50)).all():
+      send(order.user.email)
+`| {class: code}

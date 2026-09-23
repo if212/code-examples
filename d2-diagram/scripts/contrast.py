@@ -14,6 +14,11 @@ Rules (--check):
   decorative stroke      exempt: a container with a tinted fill (the tint and the
                          title mark the region), a node whose fill alone reaches
                          3.0:1, and any class marked with a `# decorative` comment
+  code palette           when the theme defines code-keyword (neutral) or sf-code-add
+                         (brand): svgpost.py's CODE_ROLES - the four text roles on
+                         the code body and on each line band >= 4.5:1, the badge
+                         digit on the badge >= 4.5:1, each band's bar on the body
+                         >= 3.0:1 (skipped, with a note, without svgpost.py)
   colors                 #RGB, #RRGGBB, rgb(), the 148 CSS names (silver) and ${vars};
                          any other value set on a class is a failure (it cannot be
                          audited); transparent and none mean no color
@@ -38,6 +43,10 @@ try:  # one table of the 148 CSS named colours, shared with d2lint's E-contrast
     from d2lint import CSS_NAMED
 except ImportError:  # contrast.py copied alone: white and black still work
     CSS_NAMED = {'white': 'FFFFFF', 'black': '000000'}
+try:  # the code step's colours (CODE_ROLES), audited with the theme that defines them
+    import svgpost
+except Exception:  # contrast.py copied alone: the code palette is skipped, with a note
+    svgpost = None
 
 THEME0 = {  # d2 theme 0, used for codes a theme file does not override
     'N1': '#0A0F25', 'N2': '#676C7E', 'N3': '#9499AB', 'N4': '#CFD2DD', 'N5': '#DEE1EB',
@@ -195,7 +204,8 @@ def check(path):
 
     tints = {}
     for name, cls in classes.items():
-        if kind_of(name, cls) == 'container':
+        # a code-file card holds one code block (audited as the code palette below), never other shapes
+        if kind_of(name, cls) == 'container' and name != 'code-file':
             f = hexcolor(st(cls, 'fill'))
             if f and f != canvas:
                 tints[name] = f
@@ -261,6 +271,18 @@ def check(path):
                 ('table constraint AA2 on N7', codes['AA2'], [('N7', canvas)], 4.5)]
         for label, fg, bgs, need in dflt:
             print('    ' + judge(label, fg, bgs, need))
+    brand = 'neutral' if 'code-keyword' in vars_ else 'snowflake' if 'sf-code-add' in vars_ else None
+    if brand and svgpost is None:
+        print('  code palette: not audited - svgpost.py is not next to contrast.py')
+    elif brand:
+        col = svgpost.code_colors(brand, {k: hexcolor(v) for k, v in vars_.items() if hexcolor(v)})
+        bgs = [('body', col['body'])] + [(k + ' band', col[k][0]) for k in svgpost.CODE_BANDS]
+        print(f'  code palette (svgpost.py CODE_ROLES["{brand}"]: text on the body and the line bands, never bold):')
+        for role in svgpost.CODE_TEXT_ROLES:
+            print('    ' + judge(f'{role:<8} {col[role]}', col[role], bgs, 4.5))
+        print('    ' + judge(f'badge digit {col["digit"]} on {col["badge"]}', col['digit'], [('badge', col['badge'])], 4.5))
+        for k in svgpost.CODE_BANDS:
+            print('    ' + judge(f'{k} band bar {col[k][1]}', col[k][1], [('body', col['body'])], 3.0))
     print(f'RESULT: {"PASS" if not fails else "FAIL"} - {fails} failure(s) '
           '(text >= 4.5:1, informative strokes >= 3.0:1)')
     return fails

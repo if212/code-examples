@@ -1,16 +1,18 @@
 # Compare template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
 ...@neutral-theme
 
-# Before | after, key below: grid-rows first (then cells fill row by row).
-# Each panel is a grid cell laid out on its own (a cell keeps its own
-# direction). No edge crosses the panels (playbooks/change.md).
-grid-rows: 2
-grid-columns: 2
+# Before | after: one grid row, two cells. Each panel is a grid cell laid
+# out on its own (a cell keeps its own direction). No edge crosses the
+# panels (playbooks/change.md).
+grid-rows: 1
 horizontal-gap: 16
-vertical-gap: 16
 
 # One width for every box, one height for the bottom row (a cylinder and a
-# box side by side): both panels come out the same size.
+# box side by side): both panels come out the same size. 120 is the widest
+# box that keeps two panels of two boxes a row in 800px at scale 1.00 (110
+# when a hidden rank edge shifts a row): about 13 characters on every line
+# (12 at 110; d2 fits tech lines 2+ at the title size too); wrap longer
+# lines with \n, or stack the panels (grid-columns: 1, boxes up to 300).
 classes: {
   box: {width: 120}
   low: {height: 108}
@@ -49,9 +51,11 @@ after: "After: OIDC tokens" {
   web -> idp: {class: dep}
 }
 
-# The key: chips in the status classes (a legend swatch cannot show text weight).
+# The key: chips in the status classes (a legend swatch cannot show text
+# weight), centred under the panels; as a grid cell it would stretch.
 key: {
   class: key
+  near: bottom-center
   added: Added {class: [service; chip; success]}
   removed: Removed {class: [muted; chip]}
   changed: Changed {class: [service; chip; focal]}

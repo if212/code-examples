@@ -1,0 +1,41 @@
+# Code-compare template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+
+# Two versions of ONE snippet side by side, and why it changed
+# (playbooks/code.md section 5). Captions, then the code, then one note.
+# `-- <->` marks a removed line (before only), `-- <+>` an added or changed
+# line (after only). One width for both sides: 8.4 a character of the longest
+# line + 14 (36 characters: 316). Past 36 characters, stack the two
+# (grid-columns: 1). Different files: code-file cards, their paths as titles.
+grid-rows: 2
+grid-columns: 2
+horizontal-gap: 16
+vertical-gap: 8
+
+classes: {
+  side: {width: 300}
+  why: {height: 66}
+}
+
+h1: Before {class: caption}
+h2: After {class: caption}
+
+before: |`sql
+  -- page 2001: skips 100,000 rows
+  SELECT id, total, created_at
+  FROM orders
+  ORDER BY id
+  LIMIT 50 OFFSET 100000; -- <->
+`| {class: [code; side]}
+
+after: |`sql
+  -- $1: last id on the page before
+  SELECT id, total, created_at
+  FROM orders
+  WHERE id > $1 -- <+>
+  ORDER BY id
+  LIMIT 50; -- <+>
+`| {class: [code; side]}
+
+# Why, in two lines of about 40 characters.
+change: "Keyset paging seeks the index: page 2001\nreads 50 rows instead of 100,050" {class: [note; why]; near: bottom-center}

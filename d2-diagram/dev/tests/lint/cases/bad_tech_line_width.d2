@@ -1,0 +1,7 @@
+# post: svgpost
+# expect: E-label-overflow
+# expect-text: 'no map for fixer lines' needs
+# d2 fits every line of a label at its size (16px), a tech box's lines 2+ too, though svgpost draws
+# them at 14px: a 21-character second line does not fit 120px, and the message names that line.
+...@neutral-theme
+map: "git-diff map\nno map for fixer lines" {class: [service; tech]; width: 120}

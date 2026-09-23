@@ -1,0 +1,19 @@
+# request: "Show how the web app reaches the order service through the API gateway."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: none
+out: -
+nodes:
+  web: Web app
+  api: Backend
+  api.gw: API gateway  # the edge proxy
+  api.orders: Order service
+  api.db: Orders DB\nPostgres {shape: cylinder}
+  sdk: "C# SDK" {inferred}
+edges:
+  web -> api.gw: HTTPS {inferred}
+  api.gw -> api.orders: forwards
+  api.orders -> api.db: stores orders
+  sdk -> api.gw: calls

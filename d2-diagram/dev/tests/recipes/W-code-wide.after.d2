@@ -1,0 +1,28 @@
+# After: the long line broken in the source (the query in a constant): 78 characters at most, so
+# the card fits the column and the code shows at 14px.
+...@neutral-theme
+grid-rows: 2
+vertical-gap: 16
+
+store: "orders/store.go" {
+  class: code-file
+  src: |`go
+    func (s *Store) ByCustomer(ctx context.Context, cid string) ([]Order, error) {
+        const q = "SELECT id, total, status FROM orders WHERE customer_id = $1"
+        rows, err := s.db.QueryContext(ctx, q, cid) // <1>
+        if err != nil {
+            return nil, err
+        }
+        defer rows.Close() // <2>
+        return scanOrders(rows)
+    }
+  `| {class: code}
+}
+
+notes: {
+  class: callouts
+  grid-rows: 1
+  grid-columns: 2
+  n1: "1. The customer id is a bind\nparameter, never spliced in" {class: callout}
+  n2: "2. The rows go back to the\npool on every return path" {class: callout}
+}

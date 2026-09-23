@@ -1,0 +1,15 @@
+# After: a hidden edge from the short-path source to the node under its peer (labelled like
+# that node's own edge, or bare when it is bare) lifts the source into its peer's row.
+...@neutral-theme
+direction: down
+classes: {box: {width: 170}; wide: {width: 360}}
+events: "Order events\nKafka" {class: [service; tech; box]}
+rules: "Pricing rules\nYAML" {class: [service; tech; box]}
+enrich: "Enricher\nFlink, stateful\nper customer" {class: [service; tech; box]}
+price: "Pricing engine\nreads orders and rules" {class: [service; tech; wide]}
+quote: Quote API {class: [service; wide]}
+events -> enrich: {class: dep}
+rules -> enrich: {class: dep; style.opacity: 0}
+enrich -> price: {class: dep}
+rules -> price: {class: dep}
+price -> quote: {class: dep}

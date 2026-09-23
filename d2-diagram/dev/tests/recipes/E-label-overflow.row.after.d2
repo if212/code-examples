@@ -1,0 +1,10 @@
+# After: the width class stays (one width per row); the long line is wrapped at 13 characters,
+# which 120px holds on every line.
+...@neutral-theme
+direction: down
+classes: {box: {width: 120}}
+json: "analysis.json\nrow e.g. 109" {class: [service; tech; box]}
+map: "git-diff map\nno map for\nfixer lines" {class: [service; tech; box]}
+gate: "Gate\nreads the row" {class: [service; tech; box]}
+json -> map: {class: dep}
+map -> gate: {class: dep}

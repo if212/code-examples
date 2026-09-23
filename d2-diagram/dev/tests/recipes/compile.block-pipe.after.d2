@@ -1,0 +1,8 @@
+# After: the backtick delimiters survive `|` and `||` in the code.
+...@neutral-theme
+cfg: "config/retry.ts" {
+  class: code-file
+  src: |`ts
+    export const retries = Number(process.env.RETRIES) || 3;
+  `| {class: code}
+}

@@ -169,5 +169,36 @@
 "expect": "OUT",
 "alt": [],
 "call": "OUT"
+},
+{
+"id": "V25",
+"request": "Here is our Flask login view; for the README, a figure with numbered notes on the rate-limit check, the password check and the session cookie.",
+"expect": "code-annotated",
+"alt": [],
+"call": "GO"
+},
+{
+"id": "V26",
+"request": "Which services does place_order() in orders/service.py call, in order? Show the function's code too.",
+"expect": "code-calls",
+"alt": [],
+"call": "ASK",
+"altcall": ["GO"]
+},
+{
+"id": "V27",
+"request": "For the PR write-up: our retry helper before and after the fix, side by side, with one line on why it stops the thundering herd.",
+"expect": "code-compare",
+"alt": [],
+"call": "ASK",
+"altcall": ["GO"]
+},
+{
+"id": "V28",
+"request": "Onboarding figure: the code that runs when a Stripe webhook hits us: the Express route, the signature check, the SQL insert.",
+"expect": "code-walkthrough",
+"alt": [],
+"call": "ASK",
+"altcall": ["GO"]
 }
 ]

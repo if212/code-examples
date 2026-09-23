@@ -1,0 +1,22 @@
+# request: "In the checkout design doc, show what checkout() in checkout/checkout.ts
+#  calls, in order: it asks the Pricing API for a quote, reserves stock with the
+#  Inventory API, charges the card through Stripe, then saves the order to the
+#  Orders DB. Number the calls in the code and on the arrows."
+type: code-calls
+reader: engineers reading the checkout design doc
+width: 800
+direction: down
+focus: none
+out: retries, the stock release on a failed charge, logging
+nodes:
+  code: checkout/checkout.ts
+  code.src: * {code}   # checkout/checkout.ts:8-15, verbatim
+  pricing: Pricing API
+  inventory: Inventory API
+  stripe: Stripe {external}
+  ordersdb: Orders DB {shape: cylinder}
+edges:
+  code -> pricing: 1. quote
+  code -> inventory: 2. reserve
+  code -> stripe: 3. charge
+  code -> ordersdb: 4. save

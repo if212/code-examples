@@ -1,0 +1,13 @@
+# request: "For the PR description, show list_orders.sql before and after the switch to keyset paging."
+type: code-compare
+reader: reviewers of the paging PR
+width: 800
+direction: right
+focus: none
+out: the index, the page cursor in the API
+nodes:
+  h1: Before
+  h2: After
+  before: * {code}   # queries/list_orders.sql at main
+  after: * {code}    # queries/list_orders.sql in the PR
+edges:

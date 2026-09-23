@@ -4,7 +4,8 @@
 usage: theme_rules.py NEUTRAL.d2 SNOWFLAKE.d2
   (a) no node role's fill equals a container tint of its theme, so a node never
       looks hollow on the panel it sits on (actor on zone, sf-datastore on
-      sf-container, focal on zone-blue, queue on zone-violet, note on zone-amber)
+      sf-container, focal on zone-blue, queue on zone-violet, note on zone-amber); a
+      code-file card is no panel: it holds its one code block, never a node
   (b) the neutral AA2 (table constraint tags, class member types) is a slate
       ink-* value, never a primary-* hue: blue means focus
   (c) the six geometry classes exist in both themes with the same geometry:
@@ -115,7 +116,7 @@ def main(argv):
     fails = []
     for path, (vars_, classes, codes) in themes.items():
         canvas = codes.get('N7', '#FFFFFF')
-        tints = {n: c['style.fill'] for n, c in classes.items() if is_container(n, c)
+        tints = {n: c['style.fill'] for n, c in classes.items() if is_container(n, c) and n != 'code-file'
                  and c.get('style.fill') not in (None, '', 'TRANSPARENT', canvas)}
         for n, c in sorted(classes.items()):
             if is_container(n, c) or not c.get('style.fill'):

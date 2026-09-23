@@ -1,0 +1,14 @@
+...@mini-theme
+direction: down
+web: Web app {class: actor}
+api: Backend {
+  class: zone
+  gw: "API gateway\nKong" {class: service}
+  orders: Order service {class: service}
+  db: "Orders DB\nPostgres 16" {class: datastore}
+}
+sdk: C# SDK {class: service}
+web -> api.gw: HTTPS {class: dep}
+api.gw -> api.orders: routes {class: dep}
+api.orders -> api.db: writes orders {class: dep}
+sdk -> api.gw: calls {class: dep}

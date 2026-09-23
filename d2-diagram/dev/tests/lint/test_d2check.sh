@@ -138,8 +138,13 @@ sh "$CHECK" --no-raster "$T/multi_board.d2" "$T/v2/mb.svg" > /dev/null 2>&1
 # 5. tripwire, formatting, strict -----------------------------------------------------------------------
 printf 'a: "Caf\303\251"\na -> b\n' > "$T/nonascii.d2"
 o=$(sh "$CHECK" --no-raster "$T/nonascii.d2" 2>&1); rc=$?
-[ "$rc" = 2 ] && has "$o" '^tripwire: 1 line' && has "$o" '(the whole .d2, comments included, must be plain ASCII)' &&
+[ "$rc" = 2 ] && has "$o" '^tripwire: 1 line' && has "$o" '(the whole .d2, comments included, must be plain ASCII; in code: expand tabs to 4 spaces)' &&
   ok "tripwire: non-ASCII label -> exit 2, names the plain-ASCII rule" || bad "tripwire (exit $rc)" "$o"
+# a Go snippet pasted with its tabs: the tripwire names the line and says to expand the tabs
+printf 'vars: {d2-config: {layout-engine: elk}}\nf: |`go\n  func f() error {\n  \treturn nil\n  }\n`|\n' > "$T/tabs.d2"
+o=$(sh "$CHECK" --no-raster "$T/tabs.d2" 2>&1); rc=$?
+[ "$rc" = 2 ] && has "$o" '^tripwire: 1 line' && has "$o" 'in code: expand tabs to 4 spaces' && has "$o" '<TAB>return nil' &&
+  ok "tripwire: a tab in a code block -> exit 2, says to expand tabs" || bad "tripwire on a code tab (exit $rc)" "$o"
 printf 'vars: {d2-config: {layout-engine: elk}}\na->b\n' > "$T/fmt.d2"
 o=$(sh "$CHECK" --no-raster --check-fmt "$T/fmt.d2" 2>&1); rc=$?
 [ "$rc" = 2 ] && has "$o" '^fmt: NOT formatted' && grep -q 'a->b' "$T/fmt.d2" && ok "--check-fmt: reports, leaves the file, exit 2" || bad "--check-fmt (exit $rc)" "$o"
@@ -168,6 +173,20 @@ if [ -f "$SKILL/scripts/semcheck.py" ]; then
   mkdir -p "$D2_WORK/brief_case" && cp "$HERE/d2check/brief_case.brief" "$D2_WORK/brief_case/brief_case.brief"
   o=$(sh "$CHECK" --no-raster "$T/brief_case.d2" 2>&1)
   has "$o" 'S-missing-edge' && ok "brief found in D2W/<name>.brief without --brief" || bad "D2W brief lookup" "$o"
+  # T14: the report's Re-render line (SKILL.md step 6) carries D2_WORK, so a fresh shell finds the brief;
+  # without it d2check falls back to the source checks
+  rl=$(sed -n 's/^Re-render: //p' "$SKILL/SKILL.md")
+  case $rl in
+    "D2_WORK=<D2W's parent> sh \${CLAUDE_SKILL_DIR}/scripts/d2check.sh "*"<target>.d2")
+      o=$(env -u D2_WORK TMPDIR="$T/fresh" D2_WORK="$D2_WORK" sh "$CHECK" --no-raster "$T/brief_case.d2" 2>&1)
+      o2=$(env -u D2_WORK TMPDIR="$T/fresh" sh "$CHECK" --no-raster "$T/brief_case.d2" 2>&1)
+      has "$o" 'S-missing-edge' && has "$o2" '^semantic: .* - source checks only' &&
+        ok "T14: the Re-render line's D2_WORK prefix finds the brief in a fresh shell" ||
+        bad "T14 re-render with D2_WORK" "$o
+--- without D2_WORK:
+$o2" ;;
+    *) bad "T14: SKILL.md's Re-render line does not start with D2_WORK=<D2W's parent>" "$rl" ;;
+  esac
   # without a brief the source checks still run: a class nothing defines is not "clean" (B36)
   cp "$SKILL/templates/neutral-theme.d2" "$T/"
   printf '...@neutral-theme\napi: API {class: service}\ndb: DB {class: datastor}\napi -> db: {class: dep}\n' > "$T/nobrief.d2"

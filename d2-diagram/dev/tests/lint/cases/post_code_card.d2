@@ -1,0 +1,24 @@
+# post: svgpost
+# expect-clean: E-
+# svgpost's code step (test_svgpost.sh): tokens in the four role colours, never bold; the card body under
+# its title, the title 12px in; the markers <1> <2> become badges in one column, <!> a blue line band.
+...@neutral-theme
+direction: down
+classes: {callee: {width: 268; height: 66}}
+
+handler: "routes/refunds.ts" {
+  class: code-file
+  src: |`ts
+    router.post("/refunds", async (req, res) => {
+      const order = await orders.get(req.body.orderId); // <1>
+      if (order.status !== "paid") return res.sendStatus(409); // <!>
+      await stripe.refund(order.chargeId); // <2>
+      res.sendStatus(202);
+    });
+  `| {class: code}
+}
+orders: "Orders API" {class: [service; callee]}
+payments: "Stripe" {class: [service; callee]}
+
+handler -> orders: "1. get" {class: dep}
+handler -> payments: "2. refund" {class: dep}

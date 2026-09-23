@@ -1,0 +1,32 @@
+# post: svgpost
+# expect-clean: E- I-sparse
+# code-calls without its key: the lint reads the code block (one Text per line, the card body as its
+# shape), so the card is not empty space; before the code model every code template showed I-sparse.
+...@neutral-theme
+direction: down
+classes: {
+  callee: {width: 150; height: 90}
+  row: {width: 660}
+}
+
+code: "checkout/checkout.ts" {
+  class: [code-file; row]
+  src: |`ts
+    async function checkout(cart: Cart, user: User) {
+      const quote = await pricing.quote(cart); // <1>
+      const hold = await stock.reserve(cart); // <2>
+      const charge = await stripe.charge(quote); // <3>
+      await orders.save(user, cart, hold, charge); // <4>
+      return charge.id;
+    }
+  `| {class: code}
+}
+pricing: "Pricing API" {class: [service; callee]}
+inventory: "Inventory API" {class: [service; callee]}
+stripe: "Stripe" {class: [service; callee]}
+ordersdb: "Orders DB" {class: [datastore; callee]}
+
+code -> pricing: "1. quote" {class: dep}
+code -> inventory: "2. reserve" {class: dep}
+code -> stripe: "3. charge" {class: dep}
+code -> ordersdb: "4. save" {class: dep}

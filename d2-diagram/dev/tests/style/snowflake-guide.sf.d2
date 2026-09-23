@@ -63,3 +63,20 @@ ghosts: "ghost: an invisible third child keeps the main path straight" {
   fork -> main: next {class: sf-edge}
   fork -> exit: exit {class: sf-edge}
 }
+
+snippet: "Code classes (playbooks/code.md)" {
+  class: sf-container
+  grid-rows: 2
+  vertical-gap: 16
+  card: "routes/orders.ts" {
+    class: code-file
+    src: |`ts
+      const order = await repo.find(id); // <1>
+      if (!order) return notFound();
+    `| {class: code}
+  }
+  notes: {
+    class: callouts
+    n1: "1. One read, by primary key" {class: callout}
+  }
+}

@@ -1,0 +1,32 @@
+# After: every callout has its marker: `// <4>` on the line it explains.
+...@neutral-theme
+
+grid-rows: 2
+vertical-gap: 16
+
+handler: "routes/orders.ts" {
+  class: code-file
+  src: |`ts
+    app.post("/orders", async (req, res) => {
+      const input = OrderSchema.parse(req.body); // <1>
+      const key = req.get("Idempotency-Key"); // <2>
+      const hit = await cache.get(key);
+      if (hit) return res.status(200).json(hit);
+
+      const order = await db.orders.insert(input); // <3>
+      await cache.set(key, order, { ttl: 86400 });
+      await events.publish("order.created", order); // <4>
+      res.status(201).json(order);
+    });
+  `| {class: code}
+}
+
+notes: {
+  class: callouts
+  grid-rows: 2
+  grid-columns: 2
+  n1: "1. Validates the body: a bad\nfield is a 400, before any write" {class: callout}
+  n2: "2. The client's retry key:\na repeat gets the first reply" {class: callout}
+  n3: "3. One INSERT; the order\nstarts as pending" {class: callout}
+  n4: "4. Billing and email react\nto order.created" {class: callout}
+}

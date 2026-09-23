@@ -1,5 +1,127 @@
 # Changelog
 
+## 2.2.2 - 2026-09-23: verification of the code templates and the T1-T15 fixes
+
+An adversarial pass (install from the zip under a path with a space, two new requests drawn
+end to end, the trial's compare redrawn) found these; each fix has a test.
+
+- Install: `unzip -d ~/.claude/skills/` makes only the last folder of its path, so on a machine
+  without `~/.claude` the README's zip line failed. README.md and package.sh now run
+  `mkdir -p ~/.claude/skills &&` first; structure check (q) holds every such line to it.
+- Label widths: d2 fits EVERY line of a label at its size (16px), `tech` lines 2+ too, though
+  svgpost draws them at 14px. The compare budget said 16 characters on `tech` lines at 120px:
+  measured, 16-17 character lines need 115-133px. Now: about 13 characters on every line at
+  120, 12 at 110 (change.md, compare.d2, design-system.md). E-label-overflow on a box that
+  pushed its label out names the widest line and the width d2 needs for it (was: the drawn
+  width + 40, often 40px too much), and its recipe keeps the width class of a one-width row
+  (a compare panel, a tier): shorten the line, or widen the class (pair E-label-overflow.row).
+- W-code-wide: the message kept the fix past d2check's 170-character cut ("br..."); it now
+  names the case - a pair side by side stacks (`grid-columns: 1`, 36 a side at 800), a long
+  line breaks, and code that fits while the canvas is wide for another reason ("its lines
+  fit") sends the fix to the layout (lint cases, a length check in run_tests.py).
+- S-code-marker: `<+>` in the block that reads first (left, or above) and `<->` in the other,
+  or both kinds in one block, drew the diff backwards and passed. semcheck now flags both
+  (semantic cases code_compare*, pair S-code-marker.sides). semcheck read no box for a bare
+  code block (svgpost writes its body rect without x/y): a rect's x and y default to 0.
+- code-annotated: two callouts under a short snippet (5 lines or fewer) side by side make a
+  strip (W-aspect, 650x257); one column (`grid-rows: 2` alone) gives 362x317 (code.md
+  section 3, the W-aspect recipe, pair W-aspect.callouts).
+
+## 2.2.1 - 2026-09-23: friction from a real-use trial
+
+A user trial drew two diagrams of one PR (a compare and a flowchart) and logged 15
+friction items (T1-T15). Fixed here, each with a test where it is behaviour.
+
+Workflow
+- One home for splitting (route.md, "Assume, ask, split"): over budget means past about
+  15 nodes once `out:` holds what the request does not need; every diagram of a split is
+  drawn, the first first, each with its own brief and loop, one report. "Not split" needs
+  one picture asked for in words ("a diagram" alone is not); over budget it groups parts
+  and moves detail to `out:`. brief.md section 4, the E-small-text recipe and flowchart.md's
+  budget point there.
+- A document the user hands over as the request (a handoff, an issue, a goal doc) goes
+  into the brief as `# source: <name> "<verbatim passage>"`: its words ground a focus and
+  count as asked (semcheck).
+- SKILL.md: what to read before the first render (route.md, the template and playbook
+  its row names, brief.md sections 2, 3, 5, 7: about 540 lines, was about 1,600) and a
+  "Read on demand" table; experiments spelled out (the theme copied into D2W, the same
+  `--brief`, PNGs in the sibling `<name>-exp/`); the Re-render line carries `D2_WORK`, so
+  a fresh shell finds the brief; a report block per diagram of a split.
+- `semcheck.py --sync-labels BRIEF IN.d2` rewrites the brief's node and edge labels to
+  the wording the .d2 draws (keys, attributes and comments stay); slips are kept and listed,
+  never synced: a label the .d2 cuts (an unquoted `#` or `;`), a bare key (no label written),
+  a label the brief wants empty, an edge drawn with none, a chain line.
+
+Templates, playbooks and recipes
+- compare: two panels in one grid row, the key `near: bottom-center` (a key cell
+  stretched to its column, and three cells filled a 2 x 2 grid); the width budget up
+  front (two 120px boxes a row per panel: about 13 characters a line, 16 on `tech` lines
+  2+, 110px when a hidden rank edge shifts a row; 132px boxes shrink the canvas to scale
+  0.96; stacked panels take boxes to 300).
+  Green means added in a compare, so an outcome is never `success`; a failure the
+  request names is `danger` with its label naming it.
+- flowchart rule 4 and its template: declare the failure EDGE first (at the root ELK
+  places a source's targets by edge order, whatever the node order; inside a container
+  by node order).
+- W-sibling-size: a source ELK drops a rank beside another chain is lifted into its
+  peer's row by a hidden edge labelled like that node's edge in; it costs about 20px of
+  width (layout.md section 3).
+- I-sparse: a narrow spine over a wider row takes the notes the request gives beside
+  the steps they explain, each held in its rank by a hidden edge labelled like the spine
+  edge beside it (bare, a note lands a rank off).
+- design-system.md: `tech` covers any "name\ndetail" second line; the chip key is a root
+  `near: bottom-center` container (a rows-only grid may give it a row).
+
+Tests
+- structure (l): a template's root grid of R x C holds R x C cells (the old compare
+  template fails it). recipes: I-sparse.spine, I-sparse.spine-label, W-sibling-size.rank.
+  semantic: 2 codesets and 3 runs for `# source:`, 5 `--sync-labels` cases. d2check:
+  the report's Re-render line finds the brief in a fresh shell (T14).
+
+## 2.2.0 - 2026-09-23: code snippets
+
+A short snippet in the picture, when the picture adds what a fenced code block cannot
+(CODE-SPEC, the lead's decision after the prototype and two blind judges).
+
+Templates and docs
+- Four templates: code-annotated (numbered notes on the lines of one snippet), code-calls
+  (what a function reaches, badge N = edge "N. verb"), code-compare (before/after with
+  green and red line bands, one note on why; a pair past 36 characters a side stacks),
+  code-walkthrough (the code at each step of one request, one card width on a straight
+  spine). Briefs in dev/tests/templates; each renders clean at 800px.
+- playbooks/code.md (snippet rules, markers, one section per template, Snowflake);
+  route.md rows 1-4 and a first tie-breaker (code in the picture only when the request
+  gives or points at a snippet and wants it shown), OUT for long listings and diffs, ASK
+  for missing code; brief.md (`key: * {code}`); design-system.md, brand-snowflake.md,
+  syntax.md section 18, layout.md section 9.
+- Themes: `code`, `code-file`, `callouts`, `callout` in both (frames decorative); the
+  var `code-keyword` (neutral) and `sf-code-add`/`-del`/`-hl` (Snowflake).
+
+Toolchain
+- svgpost.py step 0, code: tokens in four role colours from the theme's vars (text,
+  keyword, literal, comment; numbers and constants are literals, a keyword beside a dot
+  is text; never bold), a white body with the theme radius, the card body under a
+  slate-50 title bar with the path 12px in, trailing markers `<N>` as badges in one
+  column (the digit in the embedded mono face) and `<+>` `<->` `<!>` as line bands,
+  `callout` "N. text" as badge plus text, the hidden dark copies dropped.
+- d2lint.py reads code blocks (one text per line, measured in the mono face): the false
+  I-sparse on every code diagram is gone. New E-code-overflow (a line past its card) and
+  W-code-wide (code under 13px); a before/after pair at full scale is exempt from
+  W-aspect (`aspect_exempt: code-pair`, which the templates gate honours).
+- semcheck.py: the `code` attribute; S-code-marker (badges pair with callouts or edges
+  1..N down the code, no marker left as text); a `<!>` band is emphasis (S-emphasis);
+  --dump writes `key: * {code}`, --compare lists code lines that changed (markers
+  ignored); request words found in the code count as covered; a `|` in the code gets a
+  compile hint; code pasted into the brief, or `{code}` on the card instead of its block,
+  is named with where it goes (agent run a wrote both before it read brief.md), and
+  `edges: none` reads as an empty section.
+- contrast.py --check audits the code palette too: lowest code text 5.80 (neutral),
+  5.06 (Snowflake). d2check's tripwire says to expand tabs in code.
+- Tests: 8 lint cases, 4 svgpost fixtures with code-step properties, 12 semantic codesets,
+  6 runs (compare, dump, --lint, brief errors), a hint and 2 dump round trips, 4 recipe
+  pairs; routing: 4 validation cases, 4 traps, 6 held-out cases written blind from the
+  README catalog (gate 56/56 templates, 53/56 calls in both modes).
+
 ## 2.1.0 - 2026-09-23: round 4 fix wave
 
 From the round-3 evidence (10 benchmark requests judged, 5 review lenses): emphasis

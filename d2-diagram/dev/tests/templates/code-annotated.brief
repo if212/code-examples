@@ -1,0 +1,19 @@
+# request: "For the orders service README, annotate our POST /orders handler in
+#  routes/orders.ts so a new engineer sees what the key lines do: the body is
+#  validated first, so a bad field is a 400 before any write; the Idempotency-Key
+#  header means a retried request gets the first reply; the order is one INSERT and
+#  starts as pending; and billing and email react to the order.created event."
+type: code-annotated
+reader: new engineers reading the orders service README
+width: 800
+direction: down   # the card on top, the callouts under it, two a row
+focus: none
+out: the OrderSchema fields, error middleware, the cache TTL policy
+nodes:
+  handler: routes/orders.ts
+  handler.src: * {code}   # routes/orders.ts:14-24, verbatim
+  notes.n1: 1. Validates the body: a bad\nfield is a 400, before any write
+  notes.n2: 2. The client's retry key:\na repeat gets the first reply
+  notes.n3: 3. One INSERT; the order\nstarts as pending
+  notes.n4: 4. Billing and email react\nto order.created
+edges:

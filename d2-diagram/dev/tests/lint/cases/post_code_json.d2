@@ -1,0 +1,20 @@
+# post: svgpost
+# expect-clean: E-
+# svgpost's code step (test_svgpost.sh): a JSON body has no bold token, so d2 embeds no mono-bold face;
+# the badge digit still uses a face the SVG embeds (text-mono, drawn bold), never a serif fallback.
+...@neutral-theme
+direction: right
+
+body: "POST /orders body" {
+  class: code-file
+  src: |`json
+    {
+      "sku": "A-42",
+      "qty": 2, // <1>
+      "note": "gift wrap"
+    }
+  `| {class: code}
+}
+api: "Orders API" {class: service}
+
+body -> api: "1. checks qty" {class: dep}

@@ -22,9 +22,9 @@ scope laid out as a row, both ends on the last rank), `templates/swimlane.d2` (r
 
 - A compact rank is 48px plus a 40px gap; a labelled edge adds a label layer (98px
   instead of 40). The template (5 ranks, a 3-step row in each container) is 723 x 735.
-- A 3-wide parallel row over a 1-wide column leaves a void beside the column
-  (`I-sparse`): lay 2-4 sequential steps under it as a row (rule 4). Past 7 ranks:
-  fold (rule 7: 11 nodes and the key in 794 x 733); past about 15 steps: `steps` boards.
+- A 3-wide parallel row over a 1-wide column leaves a void beside the column (`I-sparse`):
+  lay 2-4 sequential steps under it as a row (rule 4). Past 7 ranks: fold (rule 7: 11 nodes
+  and the key in 794 x 733); past about 15 steps: split (route.md) into `steps` boards.
 
 ## Notation checklist
 
@@ -68,9 +68,10 @@ own (`any failure or rejected`). The success end leaves the scope too: both ends
 the last rank, and the story ends on success, where the happy path ends:
 - 2-4 steps: a one-row grid inside the boundary (`grid-rows: 1; horizontal-gap: 24`),
   arrows between the steps. The row ends at the right, so the success end goes right and
-  the failure end left: declare the failure end first (the template).
+  the failure end left: declare the failure EDGE first (the template); at the root the
+  first edge's end goes left, whatever the node order (`reference/layout.md` section 3).
 - More steps than a row holds: a column (`grid-columns: 1`) on the spine, as wide as its
-  two ends (`width: 320` for two 160px pills), the success end declared first (left):
+  two ends (`width: 320` for two 160px pills), the success edge declared first (left):
   both exits drop straight. Past 7 ranks, fold (rule 7).
 Enter and leave by container edges (an edge to the first step inside crosses the title).
 

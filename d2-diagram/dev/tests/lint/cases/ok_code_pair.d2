@@ -1,0 +1,19 @@
+# post: svgpost
+# expect-clean: E- W-aspect
+# Two 3-line blocks side by side at full scale (about 700px wide, 90 tall): a before/after pair is a
+# strip by nature, so its wide aspect is not W-aspect (the lint reports aspect_exempt: code-pair).
+...@neutral-theme
+grid-rows: 1
+horizontal-gap: 16
+classes: {side: {width: 330}}
+
+before: |`sql
+  SELECT id, total FROM orders
+  WHERE status = 'paid'
+  LIMIT 50 OFFSET 1000;
+`| {class: [code; side]}
+after: |`sql
+  SELECT id, total FROM orders
+  WHERE status = 'paid' AND id > $1
+  ORDER BY id LIMIT 50;
+`| {class: [code; side]}

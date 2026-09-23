@@ -18,7 +18,7 @@
 #   -h, --help     this text
 # Steps: d2 fmt -> ASCII tripwire -> render OUT.svg (--scale 1, bundled fonts, ELK spacing defaults:
 #   layers 40px apart, 72 with sql_table; 30px under a container's last row, 50 with bottom titles)
-#   -> svgpost.py (labels off bends and lifelines, table rules, the key, sequence and tech lines)
+#   -> svgpost.py (code blocks, labels off bends and lifelines, table rules, the key, sequence and tech lines)
 #   -> d2lint -> semcheck -> Chromium PNGs.
 # Summary: fonts: | render: | post: | display: | lint: + one line per code with its recipe and severity |
 #   semantic: | checks: | reviewed: | READ: the PNGs to Read, in order | re-render: the command that
@@ -377,7 +377,7 @@ main() {
   hits=$(LC_ALL=C grep -n '[^ -~]' "$in" 2> /dev/null || true)
   if [ -n "$hits" ]; then
     n=$(printf '%s\n' "$hits" | wc -l | tr -d ' ')
-    say "tripwire: $n line(s) of $in contain non-ASCII bytes or tabs (the whole .d2, comments included, must be plain ASCII):"
+    say "tripwire: $n line(s) of $in contain non-ASCII bytes or tabs (the whole .d2, comments included, must be plain ASCII; in code: expand tabs to 4 spaces):"
     printf '%s\n' "$hits" | head -3 | LC_ALL=C sed -e "s/$CR/<CR>/g" -e "s/$TAB/<TAB>/g" | cut -c1-120 | sed 's/^/  line /'
     fail "replace the non-ASCII characters and tabs on the tripwire lines"
   fi

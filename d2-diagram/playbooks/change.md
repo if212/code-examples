@@ -5,15 +5,16 @@
 | Type | The reader asks | Holds at 800px |
 |---|---|---|
 | walkthrough | Which path does ONE request take through the parts? | 5 hops, 9 parts |
-| compare | What changes between A and B? | 2 boxes per row per panel |
+| compare | What changes between A and B? | 2 boxes of 120px a row per panel |
 | steps | How does the picture change from one step to the next? | 5 boards, 8 nodes |
 | timeline | What happened when, in what order? | 8 events |
 | roadmap | What ships when, per stream? | 4 periods x 5 streams |
 | gitflow | Which branch is cut from where, and merged where? | 4 branches x 7 moments |
 
 Grid templates (compare, timeline, roadmap, gitflow; swimlane in flowchart.md):
-- `grid-rows` before `grid-columns`. Same gaps and cell sizes in every row: columns
-  line up, and an edge between aligned cells is straight.
+- `grid-rows` before `grid-columns`; rows x columns cells, each filled (a hole: a hidden
+  spacer). A key is never one cell of a row: `near: bottom-center`, or a row of its own.
+  Same gaps and cell sizes in every row: columns line up, edges between them are straight.
 - A grid stretches its cells: a bare `dot` becomes an oval, a `caption` sticks to the
   top. Wrap either in a slot, a hidden one-cell grid (`label: ""; grid-rows: 1;
   style.opacity: 0`) whose gaps are its padding: child + 2 x gap = row height centres it.
@@ -42,15 +43,18 @@ exchanges between two parties (sequence); several requests or states (steps).
 ## 2. Compare, and the delta variant
 
 Before/after, current/target, option A/B, a PR. Not: scored options (a table); 3+ states (steps).
-- Root `grid-rows: 2` then `grid-columns: 2` (rows first, or cells fill column by column):
-  before | after, then the key. Both panels plain `zone`, `direction: down`, no edge
-  between them. Same keys and order on both sides, one `width` class for every box and
+- Root `grid-rows: 1`: before | after, each a plain `zone` cell with `direction: down`, no
+  edge between them. Same keys and order on both sides, one `width` class for every box and
   one height for a row mixing a cylinder and a box; a replacement takes its predecessor's
   slot, an edge on one side only gets a hidden twin on the other: one graph, one layout.
+- Width first: at 800px two boxes a row per panel, at most 120px each: 13 characters on every
+  line (d2 fits `tech` lines 2+ at the title size too; 12 at 110, when a hidden rank edge shifts
+  a row; a spanning box 260). Wider shrinks all text (132: 0.96): wrap, cut, or stack (to 300).
 - Status is the class: added `success`, removed `muted` (before side only), changed
-  `focal` (`focus: after.api  # "Mark what is added, removed and changed"`). The key is a
-  `key` container of `chip`s in those classes (a legend swatch cannot show text weight):
-  786 x 536. Wider: stack the panels or draw the delta (a removed part's edge `secondary`):
+  `focal` (`focus: after.api  # "Mark what is added, removed and changed"`). Green means
+  added here, so an outcome is never `success`; a failure the request names (a PR's bug)
+  is `danger` on its side, its label naming it (`CRITICAL ...`). Key: `chip`s in the
+  status classes used, `near: bottom-center`: 786 x 540. Or the delta (removed: `secondary`):
 
 ```d2
 # cwd: ../templates
@@ -60,12 +64,8 @@ classes: {box: {width: 184}; low: {height: 108}}
 api: "Orders API\nwrites order events" {class: [service; tech; box; focal]}
 audit: "Audit table\nPostgres" {class: [datastore; tech; box; low; muted]}
 events: "order-events\nKafka" {class: [queue; tech; box; low; success]}
-billing: Billing {class: [service; box]}
-search: "Search indexer" {class: [service; box; success]}
 api -> audit: {class: secondary}
 api -> events: {class: dep}
-events -> billing: {class: dep}
-events -> search: {class: dep}
 key: {
   class: key
   near: bottom-center

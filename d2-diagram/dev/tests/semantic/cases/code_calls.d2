@@ -1,0 +1,21 @@
+# code-calls: badge N in the code, edge "N. verb" to what the call reaches (clean)
+...@mini-theme
+direction: down
+classes: {callee: {width: 150; height: 90}}
+
+code: "orders/service.go" {
+  class: code-file
+  src: |`go
+    func (s *Service) PlaceOrder(ctx context.Context, o Order) error {
+        if err := s.stock.Reserve(ctx, o.Items); err != nil { // <1>
+            return err
+        }
+        return s.db.Insert(ctx, o) // <2>
+    }
+  `| {class: code}
+}
+inventory: "Inventory API" {class: [service; callee]}
+db: "Orders DB" {class: [datastore; callee]}
+
+code -> inventory: "1. reserve" {class: dep}
+code -> db: "2. insert" {class: dep}

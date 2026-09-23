@@ -18,8 +18,10 @@
 # Logs: ${TMPDIR:-/tmp}/d2-diagram-tests/<suite>.log (the tail of a failed suite is printed);
 # the templates suite leaves each template's review PNGs in templates/work/ there.
 # Templates gate (column 800): d2check exit 0 against dev/tests/templates/<name>.brief, displayed height
-#   <= 900px and content aspect 0.6..2.5 on every board (read from the lint JSON), and no E-/W-/S- error
-#   or warning and no I-sparse beyond the brief's `# expect: W-code xN ... - <reason>` line.
+#   <= 900px and content aspect 0.6..2.5 on every board (read from the lint JSON; a board the lint marks
+#   aspect_exempt - a before/after pair of code blocks at full scale, code-compare - is a strip by nature),
+#   and no E-/W-/S- error or warning and no I-sparse beyond the brief's `# expect: W-code xN ... - <reason>`
+#   line.
 # exit: 0 every suite that ran passed | 1 a suite failed, or nothing ran | 2 usage error or d2/python3
 #   missing
 set -u
@@ -45,7 +47,7 @@ doctor     d2, python3, node, Chromium   doctor.sh on simulated machines, one de
 semantic   d2, python3                   semcheck: brief parsing, S- codes, hints, dump/compare
 style      d2, python3, Chromium         theme contrast and fmt, class coverage, Snowflake rules
 templates  d2, python3 (Chromium)        every template at 800px: d2check exit 0 against its brief, height <= 900,
-                                         aspect 0.6-2.5, no code outside the brief's # expect: line
+                                         aspect 0.6-2.5 (or code-pair exempt), no code outside the brief's # expect: line
 snippets   d2                            every d2 block in the docs renders (d2-bad blocks fail)
 export     d2, python3, node, Chromium   the commands of reference/export.md on fixtures
 recipes    d2, python3                   every Fix: in workflows/review-and-fix.md, by before/after pairs
@@ -130,7 +132,7 @@ for jf in sorted(glob.glob(os.path.join(work, "*.lint.json"))):
     sizes.append("%s%dx%d aspect %.2f" % (tag, w, h, ar))
     if h > 900:
         bad.append("%sheight %d > 900" % (tag, h))
-    if not 0.6 <= ar <= 2.5:
+    if not 0.6 <= ar <= 2.5 and not sm.get("aspect_exempt"):
         bad.append("%saspect %.2f outside 0.6-2.5" % (tag, ar))
 if not sizes:
     bad.append("no lint JSON in %s" % work)

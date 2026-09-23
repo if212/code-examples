@@ -17,7 +17,7 @@ and is gone after the fix.
 
 | # | Check | Fails when |
 |---|---|---|
-| 1 | Legible at its width | any E-/W-small-text; text you have to squint at in col.png; W-tall, W-aspect |
+| 1 | Legible at its width | any E-/W-small-text or W-code-wide; text you have to squint at in col.png; W-tall, W-aspect |
 | 2 | Accurate | any S- error; an edge on the wrong node, reversed, or in the wrong group; a label that differs from the brief |
 | 3 | Clean routing | an edge through a node, label or title; crossings; diagonal or curved edges; a label on a bend, a border or a lifeline; a branch label far from its decision |
 | 4 | One reading direction | the flow doubles back against `direction`; the main path zig-zags or drifts sideways, a lower tier out of line with its callers (W-dogleg, W-long-edge, W-edge-jog) |
@@ -37,8 +37,8 @@ Seen: text displays under 10px in the column; the canvas is wider than the
 column and shrinks (`display:` shows scale < 1).
 Fix: make the canvas narrower, not the font bigger: `direction: down` (tiers
 side by side instead of ranks in a row), wrap labels near 22 characters with
-`\n` (`"Order management\nservice"`). Past about 15 nodes, split into `steps`
-boards (playbooks/change.md section 3). Sequence: every participant adds a
+`\n` (`"Order management\nservice"`). Past about 15 nodes: split, or group
+(workflows/route.md, "Assume, ask, split"). Sequence: every participant adds a
 column 150px wide or more, so five fit 800px (a state change becomes a note on
 its lifeline); messages of one line, at most 40 characters (playbooks/sequence.md).
 
@@ -47,6 +47,18 @@ Seen: text displays at 10-12px. At scale < 1 it is the E-small-text case,
 milder; at scale 1.00 a `style.font-size` under 12 was set.
 Fix: at scale < 1 apply the E-small-text levers; at scale 1.00 delete the
 font-size override (the theme sets 14-16px).
+
+### W-code-wide
+Seen: code shows under 13px: its longest line (or a pair side by side) is
+wider than the column holds at 14px, 86 characters in one card at 800 or 36
+a side in a before/after pair, so the canvas shrinks; or a block sets a
+font-size under 14.
+Fix: break the long line in the source, or cut the lines around the ones
+that matter with a `// ...` line (playbooks/code.md section 1); a pair past
+36 characters a side: stack it, `grid-columns: 1` (playbooks/code.md
+section 5). A font-size override on a block: drop it (code is 14px). The
+message says `its lines fit`: the code is not the cause; fix the layout
+findings that widen the canvas first.
 
 ### W-tall
 Seen: at a doc column (under 1200px) the displayed height passes 1.25x the
@@ -80,13 +92,17 @@ Fix: by type (reference/layout.md section 9 has the numbers):
 Seen: the content's width/height ratio leaves the band while it fills
 much of the column: under 0.6 (a tower) with the height at 0.75x the column
 or more, over 2.5 (a strip) with the width at 0.75x or more; on a slide,
-under 1.2 or over 3.2.
-Fix: a strip: the E-small-text levers. A tower: the W-tall levers; a state
-machine: the happy path down a spine of `compact` states in one width class
-(`{width: 140; height: 48}`), every exit into one side column, and a hidden
-`ghost` (the theme class) on the far side of each 2-way fork, its edge
-labelled like its sibling: an order lifecycle went from 356x779 (aspect 0.46)
-to 395x599, 642x598 with the key its markers need at the right.
+under 1.2 or over 3.2. Two code blocks side by side at full scale (a
+before/after pair) are a strip by nature: exempt (lint JSON
+`aspect_exempt: code-pair`); the same pair shrunk still fires.
+Fix: a strip: the E-small-text levers; a short snippet over two callouts
+side by side: the callouts in one column (playbooks/code.md section 3). A
+tower: the W-tall levers; a state machine: the happy path down a spine of
+`compact` states in one width class (`{width: 140; height: 48}`), every exit
+into one side column, and a hidden `ghost` (the theme class) on the far side
+of each 2-way fork, its edge labelled like its sibling: an order lifecycle
+went from 356x779 (aspect 0.46) to 395x599, 642x598 with the key its markers
+need at the right.
 
 ### E-contrast
 Seen: a label below 3:1 against its fill: a raw `style.fill` or
@@ -131,7 +147,21 @@ class (`classes: {cell: {height: 165}}`, `class: [service; cell]`).
 Seen: the label spills out of its box, or is pushed outside a fixed box:
 `width`/`height` smaller than the text (d2 never grows a fixed box). A
 `style.multiple` card is measured on its front copy.
-Fix: delete the fixed size and wrap the label with `\n`.
+Fix: shorten or wrap (`\n`) the line the message names: d2 fits every line
+at the label's size, `tech` lines 2+ too. A box of a one-width row (a
+compare panel, a tier, a spine) keeps its width class: shorten the line, or
+give the class the width the message prints. Any other box: delete the
+fixed size and wrap the label.
+
+### E-code-overflow
+Seen: a code line ends at or past the right edge of its block or card: a
+width class narrower than the code (d2 never wraps code), or a code block
+as a sequence note (sized as one line of prose).
+Fix: the width the message prints (8.4px a character of the longest line,
++ 24 for a card, + 14 for a bare block), on the width class every card of
+the row shares; or break the line in the source (playbooks/code.md section
+1). In a sequence diagram: no block, a short message label (`POST /orders
+{sku, qty}`).
 
 ### E-node-overlap
 Seen: two nodes drawn on top of each other: two objects on the same `near`
@@ -295,12 +325,18 @@ none: they are styled by the template's globs (playbooks/erd.md rule 4).
 ### W-sibling-size
 Seen: siblings in one row differ in height (`66/82`, a wrapped label; a
 cylinder beside a box) or in width (`204/129`), stacked siblings do not share
-a centre, or side-by-side containers end at different heights.
+a centre, or side-by-side containers end at different heights. Or a source
+sits a rank low, beside the second node of a peer chain: ELK puts a source
+just above its target.
 Fix: one class for the row carries the larger size
 (`classes: {tier: {width: 180; height: 82}}`, `class: [service; tier]`);
 side-by-side zones: equal node heights, never a container `height`. A
 caller as wide as the partners it spans (W-dogleg: 2 x 130 + the 20px gap =
-280) is not flagged: lint accepts a whole span of the row's width.
+280) is not flagged: lint accepts a whole span of the row's width. A source
+a rank low: lift it into its peer's row with a hidden edge to the node under
+that peer, labelled like that node's edge in, since a label adds a layer
+(`rules -> enrich: {class: dep; style.opacity: 0}`; about 20px wider:
+reference/layout.md section 3).
 
 ### W-seq-group-ragged
 Seen: sequence groups, or the operands of one `alt`/`par`, start and end at
@@ -323,11 +359,15 @@ the displayed width (160px or more), or a zone or grid row whose children
 fill under half of it (`container 'feedback' is 52% empty (right)`).
 Fix: an empty square: draw the entry point as wide as the tier it feeds
 (`width: 620` on a gateway over four services), or pull the node that
-leaves it next to its partner (a sink: `pg <- api`, W-long-edge). A
-half-empty container (a grid row with one node): move that node into the
-row of its partner, so the rows fill evenly. The column over and under a
-key that d2check keeps at the right of the drawing is its margin and never
-counts.
+leaves it next to its partner (a sink: `pg <- api`, W-long-edge). A narrow
+spine over a wider row (1-wide flowchart steps above a 3-step scope): the
+notes the request gives go beside the steps they explain, each held in its
+step's rank by a hidden edge labelled like the spine edge beside it
+(`why -> first: no {class: ghost}`); bare, a note lands a rank off, since a
+label adds a layer. A half-empty container (a grid row with one node): move
+that node into the row of its partner, so the rows fill evenly. The column
+over and under a key that d2check keeps at the right of the drawing is its
+margin and never counts.
 
 ## Meaning: the diagram against the brief (semcheck)
 
@@ -379,7 +419,11 @@ Fix: write each edge once.
 ### S-node-label
 Seen: a node's text differs from the brief (drifted wording, or a label cut
 by an unquoted `#`).
-Fix: use the brief's label, the user's words; quote labels holding `#`.
+Fix: use the brief's label, the user's words; quote labels holding `#`. A
+rewording you made on purpose in the .d2 (a shorter line that fits) goes into
+the brief in one step, node and edge labels (slips stay listed: a label the
+.d2 cuts or leaves out, a chain line):
+`python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --sync-labels D2W/<name>.brief <target>.d2`
 
 ### S-node-label-case
 Seen: the label differs from the brief only in case.
@@ -387,7 +431,8 @@ Fix: keep the brief's case (zone titles may render upper-case: that passes).
 
 ### S-edge-label
 Seen: an edge label differs from the brief (drifted, or cut by `#` or `;`).
-Fix: use the brief's label; quote labels holding `#` or `;`.
+Fix: use the brief's label; quote labels holding `#` or `;`. A rewording on
+purpose: `--sync-labels` (S-node-label).
 
 ### S-edge-style
 Seen: the brief marks the edge dashed (async, optional) and it is solid, or
@@ -480,8 +525,9 @@ edge outside the brief's focus; a focus whose comment quotes no words of the
 `# request:` (Snowflake may write `# brand`); a focal node inside `zone-blue`;
 the focus node without `focal` (or `sf-primary`), or with a class after it
 that repaints it; a focused group that is not `zone-blue`; focus-path edges
-without `flow`. Warning: two peers (same parent and base role) styled
-unlike. INFO: the brief has no `focus:` line.
+without `flow`. A `<!>` band is emphasis: the focus names its code block or
+card, and a focused code card has a `<!>` line. Warning: two peers (same
+parent and base role) styled unlike. INFO: the brief has no `focus:` line.
 Fix: emphasis nobody asked for goes: the node back to its base role
 (`service`), the edge to `dep`, and `focus: none` (workflows/brief.md section
 3). A focus the request does ask for quotes it: `focus: api  # "Focus on the
@@ -489,6 +535,18 @@ API"`. In `zone-blue`, the group is the focus: make the node plain, or make
 the group a `zone`. Peers take one class. The class order: see Last class
 wins; a focused group: `zone-blue` (Snowflake: see Snowflake has no focus
 group).
+
+### S-code-marker
+Seen: a numbered badge in the code without its partner (a callout "N. ..."
+or an edge "N. verb" leaving the card), a number used twice, numbers that
+skip or do not run 1..N down the code, a marker left in the code as text
+(the lexer did not read it as a comment), or diff bands on the wrong side:
+`<+>` in the block that reads first, or `<+>` and `<->` in one block.
+Fix: one trailing marker comment per explained line in the language's own
+syntax (`// <1>`, `# <1>`, `-- <1>`), numbered from the top, and exactly one
+callout or edge with its number (playbooks/code.md section 2); `<->` only
+on the before block, `<+>` only on the after block. INI and Dockerfile
+comments cannot trail code: no markers there.
 
 ### S-key
 Seen: a colour, dash or border means something and the diagram has no key:
@@ -501,9 +559,9 @@ in the real classes (`a -> b: event, async {class: async}`, endpoints hidden
 with `style.opacity: 0`); d2check restyles it and puts it right of the
 diagram when that fits the column, else under it: never style it by hand.
 Statuses shown by text style (added, removed, planned): a `key` container of
-`chip` nodes in the real classes, a grid cell when it is no wider than a
-panel, else `near: bottom-center` (a wider key cell widens its panel's
-column, so the panels differ). C4: a `title` node plus the key. ERD: the
+`chip` nodes in the real classes, `near: bottom-center` (one cell of a grid
+row stretches to its column, or widens it); a rows-only grid may give it a
+row of its own (roadmap). C4: a `title` node plus the key. ERD: the
 crow's-foot key, or a `caption` line naming the notation. Where to put it
 and what goes in: reference/design-system.md section 8.
 
@@ -601,6 +659,7 @@ reproduced with d2 0.7.1.
 | `missing value after colon` (with `maps must be terminated with }`) | an unquoted hex colour: `#` starts a comment | quote it: `"#1E293B"`, or use a role class |
 | `maps must be terminated with }` | an unclosed `{` | close it; look for an unquoted `#` that commented out a `}` |
 | `block string must be terminated` | an unclosed `\|md` block | `shape: text` with a plain label |
+| `unexpected text after <lang> block string` | a `\|` or `\|\|` in the code closes a `\|lang` or `\|\|lang` block | the backtick delimiters: ``\|`lang ... `\|`` |
 | `is not a valid config` | an ELK flag or unknown key in `d2-config` | remove it; valid keys: `theme-id dark-theme-id layout-engine pad center sketch theme-overrides dark-theme-overrides data`; ELK spacing flags go after `--` on d2check |
 | `is not a valid theme ID` | a `theme-id` the file does not need | delete it: the theme file sets theme 0 |
 | `failed to import` | the theme is not next to the `.d2` (imports resolve from the importing file) or its name is misspelled | `cp ${CLAUDE_SKILL_DIR}/templates/neutral-theme.d2 <dir>/`; `...@neutral-theme` |

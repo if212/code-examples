@@ -1,0 +1,30 @@
+# After: the width the message asks for, on the one side class both cards share (330 >= 327):
+# every line ends inside its card, and the two sides stay one width.
+...@neutral-theme
+grid-rows: 2
+grid-columns: 2
+horizontal-gap: 16
+vertical-gap: 8
+classes: {side: {width: 330}}
+
+h1: Before {class: caption}
+h2: After {class: caption}
+before: "queries/list_orders.sql" {
+  class: [code-file; side]
+  src: |`sql
+    SELECT id, total, created_at, status
+    FROM orders
+    ORDER BY created_at DESC
+    LIMIT 50 OFFSET 100000; -- <->
+  `| {class: code}
+}
+after: "queries/list_orders.sql" {
+  class: [code-file; side]
+  src: |`sql
+    SELECT id, total, created_at, status
+    FROM orders
+    WHERE created_at < $1 -- <+>
+    ORDER BY created_at DESC
+    LIMIT 50;
+  `| {class: code}
+}

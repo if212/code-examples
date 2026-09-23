@@ -1,0 +1,13 @@
+# request: "Show which setting in deploy/app.ini the Orders API reads: the timeout."
+type: code-calls
+reader: engineers on call for the Orders API
+width: 800
+direction: right
+focus: none
+out: the other sections of app.ini
+nodes:
+  cfg: deploy/app.ini
+  cfg.src: * {code}   # deploy/app.ini:1-3, verbatim
+  api: Orders API
+edges:
+  cfg -> api: 1. timeout

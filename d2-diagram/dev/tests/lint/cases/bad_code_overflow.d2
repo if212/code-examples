@@ -1,0 +1,32 @@
+# post: svgpost
+# expect: E-code-overflow
+# expect-text: (36 characters) runs
+# expect-text: give it width: 327 or more (8.4px a character + 24)
+# A before/after pair of code-file cards whose side class (280) is narrower than their code: 36
+# characters a line need 8.4 x 36 + 24 = 327. d2 never wraps code: the lines run past the card.
+# (A bare block never overflows this way: d2 widens it to its code, and the sides come out unequal.)
+...@neutral-theme
+grid-rows: 2
+grid-columns: 2
+horizontal-gap: 16
+vertical-gap: 8
+classes: {side: {width: 280}}
+
+h1: Before {class: caption}
+h2: After {class: caption}
+before: "queries/list_orders.sql" {
+  class: [code-file; side]
+  src: |`sql
+    SELECT id, total, created_at, status
+    FROM orders ORDER BY created_at DESC
+    LIMIT 50 OFFSET 100000; -- scan 100k
+  `| {class: code}
+}
+after: "queries/list_orders.sql" {
+  class: [code-file; side]
+  src: |`sql
+    SELECT id, total, created_at, status
+    FROM orders WHERE created_at < $1
+    ORDER BY created_at DESC LIMIT 50;
+  `| {class: code}
+}

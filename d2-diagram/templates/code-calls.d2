@@ -1,0 +1,45 @@
+# Code-calls template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+direction: down
+
+# ONE snippet and what it reaches, in call order (playbooks/code.md section 4):
+# a trailing comment `// <N>` on each call becomes badge N, and the edge to
+# what that call reaches is "N. <the call's verb>", in code order.
+# The card spans the row it calls: n x 150 + (n - 1) x 20 (4 x 150 + 60 = 660),
+# or the code's width (8.4 a character + 24) with a wider callee class; every
+# call then drops straight. 5 calls and 8 lines at most.
+classes: {
+  callee: {width: 150; height: 90}
+  row: {width: 660}
+}
+
+code: "checkout/checkout.ts" {
+  class: [code-file; row]
+  src: |`ts
+    async function checkout(cart: Cart, user: User) {
+      const quote = await pricing.quote(cart); // <1>
+      const hold = await stock.reserve(cart); // <2>
+      const charge = await stripe.charge(quote); // <3>
+      await orders.save(user, cart, hold, charge); // <4>
+      return charge.id;
+    }
+  `| {class: code}
+}
+
+# Callees left to right in call order; a cylinder in the row sets its height (90).
+pricing: "Pricing API" {class: [service; callee]}
+inventory: "Inventory API" {class: [service; callee]}
+stripe: "Stripe" {class: [service; callee; external]}
+ordersdb: "Orders DB" {class: [datastore; callee]}
+
+# Edges leave the card (never its code block), one per badge, in badge order.
+code -> pricing: "1. quote" {class: dep}
+code -> inventory: "2. reserve" {class: dep}
+code -> stripe: "3. charge" {class: dep}
+code -> ordersdb: "4. save" {class: dep}
+
+vars: {
+  d2-legend: {
+    x: third party {class: [service; external]}
+  }
+}

@@ -12,7 +12,8 @@
 # with SOURCE_DATE_EPOCH set they are also dated from it, so two builds are byte-identical.
 # After writing, the zip is read back and verified (root folder, no dev/, no junk, exec bits);
 # unless --no-verify, its unpacked copy must pass the structure check too.
-# Install it (delete an older copy first): unzip dev/dist/d2-diagram.zip -d ~/.claude/skills/
+# Install it (delete an older copy first; unzip -d makes only the last folder of its path):
+#   mkdir -p ~/.claude/skills && unzip dev/dist/d2-diagram.zip -d ~/.claude/skills/
 # exit: 0 built and verified | 1 structure check or verification failed | 2 usage error
 set -u
 PYTHONDONTWRITEBYTECODE=1  # no __pycache__ in the skill's scripts/ (B57)
@@ -145,7 +146,8 @@ print('zip:      %s' % out)
 print('contents: %d files in %s (%d KB unpacked, %d KB zipped)' % (len(files), ROOT, raw // 1024, size // 1024))
 print('checked:  root %s, no dev/ or junk, %d scripts/*.sh and *.py at -rwxr-xr-x' % (ROOT, len(sh)))
 print('sha256:   %s' % digest)
-print('install:  rm -rf ~/.claude/skills/d2-diagram && unzip %s -d ~/.claude/skills/' % shlex.quote(out))
+print('install:  rm -rf ~/.claude/skills/d2-diagram && mkdir -p ~/.claude/skills && unzip %s -d ~/.claude/skills/'
+      % shlex.quote(out))
 PY
 
 if [ "$verify" = 1 ]; then

@@ -1,0 +1,16 @@
+# request: "For the PR description, show list_orders.sql before and after the
+#  switch from OFFSET paging to keyset paging, and say why it is faster: page
+#  2001 now reads 50 rows instead of 100,050."
+type: code-compare
+reader: reviewers of the paging PR
+width: 800
+direction: right   # before | after, the note under them
+focus: none
+out: the index definition, the API change for the page cursor, the file name (list_orders.sql: the page caption names it)
+nodes:
+  h1: Before
+  h2: After
+  before: * {code}   # queries/list_orders.sql at main
+  after: * {code}    # queries/list_orders.sql in the PR
+  change: Keyset paging seeks the index: page 2001\nreads 50 rows instead of 100,050
+edges:

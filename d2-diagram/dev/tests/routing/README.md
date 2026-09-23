@@ -9,10 +9,10 @@ is blind: a fresh model session that sees nothing but route.md and the requests.
 
 | File | Cases | Use |
 |---|---|---|
-| `heldout.json` | 50 | release gate; never tune route.md on it. H01-H30 (the first gate) and E01-E20 (written by the round-3 routing review). The skill is English only: the round-4 Chinese requests (Z01-Z20) and vocabulary probes (P01-P16) were dropped |
+| `heldout.json` | 56 | release gate; never tune route.md on it. H01-H30 (the first gate), E01-E20 (written by the round-3 routing review) and C01-C06 (the code templates: written by a fresh session that saw only README.md's template catalog, never route.md; expect/alt fixed before the first run). The skill is English only: the round-4 Chinese requests (Z01-Z20) and vocabulary probes (P01-P16) were dropped |
 | `dev.json` | 99 | tuning: the jobs-lens phrasings (R01-R99) |
-| `validation.json` | 24 | tuning: fresh phrasings, one per template |
-| `validation2.json` | 20 | tuning: traps ("flowchart" of services, "tree" of dependencies) |
+| `validation.json` | 28 | tuning: fresh phrasings, one per template |
+| `validation2.json` | 24 | tuning: traps ("flowchart" of services, "tree" of dependencies, code named but not wanted in the picture) |
 
 A case: `{"id", "request", "expect", "alt": [...], "call", "altcall": [...], "why"}`.
 `expect` is a template name (or `OUT` / `EDIT`), `alt` lists answers accepted as right,
@@ -36,7 +36,7 @@ sh run.sh tuning           # dev, validation, validation2 (after any route.md ch
 python3 blind_eval.py heldout.json ../../../workflows/route.md --per-request --gate 90%,83%
 ```
 
-- Release gate: at least 90% of the templates and 83% of the calls (45 and 42 of 50), in both
+- Release gate: at least 90% of the templates and 83% of the calls (51 and 47 of 56), in both
   modes (one session for all requests, and one session per request).
 - An EDIT or OUT call scores its template as right whatever template it names: the edited
   file stands in for the template (SKILL.md, editing).
@@ -55,6 +55,28 @@ python3 blind_eval.py heldout.json ../../../workflows/route.md --per-request --g
    calls), then run the gate once.
 
 ## Results
+
+Trial friction (route.md sha1 341da493: one home for splitting, every diagram of a split drawn,
+"a diagram" alone is not a one-picture request), two gate runs and one run of the tuning sets:
+
+| Set | Mode | Templates | Calls | Call misses (template right) |
+|---|---|---|---|---|
+| heldout | one session | 56/56, 56/56 | 52/56, 54/56 | run 1: H16 (ASK), H30, E05 (SPLIT), E20 (ASK); run 2: H30, E20 - the default drawn |
+| heldout | per request | 56/56, 56/56 | 53/56, 53/56 | H14, E20 both runs (the default drawn); H30 ASK where SPLIT was expected (run 1), E01 ASK where GO was (run 2) |
+| dev | one session | 99/99 | 99/99 | - |
+| validation | one session | 28/28 | 28/28 | - |
+| validation2 | one session | 24/24 | 24/24 | - |
+
+Code snippets (the 56-case gate with C01-C06, route.md sha1 2d856428: code rows 1-4 and the
+code tie-breaker), one gate run and two dev runs:
+
+| Set | Mode | Templates | Calls | Call misses (template right) |
+|---|---|---|---|---|
+| heldout | one session | 56/56 | 53/56 | H30, E05, E20: the default drawn where SPLIT or ASK was expected |
+| heldout | per request | 56/56 | 53/56 | H14, H30, E20 |
+| dev | one session | 98/99, 99/99 | 94/99, 91/99 | R44 flowchart in run 1 (sequence expected; compare, an alternate, in run 2); calls: the defaults drawn (R02, R06, R09, R17, R44, R52, R71) and R58 an ASK for code (run 2) |
+| validation | one session | 28/28 | 28/28 | - |
+| validation2 | one session | 24/24 | 24/24 | - |
 
 Round 4 verification (the 50-case English gate, route.md sha1 e382d7de, after the Chinese genre
 tie-breaker was dropped), one run:

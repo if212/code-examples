@@ -1,0 +1,15 @@
+# request: "For the auth README, annotate our login view in auth/views.py: the rate
+#  limit per IP, the single 401 for a bad email or password, and the session cookie."
+type: code-annotated
+reader: engineers reading the auth README
+width: 800
+direction: down
+focus: none
+out: the User model, CSRF
+nodes:
+  view: auth/views.py
+  view.src: * {code}   # auth/views.py:12-19, verbatim
+  notes.n1: 1. Rate limit per IP,\nbefore any lookup
+  notes.n2: 2. One 401 for a bad email\nor a bad password
+  notes.n3: 4. The session cookie\nholds the user id only
+edges:

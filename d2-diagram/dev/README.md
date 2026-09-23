@@ -56,18 +56,18 @@ the faithful-render cases need Chromium (Node Playwright or a Chrome binary);
 
 | Suite | Command | Proves |
 |---|---|---|
-| structure | `sh dev/tests/structure/check.sh` | the checks (a)-(p): frontmatter, paths, anchors and `section N` / `rule N` references (and no link from a shipped file into `dev/`), reachability, a heading per code, ASCII, size budgets (SKILL.md 170 lines / 9 KB, playbooks 150, templates 80, each workflow and reference file its own), deleted paths, junk, class lists, script syntax, allowed-tools, templates fmt + routed, the svgpost wiring, no escape-hatch wording ("the honest shape") in the recipes, a recipe grep context (`-A N`) that covers the longest recipe, no way to write bytecode into the skill |
+| structure | `sh dev/tests/structure/check.sh` | the checks (a)-(q): frontmatter, paths, anchors and `section N` / `rule N` references (and no link from a shipped file into `dev/`), reachability, a heading per code, ASCII, size budgets (SKILL.md 170 lines / 9 KB, playbooks 150, templates 80, each workflow and reference file its own), deleted paths, junk, class lists, script syntax, allowed-tools, templates fmt + routed + root grids full (R x C cells), the svgpost wiring, no escape-hatch wording ("the honest shape") in the recipes, a recipe grep context (`-A N`) that covers the longest recipe, no way to write bytecode into the skill, install commands that create the folder they unzip into |
 | lint | `python3 dev/tests/lint/run_tests.py` | every d2lint code fires on its case, ok cases stay clean, rasterizer checks |
 | d2check | `sh dev/tests/lint/test_d2check.sh` | exit codes, summary lines, file modes, routes, multi-board |
 | doctor | `sh dev/tests/lint/test_doctor.sh` | doctor.sh on simulated machines (one dependency taken away at a time) prints the right verdict and fix; every script's `--help` and usage exit |
-| semantic | `python3 dev/tests/semantic/run_tests.py` | semcheck codes, brief parsing, `--hint` on real d2 errors, dump/compare |
+| semantic | `python3 dev/tests/semantic/run_tests.py` | semcheck codes, brief parsing (`# source:` passages too), `--hint` on real d2 errors, dump/compare, `--sync-labels` |
 | style | `sh dev/tests/style/run.sh` | theme contrast, fmt, class coverage, brand rules, a before/after sheet |
 | templates | `sh dev/run_all_tests.sh --only templates` | every template: d2check exit 0 against its brief at 800px |
 | snippets | `sh dev/tests/refs/check_snippets.sh <md files>` + `selftest.sh` | every doc snippet renders (and every d2-bad fails) |
 | export | `sh dev/tests/refs/check_export.sh` | the commands of reference/export.md, run on fixtures |
 | recipes | `sh dev/tests/recipes/run.sh` | every `Fix:` in review-and-fix.md (see below) |
 | icons | `sh dev/tests/refs/verify_icons.sh` | every icon name in the docs answers HTTP 200 (network) |
-| routing | `sh dev/tests/routing/run.sh gate` | blind `claude -p` sessions, given only workflows/route.md, pick the right template for 50 held-out English requests: 90% templates and 83% calls in both modes (needs the claude CLI; `--llm`) |
+| routing | `sh dev/tests/routing/run.sh gate` | blind `claude -p` sessions, given only workflows/route.md, pick the right template for 56 held-out English requests: 90% templates and 83% calls in both modes (needs the claude CLI; `--llm`) |
 
 ## Build the zip
 
@@ -174,8 +174,13 @@ layouts: rerun the recipes after any of them.
 | crow's feet at the source end render only on `<->`; `style.stroke` paints a sql_table's body | playbooks/erd.md rules 1 and 4 |
 | an edge label is measured with the italic face even when `italic: false` | assets/fonts/README.md (Regular passed as italic) |
 | nested `direction` is ignored except in grid cells; `grid-columns` alone fills column-major | reference/layout.md section 7; semcheck S-src-direction |
+| ELK places the targets of one source by EDGE declaration order at the root, by NODE order inside a container; it puts a source just above its target, so of two sources the one with the shorter path sits a rank low | reference/layout.md section 3; playbooks/flowchart.md rule 4; the hidden rank edge (review-and-fix.md#w-sibling-size) |
 | a later class wins; a class list assigned over a single class is ignored (list over list applies) | workflows/review-and-fix.md#last-class-wins; reference/syntax.md section 7; semcheck S-src-class |
 | the native legend (`vars.d2-legend`) is always drawn right of the diagram, shadowed, off-palette, with black text | svgpost.py restyles it and moves it under the diagram when the column is too narrow |
 | edge labels sit at the midpoint, often on a bend or a foreign sequence lifeline | svgpost.py slides them to a straight run or a free lifeline gap; d2lint reports what is left |
 | keywords are case-sensitive; `Shape: x` at the root silently draws nothing | reference/syntax.md section 16 |
 | markdown labels clip in Chromium; theme 303 draws white text on white | reference/syntax.md; reference/design-system.md section 10 |
+| a code block ignores `fill`, `border-radius` and `font-color`, paints chroma's fixed "github" colours (bold keywords), draws a hidden dark copy and places its lines in em | svgpost.py's code step (four role colours, the card body, badges and bands); d2lint reads lines in em |
+| an edge into a grid cell (a code block inside its card) is invisible to ELK: it crosses the card | playbooks/code.md section 1: edges attach to the card |
+| a `\|` in the code closes a `\|lang` block (`\|\|` a `\|\|lang` one): `unexpected text after <lang> block string` | the backtick delimiters ``\|`lang ... `\|``; semcheck --hint |
+| fonts are subset to the diagram's characters and only the faces it uses are embedded (no bold label: no bold face) | svgpost.py draws badge digits in the embedded mono face (mono bold when d2 used it) |

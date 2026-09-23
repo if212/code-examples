@@ -1,0 +1,15 @@
+# post: svgpost
+# expect: W-code-wide
+# expect-text: its lines fit (37 characters, 86 hold at 800px), the canvas is
+# A short snippet over a 1300px box: the code fits its card, the canvas does not fit the column. The
+# message sends the fix to the layout, not to the code (no line to break).
+...@neutral-theme
+direction: down
+snip: "main.go" {
+  class: code-file
+  src: |`go
+    fmt.Println("hello from the snippet")
+  `| {class: code}
+}
+wide: "A banner as wide as a slide" {class: service; width: 1300}
+snip -> wide: {class: dep}

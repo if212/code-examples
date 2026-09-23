@@ -1,0 +1,27 @@
+# S-code-marker: <2> sits above <1>
+...@mini-theme
+grid-rows: 2
+vertical-gap: 16
+
+view: "auth/views.py" {
+  class: code-file
+  src: |`python
+    @bp.post("/login")
+    def login():
+        limiter.hit(request.remote_addr)  # <2>
+        user = User.query.filter_by(email=request.form["email"]).first()
+        if user is None or not user.check_password(request.form["password"]):  # <1>
+            abort(401)
+        session["uid"] = user.id  # <3>
+        return redirect(url_for("orders.index"))
+  `| {class: code}
+}
+
+notes: {
+  class: callouts
+  grid-rows: 2
+  grid-columns: 2
+  n1: "1. Rate limit per IP,\nbefore any lookup" {class: callout}
+  n2: "2. One 401 for a bad email\nor a bad password" {class: callout}
+  n3: "3. The session cookie\nholds the user id only" {class: callout}
+}

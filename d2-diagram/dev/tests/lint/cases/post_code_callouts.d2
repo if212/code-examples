@@ -1,0 +1,26 @@
+# post: svgpost
+# expect-clean: E-
+# svgpost's code step (test_svgpost.sh): a `callout` "N. text" becomes badge N at its left edge and the
+# text left-aligned beside it; the code's badges share one column after the longest marked line.
+...@neutral-theme
+grid-rows: 2
+vertical-gap: 16
+
+job: "jobs/nightly.py" {
+  class: code-file
+  src: |`python
+    @retry(times=3, backoff=2.0)  # <1>
+    def export_orders(day: date) -> int:
+        rows = db.fetch_orders(day)  # <2>
+        s3.put(f"exports/{day}.csv", to_csv(rows))
+        return len(rows)
+  `| {class: code}
+}
+
+notes: {
+  class: callouts
+  grid-rows: 1
+  grid-columns: 2
+  n1: "1. Three tries, 2s, 4s\nand 8s apart" {class: callout}
+  n2: "2. One day of orders,\nread from the replica" {class: callout}
+}

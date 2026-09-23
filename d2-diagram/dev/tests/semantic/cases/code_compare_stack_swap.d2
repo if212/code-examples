@@ -1,0 +1,17 @@
+# code-compare stacked (grid-columns: 1): the after block's <+> lines sit in the block above (S-code-marker)
+...@mini-theme
+grid-columns: 1
+vertical-gap: 8
+h1: Before {shape: text}
+before: |`sql
+  SELECT id, total FROM orders
+  WHERE id > $1 -- <+>
+  ORDER BY id
+  LIMIT 50; -- <+>
+`| {class: code}
+h2: After {shape: text}
+after: |`sql
+  SELECT id, total FROM orders
+  ORDER BY id
+  LIMIT 50 OFFSET 100000; -- <->
+`| {class: code}

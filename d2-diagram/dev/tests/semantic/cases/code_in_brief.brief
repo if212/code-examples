@@ -1,0 +1,13 @@
+# request: "Annotate this handler for the README: the decode and the insert."
+type: code-annotated
+reader: engineers reading the README
+width: 800
+direction: down
+focus: none
+out: none
+nodes:
+  handler: routes/orders.ts
+  handler.src: |`ts
+    const input = OrderSchema.parse(req.body);
+  `|
+edges:

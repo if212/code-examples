@@ -1,0 +1,41 @@
+# Before: the notes' hidden edges are bare while the spine edges beside them are labelled:
+# a label adds an ELK layer, so each note lands a rank off and the corner stays empty.
+...@neutral-theme
+direction: down
+classes: {step: {width: 164}; end: {width: 212}}
+why: "Before, every failed\njob paged someone" {class: note}
+first: "Runs before paging,\nso it can only\nremove pages" {class: note}
+alert: CI job failed {class: [compact; step; terminal]}
+flaky: "Known flaky test?\nfrom the flake list" {class: [service; tech; step]}
+fixed: "Fix merged since?\nfrom git log" {class: [service; tech; step]}
+rerun: Re-run {
+  class: boundary
+  grid-rows: 1
+  horizontal-gap: 24
+  vertical-gap: 16
+  job: "Re-run the job\nsame commit" {class: [service; tech; step]}
+  logs: "Compare logs\nwith last green" {class: [service; tech; step]}
+  attach: "Attach result\nto the alert" {class: [service; tech; step]}
+}
+page: "Page on-call,\nas before" {class: [danger; step; end; terminal]}
+dismiss: "Dismissed,\nnobody paged" {class: [success; step; end; terminal]}
+alert -> flaky: {class: dep}
+why -> first: {class: ghost}
+first -> rerun: {class: ghost}
+flaky -> fixed: no {class: dep}
+flaky -> dismiss: yes {class: ok}
+fixed -> rerun: no {class: dep}
+fixed -> dismiss: yes {class: ok}
+rerun.job -> rerun.logs: {class: dep}
+rerun.logs -> rerun.attach: {class: dep}
+rerun -> page: fails again {class: failure}
+rerun -> dismiss: passes {class: ok}
+vars: {
+  d2-legend: {
+    a: {style.opacity: 0}
+    b: {style.opacity: 0}
+    a -> b: next check {class: dep}
+    a -> b: dismissed {class: ok}
+    a -> b: paged {class: failure}
+  }
+}

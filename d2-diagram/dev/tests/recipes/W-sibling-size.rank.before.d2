@@ -1,0 +1,14 @@
+# Before: ELK places a source just above its target, so the rules source sits a rank low,
+# beside the enricher: two heights in one row.
+...@neutral-theme
+direction: down
+classes: {box: {width: 170}; wide: {width: 360}}
+events: "Order events\nKafka" {class: [service; tech; box]}
+rules: "Pricing rules\nYAML" {class: [service; tech; box]}
+enrich: "Enricher\nFlink, stateful\nper customer" {class: [service; tech; box]}
+price: "Pricing engine\nreads orders and rules" {class: [service; tech; wide]}
+quote: Quote API {class: [service; wide]}
+events -> enrich: {class: dep}
+enrich -> price: {class: dep}
+rules -> price: {class: dep}
+price -> quote: {class: dep}

@@ -1,6 +1,6 @@
 ---
 name: d2-diagram
-description: Design, render and visually review polished technical diagrams with D2, delivering an SVG plus its .d2 source. Use for architecture/system, deployment/Kubernetes, network/VPC, C4 context and container, data pipeline/ETL/RAG indexing, LLM/agent apps, sequence/protocol, request walkthrough, flowchart/CI-CD/runbook, swimlane, state machine, ER/SQL schema, UML class, dependency/lineage graph, org chart/tree/mind map, layered stack, threat model/DFD, before/after, timeline/postmortem, roadmap, git branching and step-by-step diagrams whenever the user wants a diagram (even if D2 is not named), and to restyle, fix or re-export an existing .d2. Includes a neutral design system and a Snowflake brand theme. Not for data charts (bar/line/scatter) or UI mockups.
+description: Design, render and visually review polished technical diagrams with D2, delivering an SVG plus its .d2 source. Use for architecture/system, deployment/Kubernetes, network/VPC, C4 context and container, data pipeline/ETL/RAG indexing, LLM/agent apps, sequence/protocol, request walkthrough, flowchart/CI-CD/runbook, swimlane, state machine, ER/SQL schema, UML class, dependency/lineage graph, org chart/tree/mind map, layered stack, threat model/DFD, before/after, timeline/postmortem, roadmap, git branching, step-by-step and code-snippet diagrams (annotated lines, what a function calls, before/after code, the code at each step) whenever the user wants a diagram (even if D2 is not named), and to restyle, fix or re-export an existing .d2. Includes a neutral design system and a Snowflake brand theme. Not for data charts (bar/line/scatter) or UI mockups.
 argument-hint: "[what to draw | path/to/file.d2] [width=800] [brand=snowflake]"
 license: MIT
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(d2 *), Bash(sh ${CLAUDE_SKILL_DIR}/scripts/*), Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/*), Bash(cp *), Bash(mkdir *), Bash(ls *), Bash(chmod 644 *), Bash(nohup d2 *)
@@ -15,6 +15,11 @@ them, and you ship only what you have looked at:
 Setup: `d2` missing, or d2check exit 3: run `sh ${CLAUDE_SKILL_DIR}/scripts/doctor.sh`.
 It prints the install commands (`--install` needs no sudo: ask the user first).
 
+Before the first render read only `workflows/route.md`, the template and
+playbook its row names (the playbook's top and your type's section), and
+`workflows/brief.md` sections 2, 3, 5, 7; the rest when a row of "Read on
+demand" applies.
+
 ## 1. Route and brief
 
 `<target>` is the deliverable path without extension, named after the subject
@@ -22,7 +27,7 @@ in kebab-case; no location given: `docs/<name>` if docs/ exists, else
 `./<name>` (say which under Assumed). `<name>` is its last part.
 
 1. Match the request to a row of `workflows/route.md`: it names the template
-   and the playbook, and when to ask or split. Read that playbook.
+   and the playbook, and when to ask or split.
 2. Make the work dir and note the path it prints (D2W below):
    `mkdir -p "${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>" && ls -d "${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>"`
 3. Write `D2W/<name>.brief` as `workflows/brief.md` shows: the request
@@ -50,13 +55,12 @@ Snowflake brand: copy `snowflake-brand.d2` instead of the theme, replace the
 - Line 1 says in English what it shows. Inventory keys verbatim. Nodes
   first, in their groups; edges last, main path first.
 - Every node, container and edge gets a role class, base first, modifier
-  last: `[service; focal]` (`reference/design-system.md`). Tables and UML
-  classes take none: the template's globs style them.
-- A colour, dash or line weight that means something gets a key
-  (design-system.md section 8), as the templates show.
+  last: `[service; focal]`. Tables and UML classes take none: the
+  template's globs style them.
+- A colour, dash or line weight that means something gets a key, as the
+  templates show.
 - `direction` only at the root (a container's is ignored, a grid cell's
-  works). Render settings only in `vars.d2-config`.
-- Icons only through `workflows/icons.md`. Syntax: `reference/syntax.md`.
+  works).
 
 ## 4. Render and inspect
 
@@ -65,13 +69,13 @@ sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh --brief D2W/<name>.brief <target>.d2
 ```
 
 It formats, runs the ASCII tripwire, renders `<target>.svg` (layers/steps:
-the folder `<target>/`), post-processes it (svgpost.py moves labels off
-bends, restyles keys and tables), lints, checks it against the brief and
-rasterizes that same SVG. Read the PNGs on its `READ:` line, in order:
-`col.png` (the reader's view at the brief's width), `ann.png` (a numbered box
-per finding `[n]`), `2x.png` (detail). After `fmt: reformatted`, Read the .d2
-again.
-Experiments: `D2W/<name>-exp.d2` beside a copy of the theme (own PNGs).
+the folder `<target>/`), post-processes it (svgpost.py), lints, checks it
+against the brief and rasterizes that same SVG. Read the PNGs on its `READ:`
+line, in order: `col.png` (the reader's view at the brief's width), `ann.png`
+(a numbered box per finding `[n]`), `2x.png` (detail). After `fmt:
+reformatted`, Read the .d2 again.
+Experiments: copy `<target>.d2` to `D2W/<name>-exp.d2` and the theme into
+D2W; d2check it with the same `--brief` (its PNGs: the sibling `<name>-exp/`).
 
 | Exit | Meaning | Next |
 |---|---|---|
@@ -106,9 +110,11 @@ Checks:    compile ok; <d2check's checks: line>
 Assumed:   <S-inferred items and choices made instead of asking> | none
 Left out:  <the brief's out: items> | none
 Open:      <CODE - recipe tried - why it failed> | none
-Re-render: sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh [--column <width>] <target>.d2
+Re-render: D2_WORK=<D2W's parent> sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh [--column <width>] <target>.d2
 ```
 
+- Several diagrams (a split): one block each, in drawing order, the first
+  line `Diagram N of M: ...`; a line equal for all may say `as above`.
 - `approximate (rsvg)`: you checked topology and colour, not label fit.
   `NOT visually reviewed`: make no quality claims.
 
@@ -130,8 +136,8 @@ d2check, run `python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig
 1. Render only through d2check; ship exactly the SVG you inspected.
 2. A clean render is the compile gate: `d2 validate` passing proves nothing.
 3. Never pass `-l` or `-t`; layout, pad and theme live in `vars.d2-config`.
-4. On the theme, every node, container and edge has a role class (tables and
-   UML classes excepted) and no raw colour. An edited file keeps its own look.
+4. On the theme: role classes (step 3), never a raw colour. An edited file
+   keeps its own look.
 5. Report `reviewed:` as d2check printed it; never claim more.
 6. Labels are plain English ASCII; product and tech names stay as written.
    The whole .d2, comments included, is ASCII. No emoji.
@@ -139,19 +145,18 @@ d2check, run `python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig
 8. Only the requested formats leave D2W. The theme files are imported, never
    rendered on their own.
 
-## Where things live
+## Read on demand
 
-| Need | File |
+| When | File |
 |---|---|
-| Request -> template, playbook; ask or split | `workflows/route.md` |
-| Brief, inventory, focus | `workflows/brief.md` |
-| Rubric, one recipe per code, compile errors | `workflows/review-and-fix.md` |
-| Icons | `workflows/icons.md`, `reference/icons.md` |
-| Per-type rules (route.md names the one) | `playbooks/`: `architecture.md`, `infrastructure.md`, `pipeline.md`, `hierarchy.md`, `sequence.md`, `erd.md`, `flowchart.md`, `state.md`, `change.md` |
-| Starting diagrams, themes | `templates/*.d2` (`neutral-theme.d2`, `snowflake-brand.d2`) |
-| Roles, colours, type, keys | `reference/design-system.md`; Snowflake: `reference/brand-snowflake.md` |
-| Syntax and traps; layout, size budget | `reference/syntax.md`; `reference/layout.md` |
+| A finding code | its recipe only (step 5); the compile-error table: `workflows/review-and-fix.md` |
+| A class, colour, size or key the template lacks | `reference/design-system.md` sections 2, 7, 8; Snowflake: `reference/brand-snowflake.md` |
+| Syntax the template does not show; a trap | `reference/syntax.md` |
+| A recipe names a layout lever; a type's size budget | `reference/layout.md` |
+| Icons asked for | `workflows/icons.md` (names: `reference/icons.md`) |
 | Other formats, boards, watch mode | `reference/export.md` |
-| The loop, setup, brief check | `scripts/d2check.sh`, `doctor.sh`, `semcheck.py` (`--explain`, `--dump`, `--compare`) |
+| Another type's rules | `playbooks/*.md` (route.md names the one) |
+| Starting diagrams, themes | `templates/*.d2` (`neutral-theme.d2`, `snowflake-brand.d2`) |
+| The loop, setup, brief check | `scripts/d2check.sh`, `doctor.sh`, `semcheck.py` (`--explain`, `--dump`, `--compare`, `--sync-labels` after a label reworded in the .d2) |
 | Called by d2check; audits; icons | `scripts/svgpost.py`, `d2lint.py`, `d2raster.py`, `pngstats.py`, `raster.cjs`, `font-flags.sh`; `contrast.py`; `icon.sh` |
 | Offline icons, fonts; install | `assets/icons/`, `assets/fonts/README.md`; `README.md` |

@@ -1,0 +1,11 @@
+# post: svgpost
+# expect-clean: E-
+# A code block as an edge label: d2 places its lines in em (y="1.000000em"); the lint reads them without
+# a crash. (The playbook says never do this: the label sits on the line with no background.)
+...@neutral-theme
+direction: right
+app: Mobile app {class: service}
+api: Orders API {class: service}
+app -> api: |`json
+  {"sku": "A-42", "qty": 2}
+`| {class: dep}

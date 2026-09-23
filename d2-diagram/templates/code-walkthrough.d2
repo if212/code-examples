@@ -1,0 +1,55 @@
+# Code-walkthrough template. Write D2W/<name>.brief first (workflows/brief.md); reuse its keys.
+...@neutral-theme
+direction: down
+
+# ONE request and the code that runs at each step (playbooks/code.md section 6):
+# the caller, one card per step in call order, the store.
+# 2 or 3 cards, 15 lines in all. One width for every card: the widest code
+# (8.4 a character + 24), at least 500, so the spine stays straight.
+classes: {
+  card: {width: 504}
+  end: {width: 160}
+  store: {width: 160; height: 106}
+}
+
+browser: Browser {class: [actor; compact; end]}
+
+auth: "middleware/auth.ts" {
+  class: [code-file; card]
+  src: |`ts
+    export async function auth(req, res, next) {
+      const token = req.get("Authorization")?.slice(7);
+      req.user = await verifyJwt(token); // 401 if bad
+      next();
+    }
+  `| {class: code}
+}
+
+handler: "routes/orders.ts" {
+  class: [code-file; card]
+  src: |`ts
+    router.get("/orders/:id", auth, async (req, res) => {
+      const order = await repo.find(req.params.id, req.user);
+      if (!order) return res.sendStatus(404);
+      res.json(order);
+    });
+  `| {class: code}
+}
+
+query: "db/find-order.sql" {
+  class: [code-file; card]
+  src: |`sql
+    SELECT id, status, total_cents
+    FROM orders
+    WHERE id = $1 AND customer_id = $2;
+  `| {class: code}
+}
+
+db: "Orders DB\nPostgres" {class: [datastore; tech; store]}
+
+# The code names each hand-off (next(), repo.find): only the hops into the
+# first card and out of the last one carry a label.
+browser -> auth: "GET /orders/42" {class: dep}
+auth -> handler: {class: dep}
+handler -> query: {class: dep}
+query -> db: "reads" {class: dep}

@@ -22,9 +22,10 @@ usage: python3 dev/tests/structure/check.py [--skill DIR] [-v]     (wrapper: sh 
       or by the same file (class lists `[a; b]` included)
   (j) scripts parse (sh -n, python compile without writing bytecode) and carry a shebang
   (k) the commands SKILL.md and workflows/ tell the agent to run are covered by allowed-tools
-  (l) templates are `d2 fmt` clean; workflows/route.md routes to every template (a cell in a
-      `Template` column of its tables, or the file name), and every Template / Playbook cell
-      names a file that exists
+  (l) templates are `d2 fmt` clean, and a root grid of R rows x C columns holds R x C cells
+      (T5: an empty cell stretches its row; a key goes `near: bottom-center`); workflows/route.md
+      routes to every template (a cell in a `Template` column of its tables, or the file name),
+      and every Template / Playbook cell names a file that exists
   (m) the post step is wired: scripts/svgpost.py exists, SKILL.md names it, d2check.sh calls it,
       and `python3 ${CLAUDE_SKILL_DIR}/scripts/svgpost.py` matches an allowed-tools pattern
   (n) no escape hatch: workflows/, reference/ and playbooks/ never call a finding "the honest
@@ -34,6 +35,9 @@ usage: python3 dev/tests/structure/check.py [--skill DIR] [-v]     (wrapper: sh 
   (p) no bytecode can be written into the skill (B57): every .py file sets
       `sys.dont_write_bytecode = True` before it imports a script of the skill, and every .sh
       file that runs python sets PYTHONDONTWRITEBYTECODE=1
+  (q) every install command that unzips into a folder (README.md, dev/package.sh) creates that
+      folder first (`mkdir -p DIR && unzip ... -d DIR`): unzip -d makes only the last folder of
+      its path, so on a machine without ~/.claude the bare command fails
 exit: 0 all checks pass (warnings allowed) | 1 a check failed | 2 usage error
 """
 import argparse
@@ -492,7 +496,7 @@ BUDGETS = (
     ('reference/syntax.md', 520), ('reference/layout.md', 380), ('reference/icons.md', 280),
     ('reference/export.md', 260), ('reference/brand-snowflake.md', 200),
     ('workflows/*.md', 250), ('reference/*.md', 250),
-    ('templates/neutral-theme.d2', 150), ('templates/snowflake-brand.d2', 150), ('templates/*.d2', 80),
+    ('templates/neutral-theme.d2', 160), ('templates/snowflake-brand.d2', 160), ('templates/*.d2', 80),
 )
 
 
@@ -792,6 +796,23 @@ def check_p(skill, rep):
               'PYTHONDONTWRITEBYTECODE', errs)
 
 
+def check_q(skill, rep):
+    errs = []
+    for rel in ('README.md', 'dev/package.sh'):
+        path = os.path.join(skill, rel)
+        if not os.path.isfile(path):
+            continue                      # the unpacked zip has no dev/
+        for i, line in enumerate(read(path).splitlines(), 1):
+            for m in re.finditer(r'\bunzip\b[^\n]*?-d\s+(\S+)', line):
+                target = m.group(1).rstrip("'\"")
+                if '~/' not in target and '$HOME' not in target:
+                    continue              # a scratch folder (mktemp) exists already
+                folder = target.rstrip('/')
+                if not re.search(r'mkdir -p\s+%s/?\s*&&[^\n]*$' % re.escape(folder), line[:m.start()]):
+                    errs.append('%s:%d: unzip -d %s without `mkdir -p %s &&` first' % (rel, i, target, folder))
+    rep.check('q', 'install commands create the folder they unzip into', errs)
+
+
 def check_l(skill, rep):
     errs, warns = [], []
     tpls = sorted(p for p in glob.glob(os.path.join(skill, 'templates', '*.d2')))
@@ -804,6 +825,14 @@ def check_l(skill, rep):
             r = subprocess.run(['d2', 'fmt', '--check', p], capture_output=True, text=True, env=env)
             if r.returncode:
                 errs.append('%s is not d2 fmt clean' % os.path.relpath(p, skill))
+    for p in tpls:      # T5: a root grid of R rows x C columns holds R x C cells (an empty one stretches its row)
+        if os.path.basename(p) in THEMES:
+            continue
+        rows, cols, cells = root_grid_cells(read(p))
+        if rows and cols and len(cells) != rows * cols:
+            errs.append('%s: its root grid is %d x %d but holds %d cell(s) (%s): fill every cell (a hidden spacer '
+                        'for a hole) and put a key `near: bottom-center`' % (os.path.relpath(p, skill), rows, cols,
+                                                                            len(cells), ', '.join(cells)))
     route = os.path.join(skill, 'workflows', 'route.md')
     if os.path.isfile(route):
         text = read(route)
@@ -825,7 +854,42 @@ def check_l(skill, rep):
             errs.append('workflows/route.md routes to %s, which does not exist (line %s)' % (where, ', '.join(lines)))
     else:
         errs.append('workflows/route.md is missing (the router SKILL.md step 1 opens)')
-    rep.check('l', 'templates fmt-clean and routed', errs, warns, '%d templates' % len(tpls))
+    rep.check('l', 'templates fmt-clean, root grids full, routed', errs, warns, '%d templates' % len(tpls))
+
+
+D2_ROOT_KEYWORDS = {'grid-rows', 'grid-columns', 'grid-gap', 'horizontal-gap', 'vertical-gap', 'direction',
+                    'classes', 'vars', 'label', 'style', 'width', 'height', 'near', 'shape', 'icon', 'class',
+                    'layers', 'scenarios', 'steps', 'link', 'tooltip'}
+
+
+def root_grid_cells(text):
+    """(rows, cols, cells) of a fmt-clean .d2's root grid: `grid-rows` / `grid-columns` at column 0
+    (0 when absent) and the root objects that fill its cells - top-level keys that are no keyword, no
+    edge and no dotted path, without a `near` (inline, or one indent deep in their block)"""
+    rows = cols = 0
+    cells = []
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        m = re.match(r'^grid-(rows|columns):\s*(\d+)', line)
+        if m:
+            if m.group(1) == 'rows':
+                rows = int(m.group(2))
+            else:
+                cols = int(m.group(2))
+            continue
+        m = re.match(r'^("[^"]+"|[A-Za-z_][\w-]*)\s*:', line)
+        if not m or m.group(1) in D2_ROOT_KEYWORDS:
+            continue
+        near = re.search(r'(^|[{;\s])near:\s', line[m.end():]) is not None
+        if line.rstrip().endswith('{'):       # a block: look one indent deep, up to the closing brace
+            for inner in lines[i + 1:]:
+                if re.match(r'^\S', inner):
+                    break
+                if re.match(r'^  near:\s', inner):
+                    near = True
+        if not near:
+            cells.append(m.group(1))
+    return rows, cols, cells
 
 
 def route_table(text):
@@ -880,7 +944,8 @@ def main():
     check_n(skill, rep)
     check_o(skill, rep)
     check_p(skill, rep)
-    n = 16
+    check_q(skill, rep)
+    n = 17
     print('structure: %d/%d checks pass%s%s' % (
         n - len(rep.failed), n, (', failed: ' + ' '.join(rep.failed)) if rep.failed else '',
         (', warnings: ' + ' '.join(rep.warned)) if rep.warned else ''))

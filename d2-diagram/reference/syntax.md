@@ -14,6 +14,7 @@ needs the files in that dir). `d2 validate` only parses (section 17).
 Contents: 1 keys, labels, quoting - 2 shapes - 3 connections - 4 containers - 5 style
 - 6 positions, sizes - 7 classes - 8 vars - 9 globs - 10 imports, d2-config - 11 legend
 - 12 sql_table, class - 13 sequence - 14 grid - 15 boards - 16 keywords, case - 17 validate
+- 18 code blocks
 
 ## 1. Keys, labels, quoting, comments
 
@@ -73,7 +74,7 @@ user -> topic -> db
 No `note`, `database`, `actor`, `server` or `triangle` shape (render error):
 use `page` or `callout`, or a sequence note (13). Markdown `|md ...|` labels
 clip words in Chromium and vanish in rsvg, so titles and captions are
-`shape: text` with a plain label. Code blocks `|python ...|` render fine.
+`shape: text` with a plain label. Code blocks render fine (section 18).
 
 ## 3. Connections and arrowheads
 
@@ -494,3 +495,24 @@ keyword, and then dropped: `a.Shape: cylinder`, `a.Label: X` and `{Near:
 
 `d2 fmt` (d2check runs it) rewrites `a -> b {class: c}` as `a -> b: {class: c}`:
 re-read the file before scripted edits. `d2 fmt --check` exits 1 if unformatted.
+
+## 18. Code blocks
+
+When and how to draw them: playbooks/code.md. What d2 does with them:
+
+- Size, never wrapped: 0.6 em a character, 1.3 em a line, about 1 em of
+  padding (8.4 px, 18.2 px, 14 px at `font-size: 14`).
+- Delimiters: `|ts ...|` ends at the first `|` in the code, `||ts ...||` at
+  the first `||` (`unexpected text after ts block string`); ``|`ts ... `|``
+  survives both. `d2 fmt` re-indents a block to 2 spaces and turns only the
+  first tab of a line into them: the tripwire rejects the rest.
+- Style keys: `stroke`, `stroke-width`, `font-size`, `opacity` apply; `fill`,
+  `border-radius`, `font-color`, `bold`, `shadow`, `stroke-dash` are ignored
+  (d2check's code step paints the block); `3d` and `double-border` fail.
+- `${name}` inside the code is replaced when a var of that name exists (the
+  theme's `${paper}` too); an unknown one stays as written.
+- `md` renders prose, `http` drops the body, `diff` has no colours.
+- An edge to a block inside a card (`card.src`) crosses the card: ELK cannot
+  see into it; attach edges to the card. As an edge label or a sequence note
+  a block sits on the line or overflows its note.
+- d2 draws each block twice, a light and a hidden dark copy.

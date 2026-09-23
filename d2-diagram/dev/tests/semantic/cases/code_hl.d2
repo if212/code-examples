@@ -1,0 +1,12 @@
+# a <!> band is emphasis: the brief's focus must name the card or its code
+...@mini-theme
+q: "queries/list_orders.sql" {
+  class: code-file
+  src: |`sql
+    SELECT id, total, created_at
+    FROM orders
+    WHERE id > $1 -- <!>
+    ORDER BY id
+    LIMIT 50;
+  `| {class: code}
+}

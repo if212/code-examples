@@ -9,6 +9,13 @@ usage: python3 svgpost.py [--brand neutral|snowflake] [--column N] [--quiet] OUT
   --column  the doc column the key must fit beside the diagram (default 800)
   --quiet   print nothing on success
 Steps, in order (a second run changes nothing):
+  0. code: d2's code blocks in the design system (playbooks/code.md), rewritten in the file first so the
+     later steps and the lint see them as they ship: tokens in four colours by role (text, keyword,
+     literal, comment; never bold), a white body with the theme's radius; in a code-file card the body
+     fills the card under its title and the title starts where the code does. A trailing marker comment
+     becomes a numbered badge (<1>..<9>, one column) or a line band (<+> added, <-> removed, <!> the
+     focus) and leaves the code; a `callout` node "N. text" becomes badge N and left-aligned text; the
+     hidden dark copies go when the SVG has no dark theme
   1. text-rendering: geometricPrecision in the <style> (Chromium lays labels out at the font's advances)
   2. relabel: an edge label on a bend (within 14px of the corner: d2's 10px arc plus 4px of bare line),
      across a container border, on a lifeline its message does not touch, or (decision exits) far from its
@@ -40,6 +47,7 @@ examples:
 import argparse
 import base64
 import glob
+import html
 import math
 import os
 import re
@@ -56,9 +64,29 @@ from d2lint import Box  # noqa: E402
 SKILL = os.path.dirname(HERE)
 PALETTE = {  # FIXPLAN I4: the names svgpost reads from the imported theme's vars (fallback values)
     "neutral": {"paper": "#FFFFFF", "ink-200": "#E2E8F0", "ink-300": "#CBD5E1", "ink-400": "#7A889C",
-                "ink-600": "#475569", "ink-900": "#1E293B"},
-    "snowflake": {"sf-rule": "#BCE3F7", "sf-mid-blue": "#11567F", "sf-gray": "#5B5B5B"},
+                "ink-600": "#475569", "ink-700": "#334155", "ink-900": "#1E293B", "code-keyword": "#155E75",
+                "warn-800": "#92400E", "success-100": "#DCFCE7", "success-600": "#15973F",
+                "danger-100": "#FEE2E2", "danger-600": "#DC2626", "primary-100": "#DBEAFE",
+                "primary-600": "#2563EB"},
+    "snowflake": {"sf-rule": "#BCE3F7", "sf-mid-blue": "#11567F", "sf-gray": "#5B5B5B", "sf-midnight": "#000000",
+                  "sf-purple": "#7D44CF", "sf-pink": "#D45B90", "sf-code-add": "#DFF4FC", "sf-code-del": "#FAEBF2",
+                  "sf-code-hl": "#FFEEDB"},
 }
+# the code step's colours: each role names a theme var (palette() reads it from the theme file); a band is
+# (tint, 3px bar). contrast.py --check audits these pairs: text roles 4.5:1 on the body and every tint,
+# the digit on the badge 4.5:1, each bar 3:1 on the body
+CODE_ROLES = {
+    "neutral": {"text": "ink-900", "keyword": "code-keyword", "literal": "warn-800", "comment": "ink-600",
+                "body": "paper", "badge": "ink-700", "digit": "paper",
+                "add": ("success-100", "success-600"), "del": ("danger-100", "danger-600"),
+                "hl": ("primary-100", "primary-600")},
+    "snowflake": {"text": "sf-midnight", "keyword": "sf-mid-blue", "literal": "sf-purple", "comment": "sf-gray",
+                  "body": "paper", "badge": "sf-mid-blue", "digit": "paper",
+                  "add": ("sf-code-add", "sf-mid-blue"), "del": ("sf-code-del", "sf-pink"),
+                  "hl": ("sf-code-hl", "sf-mid-blue")},
+}
+CODE_TEXT_ROLES = ("text", "keyword", "literal", "comment")
+CODE_BANDS = ("add", "del", "hl")
 THEME_FILE = {"neutral": "neutral-theme.d2", "snowflake": "snowflake-brand.d2"}
 DIAMOND = "path:MCLCLCLCLCZ"  # d2lint's signature of shape: diamond
 # d2 rounds every corner of an ELK route with a 10px arc; a label needs bare line between its mask and the
@@ -211,6 +239,332 @@ def palette(brand):
         pal.update({"rule": pal["ink-200"], "frame": pal["paper"], "frame-stroke": pal["ink-300"], "radius": 8,
                     "title": pal["ink-600"], "text": pal["ink-600"], "span": pal["ink-400"]})
     return pal
+
+
+# ----------------------------------------------------------------------------------------------------
+# step 0, code: d2's code blocks in the design system. d2 0.7.1 draws each block twice (a light-code and a
+# hidden dark-code group), paints the light one with chroma's fixed "github" colours (bold #000000
+# keywords, #990000 functions, #999988 comments ...), a #ffffff fill that style.fill cannot change and
+# square corners, and places each line in em. This step rewrites the file's text before anything else
+# reads it, so the later steps, the lint and the semantic check see the code as it ships.
+# ----------------------------------------------------------------------------------------------------
+
+# chroma's "github" style: fill -> role; a bold #000000 token is a keyword (a word) or an operator
+CODE_GITHUB = {
+    "#990000": "text",       # NameFunction, NameException, NameLabel, HTTP method
+    "#445588": "text",       # KeywordType, NameClass
+    "#0086b3": "keyword",    # NameBuiltin (python int/str, shell echo/export)
+    "#008080": "keyword",    # NameAttribute, NameVariable*, NameConstant (shell $A, HCL attributes)
+    "#000080": "keyword",    # NameTag: YAML/JSON keys, HTML tags
+    "#3c5d5d": "keyword",    # decorator
+    "#dd1144": "literal",    # string
+    "#009926": "literal",    # regex
+    "#009999": "literal",    # number
+    "#990073": "literal",    # symbol
+    "#800080": "literal",    # entity
+    "#999988": "comment",
+    "#999999": "comment",    # preprocessor, heading
+    "#888888": "comment",    # generic output
+    "#aaaaaa": "comment",    # diff hunk header
+    "#555555": "text",       # namespace, prompt
+    "#aa0000": "text",       # traceback
+    "#a61717": "text",       # chroma Error token (a stray newline in some lexers)
+    "#bbbbbb": "text",       # whitespace
+}
+CODE_TAG = "#000080"  # a YAML or JSON key stays a keyword beside a dot
+CODE_CONSTANTS = {"true", "false", "null", "nil", "none", "undefined", "nan", "iota"}
+CODE_NUMBER = re.compile(r"^[+-]?(?:0[xX][0-9a-fA-F_]+|\d[\d_]*(?:\.\d*)?(?:[eE][+-]?\d+)?)[a-zA-Z]*$")
+# a marker: a trailing comment that holds only `<N>`, `<+>`, `<->` or `<!>`, or the tail of a real comment
+CODE_MARK = re.compile(r"^\s*(?://|#|--|;|%|/\*)\s*<(\d{1,2}|[-+!])>\s*(?:\*/)?\s*$")
+CODE_TAIL = re.compile(r"\s+<(\d{1,2}|[-+!])>\s*$")
+CODE_KIND = {"+": "add", "-": "del", "!": "hl"}
+CODE_CARD_GAP = 5  # the code-file class's grid-gap: the code's nominal inset from the card edge
+CODE_DONE = ' data-codepost="1"'
+_TSPAN = re.compile(r'<tspan fill="(#[0-9a-fA-F]{6})"(?: class="([^"]*)")?>(.*?)</tspan>|([^<]+)', re.S)
+
+
+def code_colors(brand, pal=None):
+    """CODE_ROLES as colours: {role: '#RRGGBB' | (tint, bar)} plus 'radius'. pal: the theme's vars (default:
+    the skill's theme file, palette()); a name it lacks takes PALETTE's value"""
+    pal = palette(brand) if pal is None else pal
+    base = dict(PALETTE["neutral"], **(PALETTE["snowflake"] if brand == "snowflake" else {}))
+
+    def one(name):
+        return (pal.get(name) or base[name]).upper()
+    out = {r: tuple(one(x) for x in v) if isinstance(v, tuple) else one(v) for r, v in CODE_ROLES[brand].items()}
+    out["radius"] = 6 if brand == "snowflake" else 8
+    return out
+
+
+def _cn(v):
+    return ("%d" % round(v)) if abs(v - round(v)) < 1e-6 else ("%.2f" % v)
+
+
+def _group_end(s, start):
+    """index just past the </g> that closes the <g ...> opening at start"""
+    depth = 0
+    for m in re.compile(r"<(/?)g[\s>]").finditer(s, start):
+        if m.group(1):
+            depth -= 1
+            if depth == 0:
+                return s.index(">", m.start()) + 1
+        else:
+            depth += 1
+    raise ValueError("unbalanced <g> at %d" % start)
+
+
+def _b64id(cls):
+    """the d2 object id of a group's class attribute ('Y2FyZA== code-file' -> 'card'), else None"""
+    first = (cls or "").split(" ")[0]
+    if not first or first in ("shape", "light-code", "dark-code", "code-badge"):
+        return None
+    try:
+        return html.unescape(base64.b64decode(first + "=" * (-len(first) % 4), validate=True).decode("utf-8"))
+    except Exception:
+        return None
+
+
+def code_role(fill, bold, text, before, after):
+    """the colour role of one token: the lexer's colour, then two text rules - a number or a constant is a
+    literal whatever the lexer says; a keyword-coloured name beside a dot (req.get, c.email) is text"""
+    f = fill.lower()
+    if f == "#000000":
+        role = "text" if not bold else "literal" if text.lower() in CODE_CONSTANTS else \
+            "keyword" if re.match(r"^[A-Za-z_]\w*$", text) else "text"
+    else:
+        role = CODE_GITHUB.get(f, "text")
+    if role == "comment":
+        return role
+    if CODE_NUMBER.match(text) or text.lower() in CODE_CONSTANTS:
+        return "literal"
+    if role == "keyword" and f != CODE_TAG and (before.endswith(".") or after.startswith(".")):
+        return "text"
+    return role
+
+
+def code_badge(cx, cy, r, num, col, size, face):
+    return ('<g class="code-badge"><circle cx="%s" cy="%s" r="%s" fill="%s" />'
+            '<text x="%s" y="%s" fill="%s" %s style="text-anchor:middle;font-size:%dpx">%s</text></g>') % (
+        _cn(cx), _cn(cy), _cn(r), col["badge"], _cn(cx), _cn(cy + 0.36 * size), col["digit"], face, size, num)
+
+
+def code_block(src, col, card, face):
+    """one <g class="light-code"> group rewritten. card: None, or (radius, height from the code to the card
+    bottom, the code's inset from the card's left edge, card width)"""
+    fs_m = re.search(r'class="light-code"(?: style="font-size:(\d+)")?', src)
+    fs = float(fs_m.group(1) or 16)
+    cw, lh = 0.6 * fs, 1.3 * fs  # Geist Mono's advance (600/1000 em); d2's code line height
+    rect_m = re.search(r'<rect width="([\d.]+)" height="([\d.]+)" stroke="([^"]*)" class="([^"]*)" '
+                       r'style="fill:[^;]*;stroke-width:(\d+);" />', src)
+    pad_m = re.search(r'<g transform="translate\(([\d.]+) ([\d.]+)\)">', src)
+    pad = float(pad_m.group(1)) if pad_m else 0.0
+    src = src.replace('class="light-code"', 'class="light-code"' + CODE_DONE, 1)
+    # in a card: d2 puts the code at the same y whatever the grid gap g (the title keeps its 28px); the body
+    # starts 1px above the code and the text moves down by (g - 1) / 2: (g + fs) / 2 above and below it
+    dy = (card[2] - 1) / 2 if card and card[2] >= 1 else 0.0
+    if dy and pad_m:
+        src = src.replace(pad_m.group(0), '<g transform="translate(%s %s)">' % (
+            pad_m.group(1), _cn(float(pad_m.group(2)) + dy)), 1)
+
+    # tokens: one colour per role, never bold
+    def recolor(tm):
+        open_tag, body = tm.group(1), tm.group(2)
+        parts = list(_TSPAN.finditer(body))
+        plain = [html.unescape(p.group(3) if p.group(4) is None else p.group(4)).replace("\xa0", " ") for p in parts]
+        out = []
+        for i, p in enumerate(parts):
+            if p.group(4) is not None:
+                out.append(p.group(0))
+                continue
+            role = code_role(p.group(1), "bold" in (p.group(2) or ""), plain[i].strip(), plain[i - 1] if i else "",
+                             plain[i + 1] if i + 1 < len(parts) else "")
+            out.append('<tspan fill="%s">%s</tspan>' % (col[role], p.group(3)))
+        if 'fill="' not in open_tag:
+            open_tag = open_tag.replace("<text ", '<text fill="%s" ' % col["text"], 1)
+        return open_tag + "".join(out) + "</text>"
+    src = re.sub(r'(<text class="text-mono"[^>]*>)(.*?)</text>', recolor, src, flags=re.S)
+
+    # markers: found in comment tokens only, stripped, remembered as (line, column, kind, number)
+    marks = []
+    texts = list(re.finditer(r"(<text [^>]*>)(.*?)</text>", src, re.S))
+    rebuilt_src, last = [], 0
+    for li, tm in enumerate(texts):
+        at, rebuilt = 0, []
+        for p in _TSPAN.finditer(tm.group(2)):
+            plain = html.unescape(p.group(3) if p.group(4) is None else p.group(4)).replace("\xa0", " ")
+            comment = p.group(4) is None and p.group(1).upper() == col["comment"]
+            mm = CODE_MARK.match(plain) if comment else None
+            if mm:
+                num = mm.group(1)
+                marks.append((li, at, "badge" if num.isdigit() else CODE_KIND[num], num))
+                rebuilt.append("\n" if plain.endswith("\n") else "")
+                continue
+            tail = CODE_TAIL.search(plain) if comment else None
+            if tail:  # the end of a real comment: the comment stays, the marker goes
+                num, keep = tail.group(1), plain[:tail.start()]
+                marks.append((li, at + len(keep) + 1, "badge" if num.isdigit() else CODE_KIND[num], num))
+                esc = html.escape(keep, quote=False).replace(" ", "&#160;") + ("\n" if plain.endswith("\n") else "")
+                rebuilt.append('<tspan fill="%s">%s</tspan>' % (p.group(1), esc))
+                at += len(keep)
+                continue
+            rebuilt.append(p.group(0))
+            at += len(plain.rstrip("\n"))
+        rebuilt_src += [src[last:tm.start(2)], "".join(rebuilt)]
+        last = tm.end(2)
+    src = "".join(rebuilt_src) + src[last:]
+    src = re.sub(r"(?:&#160;)+(\n?)</text>", r"\1</text>", src)  # the space left before a stripped marker
+
+    # the body: white, rounded; in a card, the card's body under its title
+    w_rect = None
+    if rect_m:
+        w, h, stroke, cls, sw = (float(rect_m.group(1)), float(rect_m.group(2)), rect_m.group(3), rect_m.group(4),
+                                 rect_m.group(5))
+        if card:
+            r, body_h, g, card_w = card
+            x0, y0 = -max(0.0, g), -1.0
+            w, h = card_w, max(h, body_h) + 1
+            d = "M%s %s H%s V%s A%s %s 0 0 1 %s %s H%s A%s %s 0 0 1 %s %s Z" % (
+                _cn(x0), _cn(y0), _cn(x0 + w), _cn(y0 + h - r), _cn(r), _cn(r), _cn(x0 + w - r), _cn(y0 + h),
+                _cn(x0 + r), _cn(r), _cn(r), _cn(x0), _cn(y0 + h - r))
+            body = '<path d="%s" stroke="%s" class="%s" style="fill:%s;stroke-width:%s;" />' % (d, stroke, cls, col["body"], sw)
+        else:
+            body = '<rect width="%s" height="%s" rx="%d" ry="%d" stroke="%s" class="%s" style="fill:%s;stroke-width:%s;" />' % (
+                rect_m.group(1), rect_m.group(2), col["radius"], col["radius"], stroke, cls, col["body"], sw)
+        src = src.replace(rect_m.group(0), body, 1)
+        w_rect = w
+
+    # bands behind marked lines (a tint and a 3px bar), badges in one column after the longest marked line
+    bands = []
+    rows = {li: kind for li, _at, kind, _n in marks if kind != "badge"}
+    if rows and w_rect:
+        inset = 1 if rect_m.group(5) != "0" else 0
+        bx = -max(0.0, card[2]) + inset if card else inset
+        for li, kind in sorted(rows.items()):
+            tint, bar = col[kind]
+            top = dy + pad + (1 + 1.3 * li) * fs - 0.95 * fs  # the line box, centred on the glyphs
+            bands.append('<rect x="%s" y="%s" width="%s" height="%s" fill="%s" class="code-band code-%s" />' % (
+                _cn(bx), _cn(top), _cn(w_rect - 2 * inset), _cn(lh), tint, kind))
+            bands.append('<rect x="%s" y="%s" width="3" height="%s" fill="%s" class="code-band code-%s" />' % (
+                _cn(bx), _cn(top), _cn(lh), bar, kind))
+    badges = []
+    column = max([at for _li, at, kind, _n in marks if kind == "badge"] or [0])
+    for li, _at, kind, num in marks:
+        if kind == "badge":
+            r = 0.56 * fs
+            badges.append(code_badge(pad + column * cw + r + 0.25 * cw, dy + pad + (1 + 1.3 * li) * fs - 0.36 * fs,
+                                     r, num, col, max(14, int(fs)), face))
+    if bands:
+        anchor = re.search(r'<g transform="translate\([\d.]+ [-\d.]+\)">', src)
+        src = src[:anchor.start()] + "".join(bands) + src[anchor.start():]
+    if badges:
+        close = src.rfind("</g>")
+        src = src[:close] + "".join(badges) + src[close:]
+    return src
+
+
+def code_callout(g, col, face):
+    """a `callout` node 'N. text': badge N at its left edge, the text left-aligned beside it"""
+    rm = re.search(r'<rect x="([-\d.]+)" y="([-\d.]+)" width="([\d.]+)" height="([\d.]+)"', g)
+    tm = re.search(r'<text x="([-\d.]+)" y="([-\d.]+)"([^>]*)style="text-anchor:middle;font-size:(\d+)px"([^>]*)>(.*?)</text>',
+                   g, re.S)
+    if not rm or not tm:
+        return g
+    first = re.search(r"^(<tspan x=\"[-\d.]+\" dy=\"[-\d.]+\">)?(\d{1,2})\.\s", tm.group(6))
+    if not first:
+        return g
+    x0, fs, body = float(rm.group(1)), int(tm.group(4)), tm.group(6)
+    r = 0.56 * max(fs, 14)
+    tx = x0 + 2 * r + 8
+    body = body[:first.start(2)] + body[first.end():]
+    body = re.sub(r'<tspan x="[-\d.]+"', '<tspan x="%s"' % _cn(tx), body)
+    text = '<text x="%s" y="%s"%sstyle="text-anchor:start;font-size:%dpx"%s>%s</text>' % (
+        _cn(tx), tm.group(2), tm.group(3), fs, tm.group(5), body)
+    b = code_badge(x0 + r, float(tm.group(2)) - 0.36 * fs, r, first.group(2), col, max(fs, 14), face)
+    return g[:tm.start()] + text + b + g[tm.end():]
+
+
+def code_title(g):
+    """a code-file card: its title starts 12px in, on the code's left edge (d2 centres it); a title with less
+    than 12px to spare on a side stays centred"""
+    rm = re.search(r'<rect x="([-\d.]+)" y="([-\d.]+)" width="([\d.]+)"', g)
+    tm = re.search(r'<text x="([-\d.]+)"([^>]*)style="text-anchor:middle;([^"]*)"([^>]*)>(.*?)</text>', g, re.S)
+    if not rm or not tm:
+        return g
+    fm = re.search(r"font-size:(\d+(?:\.\d+)?)px", tm.group(3))
+    lines = re.findall(r"<tspan[^>]*>(.*?)</tspan>", tm.group(5), re.S) or [tm.group(5)]
+    width = max(len(html.unescape(re.sub(r"<[^>]+>", "", t))) for t in lines) * 0.6 * float(fm.group(1) if fm else 14)
+    x = _cn(float(rm.group(1)) + min(12.0, (float(rm.group(3)) - width) / 2))
+    body = re.sub(r'(<tspan x=")[-\d.]+(")', lambda m: m.group(1) + x + m.group(2), tm.group(5))
+    return g[:tm.start()] + '<text x="%s"%sstyle="text-anchor:start;%s"%s>%s</text>' % (
+        x, tm.group(2), tm.group(3), tm.group(4), body) + g[tm.end():]
+
+
+def step_code(raw, brand):
+    """step 0 on the file's text: (new text, what changed). A file that carries data-codepost is done."""
+    if CODE_DONE in raw:
+        return raw, []
+    col = code_colors(brand)
+    # the badge digit in a face the SVG embeds: mono bold when d2 drew a bold token, else mono made bold
+    face = 'class="text-mono-bold"' if re.search(r"\.text-mono-bold\s*\{", raw) else 'class="text-mono" font-weight="bold"'
+    done, s = [], raw
+    groups = {}  # object id -> (start, user classes)
+    for m in re.finditer(r'<g class="([^"]+)">', s):
+        oid = _b64id(m.group(1))
+        if oid is not None:
+            groups[oid] = (m.start(), m.group(1).split(" ")[1:])
+    cards = {}
+    for oid, (start, cls) in groups.items():
+        if "code-file" in cls:
+            rm = re.search(r'<rect x="([-\d.]+)" y="([-\d.]+)" width="([\d.]+)" height="([\d.]+)" rx="([\d.]+)"',
+                           s[start:start + 800])
+            if rm:
+                cards[oid] = tuple(float(v) for v in rm.groups())
+    out, pos, n = [], 0, 0
+    for m in re.finditer(r'<g transform="translate\(([-\d.]+) ([-\d.]+)\)" class="light-code"', s):
+        if m.start() < pos:
+            continue
+        end = _group_end(s, m.start())
+        owner = None
+        for om in re.finditer(r'<g class="([^"]+)">', s[max(0, m.start() - 4000):m.start()]):
+            if _b64id(om.group(1)) is not None:
+                owner = _b64id(om.group(1))
+        parent = owner.rsplit(".", 1)[0] if owner and "." in owner else None
+        card, block = None, s[m.start():end]
+        if parent in cards:
+            cx, cy, cwid, ch, crad = cards[parent]
+            gx = float(m.group(1)) - cx  # the code's inset from the card's left edge
+            if gx > CODE_CARD_GAP + 0.5:  # a card wider than its code (a width class): d2 centred the code
+                block = block.replace(m.group(0), '<g transform="translate(%s %s)" class="light-code"' % (
+                    _cn(cx + CODE_CARD_GAP), m.group(2)), 1)
+                gx = CODE_CARD_GAP
+            card = (crad, cy + ch - float(m.group(2)), gx, cwid)
+        out += [s[pos:m.start()], code_block(block, col, card, face)]
+        pos, n = end, n + 1
+    s = "".join(out) + s[pos:]
+    if n:
+        done.append("%d code block(s) restyled" % n)
+    for m in list(re.finditer(r'<g class="([^"]+)">', s))[::-1]:
+        if "code-file" in m.group(1).split(" ")[1:]:
+            e = _group_end(s, m.start())
+            s = s[:m.start()] + code_title(s[m.start():e]) + s[e:]
+    k = 0
+    for m in list(re.finditer(r'<g class="[^"]* callout(?: [^"]*)?">', s))[::-1]:
+        e = _group_end(s, m.start())
+        g2 = code_callout(s[m.start():e], col, face)
+        if g2 != s[m.start():e]:
+            s, k = s[:m.start()] + g2 + s[e:], k + 1
+    if k:
+        done.append("%d callout(s)" % k)
+    if "dark-code{display: block}" not in s:  # no dark theme: the hidden dark copies only add bytes
+        k = 0
+        while True:
+            m = re.search(r'<g transform="translate\([-\d.]+ [-\d.]+\)" class="dark-code"', s)
+            if not m:
+                break
+            s, k = s[:m.start()] + s[_group_end(s, m.start()):], k + 1
+        if k:
+            done.append("%d dark copies dropped" % k)
+    return s, done
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -1091,22 +1445,13 @@ def _n(v):
 STEPS = (step_precision, step_relabel, step_tables, step_key, step_sequence, step_tech, step_aria, step_fit)
 
 
-def process(path, brand, column):
-    """post-process one SVG in place; returns the list of what changed"""
-    raw = open(path, encoding="utf-8").read()
-    dg = d2lint.load(path)
-    c = Ctx(raw, dg, brand, column)
-    for step in STEPS:
-        step(c)
-    if not c.ed.changed():
-        return []
-    done = c.done or ["no fixes needed"]  # only the text-rendering rule: the file changes, nothing visible does
-    out = c.ed.apply()
+def write_svg(path, text):
+    """replace path with text in one step (a temporary file beside it, then a rename), mode 644"""
     d = os.path.dirname(os.path.abspath(path))
     fd, tmp = tempfile.mkstemp(prefix=".svgpost-", suffix=".svg", dir=d)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(out)
+            fh.write(text)
         # readable by everyone, as d2check leaves it (d2 itself writes 0600): the re-render line matches
         os.chmod(tmp, (os.stat(path).st_mode | 0o644) & 0o777)
         os.replace(tmp, path)
@@ -1114,6 +1459,24 @@ def process(path, brand, column):
         if os.path.exists(tmp):
             os.remove(tmp)
         raise
+
+
+def process(path, brand, column):
+    """post-process one SVG in place; returns the list of what changed"""
+    raw = open(path, encoding="utf-8").read()
+    # step 0 rewrites the file first: the lint model the other steps read sees the code as it ships
+    raw2, done = step_code(raw, brand)
+    if raw2 != raw:
+        write_svg(path, raw2)
+    dg = d2lint.load(path)
+    c = Ctx(raw2, dg, brand, column)
+    for step in STEPS:
+        step(c)
+    if not c.ed.changed() and raw2 == raw:
+        return []
+    done = done + c.done or ["no fixes needed"]  # only the text-rendering rule: nothing visible changes
+    if c.ed.changed():
+        write_svg(path, c.ed.apply())
     return done
 
 

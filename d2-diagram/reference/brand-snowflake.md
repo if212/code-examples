@@ -60,8 +60,9 @@ or `--pad` by hand.
 Combine a shape role with an accent the same way as the neutral theme (last
 class wins): `{class: [sf-datastore; sf-primary]}` is a blue cylinder, and a
 geometry class goes after the `sf-*` role: `[sf-node; compact]`. Only `sf-*`
-classes and the six geometry classes exist here: a neutral one (`focal`,
-`flow`) is silently ignored, and semcheck names its twin (`S-src-class`).
+classes, the six geometry classes and the four code classes exist here: a
+neutral one (`focal`, `flow`) is silently ignored, and semcheck names its
+twin (`S-src-class`).
 
 | Neutral class | Here | Note |
 |---|---|---|
@@ -77,6 +78,7 @@ classes and the six geometry classes exist here: a neutral one (`focal`,
 | `failure` | `sf-failure` | |
 | `danger` `success` | none | name the outcome in the label (full weight, never `sf-muted`); the path into a failed end is `sf-failure` |
 | `decision` `terminal` `dot` `queue` `note` `caption` | an `sf-*` class plus the shape on the object | below |
+| `code` `code-file` `callouts` `callout` | the same classes | brand colours (playbooks/code.md section 7) |
 
 Sequence diagrams: every participant is `sf-actor`, so its lifeline (drawn
 in the participant's outline colour) stays light and the messages carry the

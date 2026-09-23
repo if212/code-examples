@@ -13,6 +13,7 @@ E- must be fixed, W- fix what a reader would notice, I- information only.
   legibility   E-small-text W-small-text W-tall W-aspect E-contrast E-contrast-dark W-non-ascii
   collisions   E-label-overlap E-edge-label-on-node E-icon-collision E-label-overflow
                E-node-overlap E-child-outside E-off-canvas
+  code         E-code-overflow W-code-wide
   routing      E-edge-through-node E-edge-through-label W-edge-through-container W-edge-crossing
                W-edge-overlap W-edge-label-on-border W-diagonal-edge W-curved-edge W-long-edge
                W-dogleg W-fanout W-edge-jog W-label-on-bend W-label-on-lifeline W-short-label
@@ -32,6 +33,9 @@ How d2 output is decoded (verified on d2 v0.7.1):
   * the native legend (vars.d2-legend) is drawn after the diagram: frame <rect>s, <text>s and
     items wrapped in <g transform="translate(..) scale(..)">
   * fonts are embedded as WOFF; label widths come from their advance tables
+  * a code block is a <g class="light-code" style="font-size:N"> (plus a hidden dark-code copy): its first
+    rect (or the card body svgpost draws) is the node's shape, each <text class="text-mono" y="K em"> one
+    line of text at N px; svgpost's badges and line bands are not text
 """
 import argparse
 import base64
@@ -79,9 +83,9 @@ TILT_PX = 8.0            # a straight segment drifting more than this sideways o
 # print order: severity first, then the review rubric (legible, accurate, clean routing, direction, focus, clutter)
 CODE_ORDER = [
     "E-small-text", "E-contrast", "E-contrast-dark", "E-off-canvas", "E-node-overlap", "E-child-outside",
-    "E-label-overlap", "E-label-overflow", "E-icon-collision", "E-edge-through-node", "E-edge-through-label",
-    "E-edge-label-on-node",
-    "W-small-text", "W-tall", "W-aspect", "W-edge-crossing", "W-edge-overlap", "W-edge-through-container",
+    "E-label-overlap", "E-label-overflow", "E-code-overflow", "E-icon-collision", "E-edge-through-node",
+    "E-edge-through-label", "E-edge-label-on-node",
+    "W-small-text", "W-code-wide", "W-tall", "W-aspect", "W-edge-crossing", "W-edge-overlap", "W-edge-through-container",
     "W-long-edge", "W-dogleg", "W-fanout", "W-curved-edge", "W-diagonal-edge", "W-edge-jog", "W-label-on-bend",
     "W-label-on-lifeline", "W-edge-label-on-border", "W-seq-group-ragged", "W-title-size", "W-sibling-size",
     "W-unclassed", "W-short-label", "W-remote-image", "W-non-ascii", "I-sparse",
@@ -795,7 +799,7 @@ def parse_edge_id(eid):
 class Text:
     def __init__(self, owner, kind, lines, box, fs, color, bold, content):
         self.owner = owner      # node/edge id ('legend' for legend text)
-        self.kind = kind        # node-label | container-label | edge-label | internal | legend
+        self.kind = kind        # node-label | container-label | edge-label | internal | legend | code
         self.lines = lines
         self.box = box
         self.fs = fs
@@ -812,6 +816,8 @@ class Text:
         self.fs_min = fs      # smallest line size (svgpost sets `tech` lines 2..n to 14px)
         self.line_colors = []  # per-line fill where a <tspan> sets its own
         self.el = None        # the <text> element (svgpost edits it)
+        self.fm = None        # font metrics of its face (None: estimated widths)
+        self.slack = 1.0
 
 
 class Node:
@@ -841,6 +847,8 @@ class Node:
         self.strokes = []     # open inner strokes of the shape (cylinder rim, queue end cap)
         self.core_poly = None  # style.multiple: the front card's outline (polys[0] is the back copy)
         self.el = None        # the node's <g> (svgpost edits it)
+        self.code_lines = []  # a code block's lines (Text, kind "code")
+        self.code_box = None  # a code block's body: d2's rect, or the card body svgpost drew
 
     @property
     def is_container(self):
@@ -1034,10 +1042,11 @@ def load(path):
         return a
 
     def text_from(el, tx, ty, owner, kind):
-        x = float(el.get("x") or 0) + tx
-        y = float(el.get("y") or 0) + ty
         fsm = re.search(r"font-size:\s*([\d.]+)px", el.get("style") or "")
         fs = float(fsm.group(1)) if fsm else 16.0
+        x = float(el.get("x") or 0) + tx
+        yv = el.get("y") or "0"  # code lines are placed in em (y="2.300000em"): a code block as an edge label
+        y = (float(yv[:-2]) * fs if yv.endswith("em") else float(yv)) + ty
         am = re.search(r"text-anchor:\s*(\w+)", el.get("style") or "")
         anchor_ = am.group(1) if am else "start"
         cls = el.get("class") or ""
@@ -1095,9 +1104,64 @@ def load(path):
         t.fs_min = min(l[3] for l in lines)
         t.line_colors = colors
         t.el = el
+        t.fm, t.slack = fm, slack  # the face's metrics: the width d2 measured a line at, before svgpost
         z[0] += 1
         t.z = z[0]
         return t
+
+    def code_block(g, tx, ty, node):
+        """a code block (<g class="light-code" style="font-size:N">): its body is the node's shape, each
+        <text class="text-mono" y="K em"> one line of kind "code" at N px, measured in the mono face; badges
+        and bands are not text. Code lines carry no colour: contrast.py audits the code palette instead"""
+        gx, gy = _translate(g)
+        ox, oy = tx + gx, ty + gy
+        fsm = re.search(r"font-size:\s*([\d.]+)", g.get("style") or "")
+        fs = float(fsm.group(1)) if fsm else 16.0
+        body = None
+        for el in g:
+            tag = _local(el.tag)
+            if "code-band" in (el.get("class") or ""):
+                continue
+            if tag == "rect" and el.get("width"):
+                x, y = float(el.get("x") or 0) + ox, float(el.get("y") or 0) + oy
+                body = Box(x, y, x + float(el.get("width")), y + float(el.get("height")))
+                break
+            if tag == "path":
+                subs = path_polylines(el.get("d"), ox, oy)
+                if subs:
+                    body = Box.of_points([q for sub in subs for q in sub])
+                break
+        if body is not None:
+            node.box = body if node.box is None else node.box.union(body)
+            node.core = node.core or body
+            node.polys.append([(body.x0, body.y0), (body.x1, body.y0), (body.x1, body.y1), (body.x0, body.y1)])
+            node.sig = node.sig or "code"
+            node.paints = True
+            node.code_box = body
+        fm = dg.fonts.get("text-mono")
+        for inner in g:
+            if _local(inner.tag) != "g" or "code-badge" in (inner.get("class") or ""):
+                continue
+            ix, iy = _translate(inner)
+            for t in inner:
+                if _local(t.tag) != "text":
+                    continue
+                yv = t.get("y") or "0"
+                base = (float(yv[:-2]) * fs if yv.endswith("em") else float(yv)) + oy + iy
+                content = "".join(t.itertext()).replace("\xa0", " ").rstrip("\n")
+                if not content.strip():
+                    continue
+                x0 = float(t.get("x") or 0) + ox + ix
+                w = fm.width(content, fs) if fm else len(content) * 0.6 * fs
+                lead = (len(content) - len(content.lstrip())) * 0.6 * fs
+                b = Box(x0 + lead, base - 0.78 * fs, x0 + w, base + 0.22 * fs)
+                tt = Text(node.id, "code", [(x0, base, content, fs)], b, fs, None, False, content)
+                tt.line_boxes = [b]
+                tt.fs_min = fs
+                tt.el = t
+                z[0] += 1
+                tt.z = z[0]
+                node.code_lines.append(tt)
 
     def shape_geometry(g, tx, ty, node, galpha):
         rects = []
@@ -1285,6 +1349,10 @@ def load(path):
                     n.is_group = "blend" in ccls.split()
                     a2 = ga * (0.5 if n.is_group else 1.0)
                     shape_geometry(ch, tx + dtx, ty + dty, n, a2)
+                elif ctag == "g" and "light-code" in ccls.split():
+                    code_block(ch, tx + dtx, ty + dty, n)
+                elif ctag == "g" and "dark-code" in ccls.split():
+                    pass  # the hidden dark-mode copy of the same code
                 elif ctag == "text":
                     t = text_from(ch, tx + dtx, ty + dty, oid, "label")
                     if t:
@@ -1366,6 +1434,7 @@ def load(path):
             t.kind = "container-label" if n.is_container or n.is_group else "node-label"
             dg.texts.append(t)
         dg.texts.extend(n.internal)
+        dg.texts.extend(n.code_lines)
     for e in dg.edges:
         if not e.hidden:
             dg.texts.extend(e.labels)
@@ -1574,6 +1643,77 @@ def names(ids, n=4):
     return out + (" +%d more" % (len(ids) - n) if len(ids) > n else "")
 
 
+def beside(a, b):
+    """two code boxes side by side: they share half the shorter one's height and do not overlap across"""
+    ov = min(a.y1, b.y1) - max(a.y0, b.y0)
+    return ov >= 0.5 * min(a.h, b.h) and (a.x1 <= b.x0 or b.x1 <= a.x0)
+
+
+def code_pair(dg, scale):
+    """two code blocks side by side at full scale (a before/after pair): a strip by nature, not W-aspect"""
+    if scale < 0.995:
+        return False
+    boxes = [n.code_box for n in dg.nodes.values() if n.code_box and not n.hidden]
+    return any(beside(boxes[i], boxes[j]) for i in range(len(boxes)) for j in range(i + 1, len(boxes)))
+
+
+def code_checks(dg, scale, column):
+    """E-code-overflow: a code line ends within 2px of the right edge of its block or card, or past it (d2
+    never wraps code); W-code-wide: code shown under 13px (the canvas shrinks to fit the column)"""
+    F = []
+    worst = None
+    for n in dg.nodes.values():
+        if n.hidden or not n.code_lines:
+            continue
+        right = n.code_box.x1 if n.code_box else None
+        card = dg.nodes.get(n.parent) if n.parent else None
+        in_card = card is not None and "code-file" in card.classes and card.box is not None
+        if in_card:
+            right = card.box.x1 if right is None else min(right, card.box.x1)
+        for k, t in enumerate(n.code_lines):
+            if right is None or t.box.x1 <= right - 2:
+                continue
+            pad = 24 if in_card else 14
+            need = math.ceil(0.6 * t.fs * max(len(x.content) for x in n.code_lines) + pad)
+            over = t.box.x1 - right
+            what = "card" if in_card else "block"
+            F.append(Finding("error", "E-code-overflow",
+                             "line %d of the code in '%s' (%d characters) %s: give it width: %d or more (%gpx a "
+                             "character + %d), or break the line" % (
+                                 k + 1, n.id, len(t.content),
+                                 "runs %.0fpx past its %s" % (over, what) if over >= 0.5 else "reaches the edge of its " + what,
+                                 need, round(0.6 * t.fs, 2), pad), t.box, [n.id]))
+            break
+        longest = max(n.code_lines, key=lambda t: len(t.content))
+        small = min(t.fs for t in n.code_lines) * scale < 13.0 - 1e-6
+        if small and (worst is None or len(longest.content) > len(worst[1].content)):
+            worst = (n, longest)
+    if worst:  # the widest block among those shown under 13px
+        n, t = worst
+        fit = int((column - 48 - 24) / 8.4)  # 14px code: 8.4px a character, a card's 24 and d2's pad
+        fit_pair = int(fit * 36 / 86)        # a before/after pair side by side: 36 a side at 800 (playbooks/code.md)
+        chars = len(t.content)
+        pair = n.code_box is not None and any(
+            m is not n and not m.hidden and m.code_box is not None and beside(n.code_box, m.code_box)
+            for m in dg.nodes.values())
+        # each message stays under the 170 characters d2check's listing keeps: the fix is at its end
+        if scale >= 0.995:
+            why = "'%s' sets font-size %g: code is 14px (playbooks/code.md section 1), drop the override" % (
+                short(n.id, 24), t.fs)
+        elif pair and chars > fit_pair:
+            why = ("a pair side by side with %d-character lines (%d fit a side at %dpx): stack it, "
+                   "grid-columns: 1 (playbooks/code.md section 5)" % (chars, fit_pair, column))
+        elif chars > fit:
+            why = ("'%s' has a %d-character line (%d fit at %dpx in one card): break it, or cut lines with "
+                   "// ... (playbooks/code.md section 1)" % (short(n.id, 24), chars, fit, column))
+        else:
+            why = ("its lines fit (%d characters, %d hold at %dpx), the canvas is %dpx wide: narrow the "
+                   "layout first (the other findings)" % (chars, fit_pair if pair else fit, column, round(dg.W)))
+        F.append(Finding("warn", "W-code-wide", "code shows at %.1fpx (scale %.2f): %s" % (floor1(t.fs * scale), scale, why),
+                         t.box, [n.id]))
+    return F
+
+
 def run_checks(dg, column=800.0):
     F = []
     vis = [n for n in dg.nodes.values() if not n.hidden and n.box]
@@ -1632,6 +1772,8 @@ def run_checks(dg, column=800.0):
         F.append(Finding("warn", "W-aspect", "content aspect %.2f:1 (tall and narrow): %dpx tall but only %dpx wide in a %s "
                          "(a %s figure wants >= %g:1)" % (math.floor(ar * 100) / 100, round(content.h * scale),
                                                           round(content.w * scale), col, budget["medium"], lo)))
+    elif ar and ar > hi and code_pair(dg, scale):
+        summary["aspect_exempt"] = "code-pair"  # a before/after pair of code blocks at full scale
     elif ar and ar > hi and disp_w >= budget["guard_wide"] * column:
         F.append(Finding("warn", "W-aspect", "content aspect %.2f:1 (wide): %s (a %s figure wants <= %g:1)" % (
             math.ceil(ar * 100) / 100, "it shrinks to scale %.2f in a %s" % (scale, col) if scale < 0.995 else
@@ -1655,6 +1797,9 @@ def run_checks(dg, column=800.0):
     for t in texts:
         if not t.box.inside(dg.vb, 1.0):
             F.append(Finding("error", "E-off-canvas", "label '%s' is clipped by the canvas edge" % short(t.content), t.box, [t.owner]))
+
+    # --- code blocks: a line past its card, code shown too small ------------------
+    F += code_checks(dg, scale, column)
 
     # --- label overlaps -----------------------------------------------------
     T = texts
@@ -1748,10 +1893,20 @@ def run_checks(dg, column=800.0):
             if not (point_in_poly(t.box.cx, t.box.cy, n.core_poly) if n.core_poly else n.contains_pt(t.box.cx, t.box.cy, 0)):
                 if (not n.icons and not n.in_seq and len(n.polys[0]) in (4, 5) and not n.box.intersects(t.box, 0)
                         and t.box.w > n.box.w * 0.9):
-                    # d2 moves a label that does not fit outside the box; ~20px a side gives it room again
+                    # d2 moves a label that does not fit outside the box. It measures EVERY line at the label's
+                    # size (svgpost draws `tech` lines 2+ smaller afterwards), so the widest line at that size
+                    # decides; 8px a side on top of it reads as a box, not a tight fit
+                    if t.fm:
+                        per = [(t.fm.width(s, t.fs) * t.slack, s) for _lx, _ly, s, _lfs in t.lines if s.strip()]
+                    else:  # no metrics: the drawn width, scaled back to the label's size
+                        per = [(t.box.w * t.fs / max(t.fs_min, 1.0), max((l[2] for l in t.lines), key=len))]
+                    wmax, widest = max(per) if per else (t.box.w, t.content)
+                    # short enough for d2check's 170-character listing: the fix is at the end
                     F.append(Finding("error", "E-label-overflow",
-                                     "label '%s' is drawn outside its box '%s': drop its fixed size, or set width: %d or "
-                                     "more (now %.0f)" % (short(t.content, 30), n.id, math.ceil(t.box.w + 40), n.box.w),
+                                     "label of '%s' is outside its box: d2 fits each line at %gpx, '%s' needs %d - "
+                                     "shorten or wrap it, or set width: %d or more (now %.0f)" % (
+                                         short(n.id, 24), t.fs, short(widest, 24), math.ceil(wmax),
+                                         math.ceil(wmax + 16), n.box.w),
                                      t.box.union(n.box), [n.id]))
                 continue  # outside label on purpose (person, label.near outside-*)
             per = [(x, t.box.y0) for x in _frange(t.box.x0, t.box.x1, 2)] + \

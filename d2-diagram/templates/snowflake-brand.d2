@@ -7,6 +7,7 @@
 #   container sf-container
 #   edge      sf-edge sf-flow sf-failure
 #   geometry  compact chip tech ghost (after the sf-* role); title key (alone)
+#   code      code code-file callouts callout (playbooks/code.md section 7)
 # Snowflake Blue fills sf-primary only: ONE node, grounded by `# brand` in the brief.
 # It is never text and never a line color (2.37:1 on white). sf-flow (Mid-Blue 3px)
 # only on a path the request describes. At most ONE sf-accent-* element per diagram.
@@ -23,6 +24,10 @@ vars: {
   sf-orange: "#FF9F36"
   sf-purple: "#7D44CF"
   sf-pink: "#D45B90"
+  # code line bands (tints of brand colours): added, removed, the highlighted line
+  sf-code-add: "#DFF4FC"
+  sf-code-del: "#FAEBF2"
+  sf-code-hl: "#FFEEDB"
   d2-config: {
     layout-engine: elk
     pad: 24
@@ -95,4 +100,12 @@ classes: {
 
   # key: a row of chips in the real classes (statuses); line keys use vars.d2-legend
   key: {label: ""; grid-rows: 1; horizontal-gap: 12; vertical-gap: 8; style: {fill: "#FFFFFF"; stroke: ${sf-rule}; stroke-width: 1; border-radius: 6}} # decorative: the chips carry the meaning
+
+  # ---- code: the neutral theme's four code classes, brand colours (playbooks/code.md section 7) ----
+  # d2check (svgpost's code step) recolours the tokens: Mid-Blue keywords, Purple Moon literals,
+  # Medium Gray comments, black text; white body, radius 6; Mid-Blue badges.
+  code: {style: {stroke: ${sf-rule}; stroke-width: 1; font-size: 14}} # decorative: the body and its code mark the block
+  code-file: {grid-rows: 1; grid-gap: 5; label.near: top-left; style: {fill: ${sf-tint}; stroke: ${sf-rule}; stroke-width: 1; border-radius: 6; font: mono; font-size: 14; bold: false; font-color: ${sf-gray}; text-transform: none}} # decorative: the title bar and the body mark the card
+  callouts: {label: ""; horizontal-gap: 24; vertical-gap: 12; style: {fill: transparent; stroke-width: 0}}
+  callout: {width: 264; height: 48; style: {fill: transparent; stroke-width: 0; font-size: 14; bold: false; font-color: ${sf-midnight}}}
 }

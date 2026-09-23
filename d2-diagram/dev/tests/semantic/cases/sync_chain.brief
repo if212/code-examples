@@ -1,0 +1,18 @@
+# request: "Show how the web app reaches the order service through the API gateway."
+type: architecture
+reader: test
+width: 800
+direction: down
+focus: none
+out: -
+nodes:
+  web: Web app
+  api: Backend
+  api.gw: API gateway\nKong
+  api.orders: Order
+  api.db: Orders DB\nPostgres 16
+  sdk: C
+edges:
+  web -> api.gw -> api.orders: via
+  api.orders -> api.db: writes orders
+  sdk -> api.gw: calls

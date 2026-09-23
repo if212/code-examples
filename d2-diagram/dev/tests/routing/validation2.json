@@ -18,5 +18,9 @@
  {"id": "W17", "request": "Diagram the data model of our Mongo collections and how documents reference each other.", "expect": "erd", "alt": ["class"], "call": "GO"},
  {"id": "W18", "request": "Explain CQRS with a diagram for the onboarding wiki.", "expect": "architecture", "alt": [], "call": "GO"},
  {"id": "W19", "request": "Which teams hand an incident to each other, from detection to the postmortem?", "expect": "swimlane", "alt": [], "call": "GO"},
- {"id": "W20", "request": "Show our Kubernetes namespaces and the network policies between them.", "expect": "network", "alt": ["deployment"], "call": "GO"}
+ {"id": "W20", "request": "Show our Kubernetes namespaces and the network policies between them.", "expect": "network", "alt": ["deployment"], "call": "GO"},
+ {"id": "W21", "request": "Flowchart of the logic of retry_with_backoff() (code below): when it retries and when it gives up.", "expect": "flowchart", "alt": [], "call": "GO"},
+ {"id": "W22", "request": "What does this PR change in our architecture? It puts Redis in front of pricing.", "expect": "compare", "alt": [], "call": "GO"},
+ {"id": "W23", "request": "Diagram of the full 60-line JSON our GET /orders/42 returns.", "expect": "OUT", "alt": ["code-annotated"], "call": "OUT", "altcall": ["ASK"]},
+ {"id": "W24", "request": "Sequence diagram of the checkout calls with the JSON request and response bodies.", "expect": "sequence", "alt": [], "call": "GO"}
 ]
