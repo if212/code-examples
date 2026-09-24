@@ -182,7 +182,7 @@ The theme fixes four sizes: `compact` (height 48), `chip` (104 x 32), `ghost`
 
 - d2 never grows a fixed box: a label too big for it is drawn outside it, or
   under a cylinder's top rim or a queue's end cap; both are
-  `E-label-overflow` (the rim case names the height that clears it).
+  `E-label-overflow` (the message names the width or height that clears it).
 - Default heights with the bundled font: boxes and queues 66 for one label
   line, 82 for two, 98 for three; cylinders 118 and 134 (the rims).
   `compact` is for one-line labels: a two-line label fills a 48px box edge to

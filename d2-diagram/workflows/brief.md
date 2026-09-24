@@ -233,7 +233,7 @@ By hand (exit 0 ok, 1 S- errors, 2 brief or compile problem):
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py D2W/<name>.brief <target>.d2
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --lint <target>.d2     # source slips only, no brief
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --explain <target>.d2  # in words, cardinality too
-python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --dump D2W/orig.d2     # EDITS only: brief skeleton
-python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig.d2 <target>.d2
+python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --dump D2W/orig.d2     # EDITS: skeleton, keeps D2W/<name>.brief
+python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig.d2 <target>.d2  # - / + and ~ class, size
 python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --sync-labels D2W/<name>.brief <target>.d2  # reworded in the .d2
 ```

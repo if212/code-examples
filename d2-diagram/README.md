@@ -160,7 +160,7 @@ fonts: default (assets/fonts/ibm-plex-sans)
 render: ok /tmp/demo/architecture.svg (elk)
 post: restyled key (below), tech lines
 display: 770x843 at column 800 (scale 1.00), min text 14px
-lint: 0 error(s), 0 warning(s)
+findings: 0 error(s), 0 warning(s)
 semantic: 0 error(s), 0 warning(s) - source checks only - no brief (write /tmp/d2work/architecture/architecture.brief, format: workflows/brief.md)
 checks: lint 0 error(s) 0 warning(s); semantic 0 error(s) 0 warning(s)
 reviewed: faithful (playwright)

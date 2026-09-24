@@ -1,0 +1,15 @@
+# post: svgpost
+# expect: E-label-overflow
+# expect-text: its 3 lines at 16px need 53px - keep 2 lines, or set height: 69 or more on its size class (now 48)
+# a depgraph's one size class (120x48, playbooks/hierarchy.md) holds two lines. d2 stacks every line at the
+# title size, a tech box's lines 2+ too (svgpost draws them at 14px afterwards): a third line does not fit
+# 48px and d2 moves the label under an empty box. The message names the height and the lines that fit, and
+# keeps the class (never "drop the fixed size" on a one-size row); the two-line box beside it is clean.
+...@neutral-theme
+direction: down
+classes: {pkg: {width: 120; height: 48}}
+rev: fct_revenue {class: [service; pkg]}
+bi: "Revenue\nLooker" {class: [service; tech; pkg]}
+dash: "Revenue\nLooker\nweekly" {class: [service; tech; pkg; focal]}
+rev -> bi: {class: dep}
+rev -> dash: {class: dep}

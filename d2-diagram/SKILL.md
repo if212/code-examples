@@ -122,13 +122,14 @@ Re-render: D2_WORK=<D2W's parent> sh ${CLAUDE_SKILL_DIR}/scripts/d2check.sh [--c
 
 Step 1 as usual (the file stands in for the template);
 `cp <target>.d2 D2W/orig.d2`. Write the brief from
-`python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --dump D2W/orig.d2` plus the
-requested change. Keep keys stable and change only what was asked. The file
-keeps its look unless a restyle is asked (then move it onto the theme, step 3):
-with a theme import, what you add takes role classes; without one, style it
-like its neighbours, and on S-src-cli-engine pin ELK with
-`vars: {d2-config: {layout-engine: elk}}` (say so under Assumed). After
-d2check, run `python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig.d2 <target>.d2`
+`python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --dump D2W/orig.d2` (it keeps
+D2W/<name>.brief) plus the requested change. Keep keys stable and change only
+what was asked. The file keeps its look unless a restyle is asked (then move
+it onto the theme, step 3): with a theme import, what you add takes role
+classes; without one, style it like its neighbours, and on S-src-cli-engine
+pin ELK with `vars: {d2-config: {layout-engine: elk}}` (say so under
+Assumed). After d2check, run
+`python3 ${CLAUDE_SKILL_DIR}/scripts/semcheck.py --compare D2W/orig.d2 <target>.d2`
 (exit 1: it listed changes) and show that only the requested change appears.
 
 ## Hard rules

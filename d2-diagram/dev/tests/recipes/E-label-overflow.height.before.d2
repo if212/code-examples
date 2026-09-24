@@ -1,0 +1,13 @@
+# Before: a depgraph's one size class (pkg, 120x48, playbooks/hierarchy.md) holds two lines. d2 stacks
+# every line at the title size, a tech box's lines 2+ too: a third line needs 53px, so d2 pushes the
+# label under an empty box.
+...@neutral-theme
+direction: down
+classes: {pkg: {width: 120; height: 48}}
+caption: "Revenue lineage: arrow = feeds" {class: caption}
+orders: "app.orders" {class: [service; pkg; external]}
+stg: "stg_orders\ndbt model\nstaging" {class: [service; tech; pkg]}
+rev: fct_revenue {class: [service; pkg; focal]}
+caption -> orders: {class: ghost}
+orders -> stg: {class: dep}
+stg -> rev: {class: dep}

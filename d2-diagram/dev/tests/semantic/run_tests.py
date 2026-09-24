@@ -182,8 +182,15 @@ RUNS = [
      ['S-erd-anchor'], []),
     ('compile error: exit 2 with a hint', ['arch.inv', 'compile_bad.d2'], 2,
      ['reserved keywords', 'hint: `left` (line 4) is a d2 keyword'], []),
-    ('compare: refactor shows exactly one change', ['--compare', 'arch_good.d2', 'arch_refactor.d2'], 1,
-     ["+ edge aws.kafka -> aws.billing : 'consumes'", '-- 1 removed, 1 added'], []),
+    ('compare: refactor shows the one relabel and the style moved into a class', ['--compare', 'arch_good.d2',
+     'arch_refactor.d2'], 1, ["+ edge aws.kafka -> aws.billing : 'consumes'", '~ edge aws.orders -> aws.kafka class: '
+     'none -> [async]', '-- 1 removed, 1 added, 2 changed (class or size)'], ['size:']),
+    ('compare: class and size changes are listed, never "identical" (T18)', ['--compare', 'cmp_look_a.d2',
+     'cmp_look_b.d2'], 1, ['~ node api class: [service; row; focal] -> [service; row]',
+                           '~ node db class: [datastore; row] -> [datastore; row; focal]', '~ node web size: 120x',
+                           ' -> 150x', '~ edge web -> api class: [dep] -> [flow]', "+ node cache 'Session cache'",
+                           '-- 1 removed, 1 added, 6 changed (class or size)'],
+     ['semantically identical', 'node cache size']),
     ('compare: identical', ['--compare', 'arch_good.d2', 'arch_good.d2'], 0, ['semantically identical'], []),
     ('compare: a code edit is listed line by line', ['--compare', 'code_calls.d2', 'code_calls_edit.d2'], 1,
      ["- code code.src line 5: 'return s.db.Insert(ctx, o)'",
@@ -366,6 +373,19 @@ RUNS = [
      ['services: Services'], ['services: services', 'SERVICES']),
     ('dump: a two-line zone title keeps the source case of both lines', ['--dump', 'dump_zone2.d2'], 0,
      ['pub: Public 1a\\n10.0.1.0/24'], ['PUBLIC 1A']),
+    # T17: an edit's copy (D2W/orig.d2) beside the brief of the session that drew it (D2W/<name>.brief)
+    ('dump: the brief beside D2W/orig.d2 keeps its request, header and labels (T17)', ['--dump', 'prdiff/orig.d2'], 0,
+     ['# kept from prdiff.brief', '#   new gate reads the row\'s resolution through a line map.\n'
+      '#   <plus the requested change, verbatim>"', 'type: compare', 'reader: reviewers of PR 42',
+      'direction: down  # panels side by side', 'focus: after.gate  # "the new gate"', 'out: the fail-closed table',
+      '  before: Before\n', '  after.map: Line map\\ngit diff {inferred}  # assumed: the map comes from git diff',
+      '  after.json -> after.map {inferred}', '  after.map -> after.gate: reads  # the new read',
+      '# in prdiff.brief, not drawn: before.cache'],
+     ['type: architecture', '<who reads it', 'before: before', 'git-diff', '<the request words']),
+    ('dump: `--dump BRIEF IN.d2` names the brief (T17)', ['--dump', 'prdiff/prdiff.brief', 'prdiff/orig.d2'], 0,
+     ['# kept from prdiff.brief', 'type: compare', '  before: Before\n'], ['type: architecture']),
+    ('dump: a zone title takes its case from its declaration, not a comment (T17)', ['--dump', 'dump_comment.d2'],
+     0, ['  before: Before\n', 'type: architecture'], ['before: before', 'kept from']),
     ('--lint: a neutral shape role in a Snowflake file names the shape, not the neutral import',
      ['--lint', 'cls_sf_shape.d2'], 1,
      ["'decision' is a neutral-theme class with no snowflake-brand twin", 'shape: diamond',
@@ -549,6 +569,25 @@ def t_dump(d2file):
         {i['code'] for i in d['findings']}
 
 
+def t_dump_brief(_):
+    """T17: the dump of an edit's copy, made with the brief beside it, checks clean against the drawing and keeps
+    the brief's type and labels"""
+    code, text = run(['--dump', 'prdiff/orig.d2'])
+    if code:
+        return False, f'dump exit {code}: {text[-300:]}', set()
+    with tempfile.TemporaryDirectory() as tmp:
+        bp = os.path.join(tmp, 'dumped.brief')
+        open(bp, 'w').write(text)
+        code, out = run(['--json', bp, 'prdiff/orig.d2'])
+    try:
+        d = json.loads(out[out.index('{'):out.rindex('}') + 1])      # stderr's import note follows the JSON
+    except ValueError:
+        return False, f'no JSON (exit {code}): {out[-300:]}', set()
+    errs = [f"{i['code']}: {i['message'][:90]}" for i in d['findings'] if i['severity'] in ('error', 'warn')]
+    ok = code == 0 and not errs and d['type'] == 'compare'
+    return ok, f"type {d['type']}, exit {code}" + (f' {errs}' if errs else ''), {i['code'] for i in d['findings']}
+
+
 def t_sync(case):
     name, brief, d2, drop, want_code, needles, after, still = case
     with tempfile.TemporaryDirectory() as tmp:
@@ -702,7 +741,8 @@ def run_all():
            [('hint', c, t_hint) for c in HINTS] + [('dump', c, t_dump) for c in DUMPS] + \
            [('sync', c, t_sync) for c in SYNCS] + \
            [('example', None, t_brief_example), ('speed', None, t_speed), ('static', None, t_static),
-            ('env', None, t_env), ('nod2', None, t_nod2), ('lintbox', None, t_lint_box), ('lintcyl', None, t_lint_box_cylinder),
+            ('env', None, t_env), ('nod2', None, t_nod2), ('dumpbrief', None, t_dump_brief),
+            ('lintbox', None, t_lint_box), ('lintcyl', None, t_lint_box_cylinder),
             ('templates', None, t_templates)]
 
     def label(kind, c):
@@ -718,7 +758,8 @@ def run_all():
                 'nod2': 'd2 missing from PATH is named as such, with the install and doctor.sh',
                 'lintbox': '--lint --svg boxes the object that carries an unknown class',
                 'lintcyl': '--lint --svg boxes a cylinder inside the canvas (path with V commands)',
-                'templates': 'every shipped template passes --lint (no unknown class, engine pinned)'}[kind]
+                'templates': 'every shipped template passes --lint (no unknown class, engine pinned)',
+                'dumpbrief': 'dump with the brief beside D2W/orig.d2 round-trips clean as type compare (T17)'}[kind]
     jobs = [j for j in jobs if k in label(j[0], j[1])]
     t0 = time.time()
     need = sorted({c[1] for kind, c, _ in jobs if kind == 'codeset'} | {c for kind, c, _ in jobs if kind == 'dump'}

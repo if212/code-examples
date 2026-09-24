@@ -12,8 +12,11 @@ usage:
   semcheck.py BRIEF OUT.svg                          check an SVG only (no source lint)
   semcheck.py --lint IN.d2 [--svg OUT.svg]           source slips only (quoting, classes, icons, engine)
   semcheck.py --explain IN.d2|OUT.svg                the drawn diagram as plain sentences
-  semcheck.py --dump IN.d2|OUT.svg                   the drawn graph as a brief skeleton (edits)
-  semcheck.py --compare OLD NEW                      meaning-level diff of two versions
+  semcheck.py --dump [BRIEF] IN.d2|OUT.svg           the drawn graph as a brief skeleton (edits); keeps the
+                                                     request, header and labels of BRIEF (default: the
+                                                     D2W/<name>.brief beside D2W/orig.d2)
+  semcheck.py --compare OLD NEW                      meaning-level diff of two versions: nodes, edges,
+                                                     labels, classes, fixed sizes
   semcheck.py --sync-labels BRIEF IN.d2              reword BRIEF's labels as drawn (keys and edges stay)
   semcheck.py --hint "<d2 error text>" | -           one fix line per known d2 compile error
   semcheck.py --field KEY BRIEF                      print one brief header value (e.g. width)
@@ -2724,21 +2727,72 @@ def _brief_quote(s):
     return f'"{s}"' if re.search(r'[#{}:;,]|^\s|\s$', s) else s
 
 
-def source_case(text, lab):
-    """Zone and boundary titles reach the SVG upper-cased (text-transform): take the source's spelling."""
+def source_case(text, lab, key=None):
+    """Zone and boundary titles reach the SVG upper-cased (text-transform): take the source's spelling, from
+    the key's own declaration first (`before: Before`), never from a comment (`# PR: before, the gate ...`)."""
     plain = lab.replace('\\n', '\n')         # upper() turns the escape backslash-n into backslash-N
     if not text or plain != plain.upper() or plain == plain.lower():
         return lab
+    text = '\n'.join(strip_comment(ln) for ln in text.splitlines())
     pat = r'\\n'.join(re.escape(p) for p in lab.split('\\n'))
+    leaf = re.escape(leaf_of(key)) if key else None
     # the label follows a colon (`services: Services`); a bare match could be the lowercase KEY
-    m = re.search(r':[ \t]*["\']?(' + pat + r')(?![\w-])', text, re.I) or re.search('(' + pat + ')', text, re.I)
+    m = (leaf and re.search(r'(?:^|[\s{;.])["\']?' + leaf + r'["\']?[ \t]*:[ \t]*["\']?(' + pat + r')(?![\w-])', text,
+                            re.I | re.M)) or \
+        re.search(r':[ \t]*["\']?(' + pat + r')(?![\w-])', text, re.I) or re.search('(' + pat + ')', text, re.I)
     return m.group(1) if m else lab
 
 
-def dump(g, src=None):
-    """The drawn graph as a brief skeleton: start an EDIT from it, never a new diagram."""
+def find_brief(path):
+    """The brief of an earlier session beside the edit flow's copy: D2W/<name>.brief next to D2W/orig.d2
+    (D2W's last folder is <name>), or None."""
+    d = os.path.dirname(os.path.abspath(path))
+    b = os.path.join(d, os.path.basename(d) + '.brief')
+    return b if os.path.isfile(b) else None
+
+
+def request_blocks(lines):
+    """The `# request:` and `# source:` comment blocks of a brief, raw, as parse_brief reads them:
+    [(kind, [line, ...]), ...]"""
+    blocks, cur, quoted, open_q = [], None, False, False
+    for raw in lines:
+        st = raw.strip()
+        m = re.match(r'^#\s*(request|source)\s*:\s*(.*)$', st, re.I)
+        if m:
+            first = m.group(2).strip()
+            quoted = first.startswith('"') if m.group(1).lower() == 'request' else '"' in first
+            open_q = quoted and first.count('"') % 2 == 1
+            cur = [raw]
+            blocks.append((m.group(1).lower(), cur))
+            continue
+        if cur is not None and st.startswith('#') and (open_q or (not quoted and re.match(r'^#(\s{2,}|\t)', st))):
+            cur.append(raw)
+            if open_q and st.count('"') % 2 == 1:
+                open_q = False
+            continue
+        cur = None
+    return blocks
+
+
+def _attr_text(k, v):
+    return k if v is True else f"{k}: {_brief_quote(str(v))}"
+
+
+def dump(g, src=None, brief=None):
+    """The drawn graph as a brief skeleton: start an EDIT from it, never a new diagram. With the diagram's
+    brief (T17: D2W/<name>.brief of an earlier session), its decisions stay: the request (the change goes
+    inside its quote), every header line, and each drawn node's and edge's label as the brief words it
+    (plus its attributes and comment) while the drawing still shows that label; the rest is as drawn."""
     seq = bool(g['lifelines'])
     text = open(src, encoding='utf-8').read() if src and src.endswith('.d2') else ''
+    inv, blines, head = None, [], []
+    if brief:
+        try:
+            inv = parse_brief(brief)
+            with open(brief, encoding='utf-8') as fh:
+                blines = fh.read().splitlines()
+        except (BriefError, OSError, UnicodeDecodeError) as e:
+            inv, head = None, [f'# note: {brief} not used ({e})']
     classes = {c for n in g['nodes'].values() for c in n['classes']}
     typ = 'sequence' if seq else 'erd' if 'sql_table' in text else 'class' if re.search(r'shape\s*:\s*class\b', text) \
         else 'state' if 'dot' in classes else 'flowchart' if 'decision' in classes else 'architecture'
@@ -2748,6 +2802,8 @@ def dump(g, src=None):
     if blocks and not seq:      # the code templates, told apart by what sits around the code
         typ = ('code-annotated' if any('callout' in n['classes'] for n in g['nodes'].values()) else
                'code-calls' if len(blocks) == 1 else 'code-compare' if not g['edges'] else 'code-walkthrough')
+    if inv and 'type' in inv['meta']:
+        typ = inv['type']       # the brief's decision; the guess above only tells the common shapes apart
     dm = re.search(r'^direction\s*:\s*(\w+)', text, re.M)
     chrome0 = chrome_keys(g['nodes'])
     focus = [n['id'] for k, n in g['nodes'].items() if k not in chrome0 and set(n['classes']) & set(FOCAL_NODE)
@@ -2760,10 +2816,39 @@ def dump(g, src=None):
             b = b.split('.')[0] if norm_key(b) in span0 else b
             focus.append(f'{a} -> {b}')
     ground = '  # "<the request words that ask for it>"' if focus else ''
-    out = [f'# request: "<paste the user\'s request, plus the requested change>"',
-           f'type: {typ}', 'reader: <who reads it, where>', 'width: 800',
-           f'direction: {dm.group(1) if dm else "down"}', f"focus: {', '.join(focus) or 'none'}{ground}",
-           'out: <left out>', 'nodes:']
+    header = {'type': f'type: {typ}', 'reader': 'reader: <who reads it, where>', 'width': 'width: 800',
+              'direction': f'direction: {dm.group(1) if dm else "down"}',
+              'focus': f"focus: {', '.join(focus) or 'none'}{ground}", 'out': 'out: <left out>'}
+    out = head + ['# request: "<paste the user\'s request, plus the requested change>"']
+    if inv:
+        out = [f'# kept from {os.path.basename(brief)}: the request, the header, and each label the drawing still '
+               f'shows; the rest as drawn']
+        req = request_blocks(blines)
+        for kind, raw in req:
+            raw = list(raw)
+            if kind == 'request':   # the change joins the request, inside its quote when it has one
+                last = raw[-1].rstrip()
+                if last.endswith('"') and raw[0].split(':', 1)[1].strip().startswith('"'):
+                    raw[-1] = last[:-1]
+                    raw.append('#   <plus the requested change, verbatim>"')
+                else:
+                    raw.append('#   <plus the requested change, verbatim>')
+            out += raw
+        if not any(kind == 'request' for kind, _ in req):
+            out.insert(1, '# request: "<paste the user\'s request, plus the requested change>"')
+        for raw in blines:
+            hm = re.match(r'^([A-Za-z][\w-]*)\s*:\s*(.*)$', strip_comment(raw))
+            if hm and not raw[:1].isspace() and hm.group(1).lower() in HEADER_KEYS:
+                header[hm.group(1).lower()] = raw.rstrip()
+        bd = inv['meta'].get('direction', '').split()
+        if dm and bd and bd[0].lower() != dm.group(1).lower():
+            header['direction'] += f'  # the .d2 says direction: {dm.group(1)}'
+        drawn = ({norm_key(x) for x in focus if '->' not in x},
+                 {tuple(norm_key(y) for y in x.split(' -> ')) for x in focus if '->' in x})
+        if 'focus' in inv['meta'] and drawn != ({norm_key(x) for x in inv['focus_nodes']},
+                                                {(norm_key(a), norm_key(b)) for a, b in inv['focus_edges']}):
+            header['focus'] += f"\n# the .d2 draws focus: {', '.join(focus) or 'none'}"
+    out += list(header.values()) + ['nodes:']
     span = set()
     if seq:
         span = {k for k in g['nodes'] if '.' in k and k.split('.')[0] in g['lifelines_norm']}
@@ -2777,12 +2862,25 @@ def dump(g, src=None):
 
     def exits(k):
         return outs[k] or any(outs[a] for a in ancestors(k))
+
+    def kept_line(item, drawn_label, ok, attrs, drop=()):
+        """(label, attrs, comment) of a node or edge the brief lists: its label while the drawing shows it,
+        `*` kept, its attributes after the drawn ones (except `drop`: what the drawing decides), its comment"""
+        raw = blines[item['line'] - 1] if 0 < item['line'] <= len(blines) else ''
+        star = re.search(r':\s*\*\s*(\{[^{}]*\})?\s*$', strip_comment(raw))
+        lab = '*' if star else _brief_quote(item['label']) if item['label'] is not None and ok else drawn_label
+        names = {a.split(':')[0] for a in attrs}
+        more = [_attr_text(k, v) for k, v in item['attrs'].items()
+                if not k.startswith('_') and k not in names and k not in drop]
+        com = comment_of(raw)
+        return lab, attrs + more, f'  # {com}' if com else ''
     chrome = chrome_keys(g['nodes'])
+    rows = []
     for k, n in sorted(g['nodes'].items(), key=lambda kv: kv[1]['order']):
         if k in span or k in chrome:
             continue
         lab = '\\n'.join(n['lines'][0]) if n['lines'] and n['lines'][0] else ''
-        lab = source_case(text, lab)
+        lab = source_case(text, lab, n['id'])
         attrs = []
         cl = set(n['classes'])
         if seq and '.' not in k and k not in g['lifelines_norm']:
@@ -2799,7 +2897,14 @@ def dump(g, src=None):
         if n.get('code'):
             attrs.append('code')
         shown = _brief_quote(lab) if lab else ('""' if 'start' in attrs else '*')
-        out.append(f"  {n['id']}: {shown}" + (f" {{{', '.join(attrs)}}}" if attrs else ''))
+        item = inv['nodes'].get(k) if inv else None
+        if item and not item['attrs'].get('_implied'):
+            shown, attrs, com = kept_line(item, shown, label_ok(item['label'], n['texts'])[0], attrs)
+            rows.append(((0, item['line']), f"  {item['key']}: {shown}" + (f" {{{', '.join(attrs)}}}" if attrs else '')
+                         + com))
+            continue
+        rows.append(((1, n['order']), f"  {n['id']}: {shown}" + (f" {{{', '.join(attrs)}}}" if attrs else '')))
+    out += [r for _, r in sorted(rows, key=lambda r: r[0])]
     out.append('edges:')
 
     def canon(e):       # (src, op, dst, src head, dst head, src labels, dst labels), `a <- b` as `b -> a`
@@ -2808,6 +2913,10 @@ def dump(g, src=None):
             return e['dst'], '->', e['src'], e['marker_end'], e['marker_start'], by_end['second'], by_end['first']
         return e['src'], e['op'], e['dst'], e['marker_start'], e['marker_end'], by_end['first'], by_end['second']
     plain = ('triangle', 'arrow')       # d2's and the themes' default heads say nothing: not listed
+    want = defaultdict(list)            # the brief's edges by canonical key, in brief order
+    per_line = Counter(w['line'] for w in inv['edges']) if inv else Counter()
+    for w in (inv['edges'] if inv else []):
+        want[canon_edge(w['src'], w['op'], w['dst'])].append(w)
     for e in g['edges']:
         s, op, d, ms, me, sl, dl = canon(e)
         if seq:
@@ -2821,9 +2930,24 @@ def dump(g, src=None):
         for side, labs in (('src', sl), ('dst', dl)):
             if labs:
                 attrs.append(f"{side}-label: {_brief_quote(' '.join(labs))}")
-        lab = e['label']
-        out.append(f"  {s} {op} {d}" + (f": {_brief_quote(lab)}" if lab else '') +
-                   (f" {{{', '.join(attrs)}}}" if attrs else ''))
+        lab = _brief_quote(e['label']) if e['label'] else ''
+        com = ''
+        w = want.get(canon_edge(s, op, d))
+        if w:
+            w = w.pop(0)
+            # the drawing decides stroke, heads and end labels; a chain line's comment is not one edge's
+            lab, attrs, com = kept_line(w, lab, label_ok(w['label'], edge_label_cands(e))[0], attrs,
+                                        ('dashed', 'solid' if e['dashed'] else '', 'src', 'dst', 'src-label',
+                                         'dst-label', 'count'))
+            com = com if per_line[w['line']] == 1 else ''
+        out.append(f"  {s} {op} {d}" + (f": {lab}" if lab else '') + (f" {{{', '.join(attrs)}}}" if attrs else '') + com)
+    if inv:
+        drawn_keys = {k for k in g['nodes']}
+        gone = [v['key'] for k, v in sorted(inv['nodes'].items(), key=lambda kv: kv[1]['line'])
+                if not v['attrs'].get('_implied') and k not in drawn_keys]
+        gone += [f"{w['src']} {w['op']} {w['dst']}" for ws in want.values() for w in ws]
+        if gone:
+            out.append(f"# in {os.path.basename(brief)}, not drawn: {', '.join(gone)}")
     return '\n'.join(out)
 
 
@@ -2858,10 +2982,50 @@ def code_edits(ga, gb):
     return removed, added
 
 
+def _cls(obj):
+    return f"[{'; '.join(obj['classes'])}]" if obj['classes'] else 'none'
+
+
+def look_edits(ga, gb):
+    """T18: `~` lines for what both versions draw: a node or edge whose classes changed (focal, muted, a
+    size class: in d2 the order counts too), and a leaf drawn at another size. A size is compared only
+    where the text stayed: a relabelled box resizes itself (its - / + lines say so); containers and
+    sequence spans follow their contents."""
+    out = []
+    kids_b = {parent_of(k) for k in gb['nodes']}
+    for k in sorted(set(ga['nodes']) & set(gb['nodes'])):
+        na, nb = ga['nodes'][k], gb['nodes'][k]
+        if na['classes'] != nb['classes']:
+            out.append(f"~ node {nb['id']} class: {_cls(na)} -> {_cls(nb)}")
+        ba, bb = na.get('bbox'), nb.get('bbox')
+        span = '.' in k and k.split('.')[0] in gb['lifelines_norm']
+        if (ba and bb and k not in kids_b and not span and na['texts'] == nb['texts']
+                and (na.get('code') or {}).get('text') == (nb.get('code') or {}).get('text')):
+            wa, ha, wb, hb = ba[2] - ba[0], ba[3] - ba[1], bb[2] - bb[0], bb[3] - bb[1]
+            if abs(wa - wb) >= 1 or abs(ha - hb) >= 1:
+                out.append(f"~ node {nb['id']} size: {wa:.0f}x{ha:.0f} -> {wb:.0f}x{hb:.0f}")
+
+    def by_key(g):      # an edge is its ends and kind, plus its place among parallel ones
+        cnt, res = Counter(), {}
+        for e in g['edges']:
+            key = canon_edge(e['src'], e['op'], e['dst'])
+            cnt[key] += 1
+            res[key + (cnt[key],)] = e
+        return res
+    ea, eb = by_key(ga), by_key(gb)
+    for k in sorted(set(ea) & set(eb), key=lambda k: eb[k]['order']):
+        if ea[k]['classes'] != eb[k]['classes']:
+            e = eb[k]
+            out.append(f"~ edge {e['src']} {e['op']} {e['dst']}" + (f" #{k[-1]}" if k[-1] > 1 else '') +
+                       f" class: {_cls(ea[k])} -> {_cls(e)}")
+    return out
+
+
 def compare(ga, gb):
     a, b = graph_facts(ga), graph_facts(gb)
     removed, added = sorted(a - b), sorted(b - a)
     code_removed, code_added = code_edits(ga, gb)
+    changed = look_edits(ga, gb)
 
     def fmt(f):
         if f[0] == 'node':
@@ -2871,10 +3035,11 @@ def compare(ga, gb):
             s += f" [{f[5]} .. {f[6]}]"
         return s + (' dashed' if f[7] == 'dashed' else '') + (f" (#{f[8]})" if f[8] > 1 else '')
     lines = ['- ' + fmt(f) for f in removed] + ['- ' + x for x in code_removed] + \
-        ['+ ' + fmt(f) for f in added] + ['+ ' + x for x in code_added]
+        ['+ ' + fmt(f) for f in added] + ['+ ' + x for x in code_added] + changed
     n_rm, n_add = len(removed) + len(code_removed), len(added) + len(code_added)
-    lines.append(f"-- {n_rm} removed, {n_add} added" + (' (semantically identical)' if not (n_rm or n_add) else ''))
-    return '\n'.join(lines), 0 if not (n_rm or n_add) else 1
+    lines.append(f"-- {n_rm} removed, {n_add} added" + (f", {len(changed)} changed (class or size)" if changed else '')
+                 + (' (semantically identical)' if not (n_rm or n_add or changed) else ''))
+    return '\n'.join(lines), 0 if not (n_rm or n_add or changed) else 1
 
 
 def _relabel(raw, new, edge):
@@ -3009,7 +3174,8 @@ def main(argv):
     ap.add_argument('--layout', help=argparse.SUPPRESS)       # tests only: skills never pass -l
     ap.add_argument('--json', action='store_true', help='machine-readable report (what d2check reads)')
     ap.add_argument('--explain', action='store_true', help='the drawn diagram as plain sentences')
-    ap.add_argument('--dump', action='store_true', help='the drawn graph as a brief skeleton, for edits')
+    ap.add_argument('--dump', action='store_true', help='the drawn graph as a brief skeleton, for edits (keeps the '
+                    'request, header and labels of BRIEF, or of the D2W/<name>.brief beside D2W/orig.d2)')
     ap.add_argument('--compare', metavar='OLD', help='meaning-level diff of OLD against DIAGRAM')
     ap.add_argument('--sync-labels', action='store_true', help='rewrite the node and edge labels of BRIEF to '
                     'the wording DIAGRAM draws (after rewording a label in the .d2)')
@@ -3132,7 +3298,11 @@ def main(argv):
                 for h in hint_lines(err):
                     print('  ' + h)
                 return 2
-            print(explain(g) if a.explain else dump(g, target))
+            if a.explain:
+                print(explain(g))
+                return 0
+            # `--dump BRIEF IN.d2`, else the D2W/<name>.brief beside D2W/orig.d2 (T17: keep its decisions)
+            print(dump(g, target, a.brief if a.diagram else find_brief(target)))
             return 0
 
         if not (a.brief and a.diagram):

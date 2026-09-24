@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.2.3 - 2026-09-23: toolchain close-out (T16-T18, the findings: line)
+
+- E-label-overflow, height: d2 stacks every line of a label at its size (a `tech` box's lines
+  2+ too), the first line the face's ascent + descent, each further line one font size (21,
+  37, 53, 69px at 16px; exact on 320 boxes in four font families). A box whose fixed height
+  holds fewer lines got no finding at all (the label sat under an empty box); now the message
+  names the lines, the height they need and how many fit (`its 3 lines at 16px need 53px -
+  keep 2 lines, or set height: 69 or more on its size class (now 48)`). A size several boxes
+  share through a class (a compare panel, a `pkg` row) is never "dropped" in any
+  E-label-overflow message: the class grows (lint case bad_label_height, pair
+  E-label-overflow.height, two height cases in the size test).
+- semcheck --dump keeps the brief of an earlier session (`--dump [BRIEF] IN.d2`, default the
+  D2W/<name>.brief beside D2W/orig.d2): its request (the change goes inside the quote), every
+  header line and each label the drawing still shows as the brief words it, with its
+  attributes and comment; brief keys no longer drawn are listed. It said `type:
+  architecture` for a compare and took a zone title's case from a comment (`# PR: before,
+  ...` gave `before: before`): a title's case now comes from its own declaration.
+- semcheck --compare lists `~` lines: a class change on a node or edge, and a leaf drawn at
+  another size where its text stayed (a wider width class, a taller box); a focus moved
+  from one node to another, or a width class changed, said "semantically identical".
+- d2check: the header over the code listing reads `findings:` (lint and semantic codes); it
+  read `lint: 4 error(s)` over four S-code-marker errors while `checks:` said `lint 0 ...
+  semantic 4`. `checks:` splits the same total (a test holds findings = lint + semantic).
+
 ## 2.2.2 - 2026-09-23: verification of the code templates and the T1-T15 fixes
 
 An adversarial pass (install from the zip under a path with a space, two new requests drawn

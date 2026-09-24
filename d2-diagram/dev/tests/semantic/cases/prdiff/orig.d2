@@ -1,0 +1,22 @@
+...@mini-theme
+vars: {d2-config: {layout-engine: elk}}
+# PR 42: before, the gate read only the marker; after, it reads the row's resolution.
+# (T17: an edit's copy, D2W/orig.d2, beside the brief of the session that drew it, D2W/prdiff.brief)
+grid-rows: 1
+horizontal-gap: 16
+before: Before {
+  class: zone
+  direction: down
+  marker: "Marker\nforbidden on safe rows" {class: service}
+  gate: "Gate\nreads only the marker" {class: service}
+  marker -> gate: {class: dep}
+}
+after: After {
+  class: zone
+  direction: down
+  json: "analysis.json\nresolution: safe" {class: service}
+  map: "Line map\ngit diff" {class: [service; success]}
+  gate: "Gate\nreads the resolution" {class: [service; focal]}
+  json -> map: {class: dep}
+  map -> gate: reads {class: dep}
+}

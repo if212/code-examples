@@ -1,0 +1,12 @@
+# After: the size class stays (one size for every package); the two short lines are joined, so the
+# label keeps the 2 lines the message says fit 48px.
+...@neutral-theme
+direction: down
+classes: {pkg: {width: 120; height: 48}}
+caption: "Revenue lineage: arrow = feeds" {class: caption}
+orders: "app.orders" {class: [service; pkg; external]}
+stg: "stg_orders\ndbt staging" {class: [service; tech; pkg]}
+rev: fct_revenue {class: [service; pkg; focal]}
+caption -> orders: {class: ghost}
+orders -> stg: {class: dep}
+stg -> rev: {class: dep}

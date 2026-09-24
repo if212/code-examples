@@ -1,0 +1,11 @@
+...@mini-theme
+# T18 before: one width class for the row, the API is the focus
+direction: down
+classes: {row: {width: 120}}
+web: Web app {class: [actor; row]}
+api: Shop API {class: [service; row; focal]}
+cache: Cache {class: service}
+db: Users DB {class: [datastore; row]}
+web -> api: HTTPS {class: dep}
+api -> db: SQL {class: dep}
+api -> cache: reads {class: dep}

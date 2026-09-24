@@ -170,6 +170,14 @@ if [ -f "$SKILL/scripts/semcheck.py" ]; then
   cp "$HERE/d2check/brief_case.d2" "$HERE/d2check/brief_case.brief" "$T/"
   o=$(sh "$CHECK" --no-raster --brief "$T/brief_case.brief" "$T/brief_case.d2" 2>&1); rc=$?
   [ "$rc" = 2 ] && has "$o" '^S-missing-edge x1 -> workflows/review-and-fix.md#s-missing-edge' && ok "brief: S- errors listed, exit 2" || bad "brief (exit $rc)" "$o"
+  # the listing's header counts every finding it lists (lint and semantic); checks: splits the same total, so the
+  # two lines agree (a lint: header counted the S- errors while checks: said lint 0)
+  f=$(printf '%s\n' "$o" | sed -n 's/^findings: \([0-9]*\) error(s), \([0-9]*\) warning.*/\1 \2/p')
+  c=$(printf '%s\n' "$o" | sed -n 's/^checks: lint \([0-9]*\) error(s) \([0-9]*\) warning(s); semantic \([0-9]*\) error(s) \([0-9]*\) warning(s)$/\1 \2 \3 \4/p')
+  sum=$(printf '%s\n' "$c" | awk 'NF == 4 && $3 > 0 { print $1 + $3, $2 + $4 }')
+  if [ -n "$f" ] && [ "$f" = "$sum" ] && ! has "$o" '^lint: '; then
+    ok "findings: = lint + semantic of checks: ($f = $c)"
+  else bad "findings: and checks: disagree ('$f' vs '$c')" "$o"; fi
   mkdir -p "$D2_WORK/brief_case" && cp "$HERE/d2check/brief_case.brief" "$D2_WORK/brief_case/brief_case.brief"
   o=$(sh "$CHECK" --no-raster "$T/brief_case.d2" 2>&1)
   has "$o" 'S-missing-edge' && ok "brief found in D2W/<name>.brief without --brief" || bad "D2W brief lookup" "$o"
@@ -292,7 +300,7 @@ o=$(sh "$CHECK" --help 2>&1); rc=$?
 # an animated SVG (every board in one file): only its first frame is linted, the brief is not applied
 cp "$HERE/d2check/multi_board.d2" "$T/anim.d2"
 o=$(sh "$CHECK" --no-raster "$T/anim.d2" "$T/out/anim-animated.svg" -- --animate-interval 1000 2>&1); rc=$?
-[ "$rc" = 3 ] && has "$o" '^lint: 0 error(s)' && has "$o" 'only the first (the base board) is linted' && grep -q '@keyframes' "$T/out/anim-animated.svg" &&
+[ "$rc" = 3 ] && has "$o" '^findings: 0 error(s)' && has "$o" 'only the first (the base board) is linted' && grep -q '@keyframes' "$T/out/anim-animated.svg" &&
   ok "animated SVG through d2check: first frame linted, no cross-frame phantoms" || bad "animated SVG (exit $rc)" "$o"
 # the ERD sample whose crow's-foot markers used to read as cropped content (B23): faithful, exit 0
 if [ -f "$SKILL/dev/tests/style/erd.ds.d2" ]; then

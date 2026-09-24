@@ -1,0 +1,21 @@
+# request: "Show what changed in PR 42: before, the gate read only the marker; after, the
+#   new gate reads the row's resolution through a line map."
+type: compare
+reader: reviewers of PR 42
+width: 800
+direction: down  # panels side by side, each top to bottom
+focus: after.gate  # "the new gate"
+out: the fail-closed table
+nodes:
+  before: Before
+  before.marker: Marker\nforbidden on safe rows
+  before.gate: Gate\nreads only the marker
+  before.cache: Cache {inferred}   # the edit dropped it
+  after: After
+  after.json: "analysis.json\nresolution: safe"
+  after.map: Line map\ngit-diff {inferred}   # assumed: the map comes from git diff
+  after.gate: Gate\nreads the resolution
+edges:
+  before.marker -> before.gate
+  after.json -> after.map {inferred}
+  after.map -> after.gate: reads   # the new read

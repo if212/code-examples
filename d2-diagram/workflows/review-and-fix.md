@@ -1,17 +1,19 @@
 # Review and fix: the rubric, one recipe per finding code, compile errors
 
-d2check lists each code with its severity and count, `-> workflows/review-and-fix.md#<code>`,
-then one line per instance; `[n]` is its numbered box on `<name>.ann.png`
-(lint and node-level S- findings; a finding about the whole diagram or an
-edge's meaning has no box). Look a code up with Grep: pattern `^### W-fanout`,
-`-A 28`. E- (geometry) and S- errors (meaning) come first: fix them all,
-independent ones in one cycle. Then W- warnings and I-sparse, in rubric
-order: a warning ships only when its recipe was tried in a render cycle and
-failed. Before any of this, d2check's post step (`svgpost.py`) has moved
-edge labels off bends, borders and foreign lifelines wherever a straight run
-holds them: what is listed is what it could not fix. Every `Fix:` below was
-proven on d2 v0.7.1 by a before/after pair: the code fires on the first file
-and is gone after the fix.
+d2check lists each code under `findings:` (lint and semantic; `checks:`
+splits that count) with its severity, count and
+`-> workflows/review-and-fix.md#<code>`, then one line per instance; `[n]` is
+its numbered box on `<name>.ann.png` (lint and node-level S- findings; a
+finding about the whole diagram or an edge's meaning has no box). Look a
+code up with Grep: pattern `^### W-fanout`, `-A 28`. E- (geometry) and S-
+errors (meaning) come first: fix them all, independent ones in one cycle.
+Then W- warnings and I-sparse, in rubric order: a warning ships only when
+its recipe was tried in a render cycle and failed. Before any of this,
+d2check's post step (`svgpost.py`) has moved edge labels off bends, borders
+and foreign lifelines wherever a straight run holds them: what is listed is
+what it could not fix. Every `Fix:` below was proven on d2 v0.7.1 by a
+before/after pair: the code fires on the first file and is gone after the
+fix.
 
 ## Rubric: judge `<name>.col.png`, in this order
 
@@ -144,13 +146,16 @@ In a grid, give every cell the height the message prints, once, through a
 class (`classes: {cell: {height: 165}}`, `class: [service; cell]`).
 
 ### E-label-overflow
-Seen: the label spills out of its box, or is pushed outside a fixed box:
-`width`/`height` smaller than the text (d2 never grows a fixed box). A
-`style.multiple` card is measured on its front copy.
-Fix: shorten or wrap (`\n`) the line the message names: d2 fits every line
-at the label's size, `tech` lines 2+ too. A box of a one-width row (a
-compare panel, a tier, a spine) keeps its width class: shorten the line, or
-give the class the width the message prints. Any other box: delete the
+Seen: the label spills out of its box, or sits under an empty fixed box:
+`width`/`height` smaller than the text (d2 never grows a fixed box). d2
+sizes every line at the label's size, `tech` lines 2+ too: at 16px 2 lines
+need 37px, 3 need 53, each more 16. A `style.multiple` card is measured on
+its front copy.
+Fix: too wide (`'<line>' needs`): shorten or wrap (`\n`) that line. Too
+tall (`its N lines ... need`): keep the lines the message says fit (join
+two short ones, or cut one). A size several boxes share (`on its size
+class`: a compare panel, a tier, a `pkg` row) stays on its class: shorten,
+or give the class the size the message prints. Any other box: delete the
 fixed size and wrap the label.
 
 ### E-code-overflow

@@ -466,7 +466,8 @@ def grayscale_text(d2raster):
 
 def overflow_sizes():
     """E-label-overflow names a size that clears the label, on each shape, with the fonts d2check uses:
-    render a fixed size that is too small, apply every suggested width/height, the finding must go"""
+    render a fixed size that is too small, apply every suggested width/height (both at once where the message
+    asks for both, "width: N or more, height: M or more"), the finding must go"""
     ff = subprocess.run(["sh", os.path.join(SCRIPTS, "font-flags.sh")], capture_output=True, text=True).stdout.split()
     d = os.path.join(OUT, "overflow")
     os.makedirs(d, exist_ok=True)
@@ -482,17 +483,21 @@ def overflow_sizes():
     bad = []
     for shape, size in (("queue", "width: 90"), ("queue", "width: 130"), ("cylinder", "height: 60"),
                         ("cylinder", "height: 90"), ("diamond", "width: 100"), ("hexagon", "width: 90"),
-                        ("rectangle", "width: 60"), ("parallelogram", "width: 90"), ("document", "height: 40")):
-        name = "%s-%s" % (shape, size.replace(": ", ""))
+                        ("rectangle", "width: 60"), ("parallelogram", "width: 90"), ("document", "height: 40"),
+                        ("rectangle", "height: 30"), ("rectangle", "width: 60; height: 30")):
+        name = "%s-%s" % (shape, size.replace(": ", "").replace("; ", "-"))
         text = 'q: "Queue\\nKafka topic" {shape: %s; %s}\n' % (shape, size)
         m = msgs(text, name)
         sizes = re.findall(r"(width|height): (\d+) or more", m[0]) if m else []
         if not sizes:
             bad.append("%s: %s" % (name, m[0] if m else "no finding"))
-        for dim, val in sizes:
-            t2 = re.sub(dim + r": \d+", "%s: %s" % (dim, val), text) if dim in text else text.replace("}", "; %s: %s}" % (dim, val), 1)
+        both = bool(m) and "or more, height:" in m[0]
+        for fix in ([sizes] if both else [[s] for s in sizes]):
+            t2 = text
+            for dim, val in fix:
+                t2 = re.sub(dim + r": \d+", "%s: %s" % (dim, val), t2) if dim in t2 else t2.replace("}", "; %s: %s}" % (dim, val), 1)
             if msgs(t2, name + "-fixed"):
-                bad.append("%s: %s %s still overflows" % (name, dim, val))
+                bad.append("%s: %s still overflows" % (name, " ".join("%s %s" % f for f in fix)))
     check("E-label-overflow sizes clear it", not bad, "; ".join(bad)[:300])
 
 

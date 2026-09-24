@@ -493,6 +493,7 @@ class FontMetrics:
         self.adv = {}
         self.ink_box = {}  # codepoint -> (xMin, yMin, xMax, yMax) of the glyph outline, font units
         self.default_adv = 500
+        self.asc, self.desc = 0, 0  # hhea ascender / descender, font units (d2 sizes a label from them)
         self._parse(data)
 
     def _parse(self, d):
@@ -507,6 +508,7 @@ class FontMetrics:
                 raw = zlib.decompress(raw)
             tabs[tag.decode("latin1")] = raw
         self.upem = struct.unpack(">H", tabs["head"][18:20])[0]
+        self.asc, self.desc = struct.unpack(">hh", tabs["hhea"][4:8])
         nh = struct.unpack(">H", tabs["hhea"][34:36])[0]
         hm = tabs["hmtx"]
         advs = [struct.unpack(">H", hm[i * 4:i * 4 + 2])[0] for i in range(nh)]
@@ -577,6 +579,30 @@ class FontMetrics:
 
     def width(self, s, size):
         return sum(self.adv.get(ord(ch), self.default_adv) for ch in s) * size / self.upem
+
+
+def d2_label_height(t, n_lines=None):
+    """the height d2 measured for a label of n_lines lines (default: all of t's): every line at the label's
+    size, the first as the face's hhea ascent + descent (each rounded up to 1/64 px, as its ruler does),
+    one font size more per further line (verified on d2 v0.7.1: 21/37/53/69 at 16px, 19/33/47/61 at 14px)"""
+    fs, fm = t.fs, t.fm
+    n_lines = len(t.lines) if n_lines is None else n_lines
+    if fm and fm.asc > 0 > fm.desc:
+        first = (math.ceil(fs * 64 * fm.asc / fm.upem) + math.ceil(fs * 64 * -fm.desc / fm.upem)) / 64
+    else:  # no metrics: IBM Plex Sans (the default family) is 1.3 em
+        first = 1.3 * fs
+    return math.ceil(first + (n_lines - 1) * fs - 1e-9)
+
+
+def size_mates(n, leaves, axis):
+    """the other boxes that share n's size along axis (0 width, 1 height) and one of its classes: a
+    one-size row (a compare panel, a hierarchy `pkg` class) keeps its class; its size is never dropped"""
+    def dim(m):
+        b = m.core or m.box
+        return b.w if axis == 0 else b.h
+    mine = set(n.classes)
+    return [m for m in leaves if m is not n and not m.hidden and m.box is not None and mine & set(m.classes)
+            and abs(dim(m) - dim(n)) <= 0.5]
 
 
 def glyph_top(ch):
@@ -1891,23 +1917,43 @@ def run_checks(dg, column=800.0):
         for t in n.labels:
             # style.multiple: the label sits on the FRONT card (polys[0] is the back copy, offset up and right)
             if not (point_in_poly(t.box.cx, t.box.cy, n.core_poly) if n.core_poly else n.contains_pt(t.box.cx, t.box.cy, 0)):
-                if (not n.icons and not n.in_seq and len(n.polys[0]) in (4, 5) and not n.box.intersects(t.box, 0)
-                        and t.box.w > n.box.w * 0.9):
-                    # d2 moves a label that does not fit outside the box. It measures EVERY line at the label's
-                    # size (svgpost draws `tech` lines 2+ smaller afterwards), so the widest line at that size
-                    # decides; 8px a side on top of it reads as a box, not a tight fit
+                core = n.core or n.box
+                if not n.icons and not n.in_seq and len(n.polys[0]) in (4, 5) and not n.box.intersects(t.box, 0):
+                    # d2 moves a label that does not fit outside the box, centred under it. It measures EVERY
+                    # line at the label's size (svgpost draws `tech` lines 2+ smaller afterwards): the widest
+                    # line at that size decides the width, the line count the height (d2_label_height); 8px a
+                    # side on top of it reads as a box, not a tight fit
                     if t.fm:
                         per = [(t.fm.width(s, t.fs) * t.slack, s) for _lx, _ly, s, _lfs in t.lines if s.strip()]
                     else:  # no metrics: the drawn width, scaled back to the label's size
                         per = [(t.box.w * t.fs / max(t.fs_min, 1.0), max((l[2] for l in t.lines), key=len))]
                     wmax, widest = max(per) if per else (t.box.w, t.content)
+                    hneed = d2_label_height(t)
+                    # too tall: more lines than the fixed height holds (d2 then centres the label under the box)
+                    tall = hneed > core.h + 0.5 and t.box.y0 >= core.y1 - 2 and abs(t.box.cx - core.cx) <= 3
+                    # too wide: the widest line (within the 4px the advance widths can miss); a label pushed out
+                    # for its height alone may well be nearly as wide as its box
+                    wide = wmax + 4 > core.w if tall and t.fm else (t.box.w > n.box.w * 0.9 or wmax > core.w + 0.5)
+                    # a one-size row (a size class several boxes share) keeps its class: grow the class
+                    on = [" on its size class" if size_mates(n, leaves, axis) else "" for axis in (0, 1)]
                     # short enough for d2check's 170-character listing: the fix is at the end
-                    F.append(Finding("error", "E-label-overflow",
-                                     "label of '%s' is outside its box: d2 fits each line at %gpx, '%s' needs %d - "
-                                     "shorten or wrap it, or set width: %d or more (now %.0f)" % (
-                                         short(n.id, 24), t.fs, short(widest, 24), math.ceil(wmax),
-                                         math.ceil(wmax + 16), n.box.w),
-                                     t.box.union(n.box), [n.id]))
+                    if wide and tall:
+                        msg = "at %gpx its %d lines need %dx%d - shorten it, or set width: %d or more, height: %d or " \
+                              "more (now %.0fx%.0f)" % (t.fs, len(t.lines), math.ceil(wmax), hneed, math.ceil(wmax + 16),
+                                                        hneed + 16, core.w, core.h)
+                    elif wide:
+                        msg = "at %gpx '%s' needs %d - shorten or wrap it, or set width: %d or more%s (now %.0f)" % (
+                            t.fs, short(widest, 24), math.ceil(wmax), math.ceil(wmax + 16), on[0], core.w)
+                    elif tall:
+                        # the lines that fit with 4px a side (joined or cut); none: only a taller box helps
+                        keep = max([k for k in range(1, len(t.lines)) if d2_label_height(t, k) + 8 <= core.h] or [0])
+                        msg = "its %d lines at %gpx need %dpx - %sset height: %d or more%s (now %.0f)" % (
+                            len(t.lines), t.fs, hneed, "keep %d line%s, or " % (keep, "s" if keep > 1 else "") if keep else "",
+                            hneed + 16, on[1], core.h)
+                    else:
+                        continue  # outside label on purpose (label.near outside-*)
+                    F.append(Finding("error", "E-label-overflow", "label of '%s' is outside its box: %s" % (
+                        short(n.id, 20), msg), t.box.union(n.box), [n.id]))
                 continue  # outside label on purpose (person, label.near outside-*)
             per = [(x, t.box.y0) for x in _frange(t.box.x0, t.box.x1, 2)] + \
                   [(x, t.box.y1) for x in _frange(t.box.x0, t.box.x1, 2)] + \
@@ -1923,13 +1969,16 @@ def run_checks(dg, column=800.0):
                 for axis, dim, now in ((0, "width", core.w), (1, "height", core.h)):
                     need = grow_to_fit(poly, per, inner, axis, now)
                     if need:
-                        grow.append((need / max(now, 1.0), "%s: %d or more (now %.0f)" % (dim, math.ceil(need), now)))
+                        grow.append((need / max(now, 1.0), "%s: %d or more%s (now %.0f)" % (
+                            dim, math.ceil(need), " on its size class" if size_mates(n, leaves, axis) else "", now)))
                 # a sensible size only (a diamond 4x taller is no fix), but always one if any fits
                 grow = [g for r, g in sorted(grow) if r <= 3 or g == min(grow)[1]]
                 hint = ("set " + " or ".join(grow)) if grow else "wrap it with \\n"
+                # a size several boxes share through a class (a one-size row) stays: never drop it
+                drop = "" if size_mates(n, leaves, 0) or size_mates(n, leaves, 1) else "drop its fixed size, or "
                 F.append(Finding("error", "E-label-overflow",
-                                 "label '%s' spills outside node '%s': drop its fixed size, or %s" % (
-                                     short(t.content, 30), n.id, hint), t.box.union(n.box), [n.id]))
+                                 "label '%s' spills outside node '%s': %s%s" % (
+                                     short(t.content, 30), n.id, drop, hint), t.box.union(n.box), [n.id]))
                 continue
             # the shape's own inner stroke (cylinder rim, queue end cap) drawn across the label's glyphs
             pts = [p for s in n.strokes for p in densify(s, 1.0)]
@@ -1941,13 +1990,16 @@ def run_checks(dg, column=800.0):
                 # d2 centres the label: growing the shape by D moves the label D/2 away from a rim or cap
                 if sb.w >= sb.h:  # a rim across the top (cylinder): the label must sit lower
                     pen = max(max((p[1] for p in pts if g.x0 - 1 <= p[0] <= g.x1 + 1), default=g.y0) - g.y0 for g in gl)
-                    need = "set height: %d or more (now %.0f)" % (math.ceil(core.h + 2 * (pen + 3)), core.h)
+                    axis, need = 1, "height: %d or more" % math.ceil(core.h + 2 * (pen + 3))
                 else:             # an end cap at the side (queue): the label must sit further from it
                     pen = max(g.x1 - min((p[0] for p in pts if g.y0 - 1 <= p[1] <= g.y1 + 1), default=g.x1) for g in gl)
-                    need = "set width: %d or more (now %.0f)" % (math.ceil(core.w + 2 * (pen + 3)), core.w)
+                    axis, need = 0, "width: %d or more" % math.ceil(core.w + 2 * (pen + 3))
+                # a size several boxes share through a class (a one-size row) stays: grow the class, never drop it
+                fix = ("set %s on its size class (now %.0f)" if size_mates(n, leaves, axis) else
+                       "set %s (now %.0f), or drop the fixed size (d2 then clears it)") % (need, core.h if axis else core.w)
                 F.append(Finding("error", "E-label-overflow",
-                                 "the %s of '%s' crosses its label '%s': %s, or drop the fixed size (d2 then clears it)" % (
-                                     "top rim" if sb.w >= sb.h else "end cap", n.id, short(t.content, 30), need),
+                                 "the %s of '%s' crosses its label '%s': %s" % (
+                                     "top rim" if sb.w >= sb.h else "end cap", n.id, short(t.content, 30), fix),
                                  t.box.union(sb), [n.id]))
 
     # --- node overlap & containment ----------------------------------------

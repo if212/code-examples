@@ -1,0 +1,13 @@
+...@mini-theme
+# T18 after: the same nodes and edges; the row class is wider, the focus moved to the DB and the first
+# edge became the main path: --compare lists each as a `~` line (label-only, it said "identical").
+# The cache is relabelled: its - / + lines say so, and its new size is not listed apart
+direction: down
+classes: {row: {width: 150}}
+web: Web app {class: [actor; row]}
+api: Shop API {class: [service; row]}
+cache: Session cache {class: service}
+db: Users DB {class: [datastore; row; focal]}
+web -> api: HTTPS {class: flow}
+api -> db: SQL {class: dep}
+api -> cache: reads {class: dep}

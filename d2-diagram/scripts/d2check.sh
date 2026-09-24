@@ -20,9 +20,9 @@
 #   layers 40px apart, 72 with sql_table; 30px under a container's last row, 50 with bottom titles)
 #   -> svgpost.py (code blocks, labels off bends and lifelines, table rules, the key, sequence and tech lines)
 #   -> d2lint -> semcheck -> Chromium PNGs.
-# Summary: fonts: | render: | post: | display: | lint: + one line per code with its recipe and severity |
-#   semantic: | checks: | reviewed: | READ: the PNGs to Read, in order | re-render: the command that
-#   rebuilds OUT byte for byte | result:
+# Summary: fonts: | render: | post: | display: | findings: every code, lint and semantic, one line each
+#   with its recipe and severity | semantic: | checks: the findings split, lint + semantic | reviewed: |
+#   READ: the PNGs to Read, in order | re-render: the command that rebuilds OUT byte for byte | result:
 # Working files go to D2W = ${D2_WORK:-${TMPDIR:-/tmp}/d2work}/<name>/, never next to OUT. D2W/.source
 # names the .d2 that owns D2W: another file with the same name gets a warning and no automatic brief
 # (pass --brief, or set D2_WORK); D2W/.lock holds the pid of the run using D2W.
@@ -609,8 +609,8 @@ main() {
       if [ "$nb" -gt 1 ]; then
         say "board ${svg#"${out%.svg}"/}: $(sed -n 's/^lint: //p' "$D2W/$base.lint.txt")"
         prefix="  "
-      else
-        say "$(grep '^lint: ' "$D2W/$base.lint.txt")"
+      else  # d2lint's count holds the semantic findings merged into its listing: all findings, not lint alone
+        say "findings: $(sed -n 's/^lint: //p' "$D2W/$base.lint.txt")"
         prefix=""
       fi
       if [ "$quiet" = 1 ]; then
