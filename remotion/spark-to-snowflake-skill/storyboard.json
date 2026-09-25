@@ -1,0 +1,312 @@
+{
+ "title": "Migration, as a Skill",
+ "whyThisDirection": "Refraction had the highest combined score from the three judges (7.5 / 7.5 / 8). It already has keynote-scale type, no terminal chrome, one strict left-to-right ember-to-ice rule and the lowest risk of looking like a vendor's UI, so it is the base. It lacked a pain beat the viewer can feel and a team payoff. To fill those gaps I took four pieces from the other concepts: Maya's story spine (the same 12-tile board before and after through a match cut, 'Needs you' tiles, beams to teammates), Open the Skill's 'Playbook \u00b7 Mappings \u00b7 Checks' triptych, which uses the user's own words, Write It Once's stepped 'by hand' motion, and its NULLS LAST trap, used as the single tool-agnostic code moment. Following the 'just high level' direction, I removed every product and API name, every file tree, diff and terminal log, the clock and all speed-up numbers.",
+ "alternatives": [
+  {
+   "title": "12 Spark Jobs. One Request.",
+   "oneLine": "One-take 3D camera through a glass terminal. One typed request, then the skill loads, swaps sessions, catches a time-zone drift and ends in a freeze-wave tile flip.",
+   "clarity": 5.5,
+   "accuracy": 5,
+   "craft": 5,
+   "verdict": "Not used as the base. It is terminal-heavy, names Snowpark Connect, runs 10 beats, has no pain beat and its one-take camera is expensive. Kept: its hook rhythm and the freeze-wave tile flip, simplified to one gradient sheen."
+  },
+  {
+   "title": "Write It Once: Spark to Snowflake, Split Screen",
+   "oneLine": "A glowing seam splits one job into 'without the skill' (re-pasted rules, one missed, wrong row wins) and 'with the skill' (one request, same steps, self-checks).",
+   "clarity": 5.5,
+   "accuracy": 5.5,
+   "craft": 6,
+   "verdict": "Not used as the base. The split halves type size, the pasted-rules side reads as a straw man, and it has three code moments. Kept: the stepped 'by hand' motion and the NULLS LAST trap as the only code."
+  },
+  {
+   "title": "Open the Skill: Spark \u2192 Snowflake",
+   "oneLine": "One glass slab opens as a triptych (playbook / map / check) and then pays off in Load, Convert and Verify beats.",
+   "clarity": 6.5,
+   "accuracy": 6.5,
+   "craft": 6.5,
+   "verdict": "Kept: the triptych, now titled 'Playbook \u00b7 Mappings \u00b7 Checks', as the single 'what is a skill' frame. Dropped: no pain beat, API-named mapping rows, the diff, and a claim of 12/12 converted despite an RDD job."
+  },
+  {
+   "title": "Refraction: Migration, as a Skill",
+   "oneLine": "Keynote motion graphics: ember Spark cards pass through a glass skill and leave as ice Snowflake jobs, with two flagged for a human.",
+   "clarity": 7.5,
+   "accuracy": 7.5,
+   "craft": 8,
+   "verdict": "CHOSEN BASE. Kept its type grammar, prompt pill (no terminal), warm-to-cool rule and 'Migration, as a skill.' end line. Changes: added a pain beat and a team beat, and removed the 9-line diff, API pills and context meter."
+  },
+  {
+   "title": "Maya's Ticket: 40 Spark Jobs, One Skill",
+   "oneLine": "One engineer's ticket: repeated questions swirl into a Skill, one plain request, a match-cut wave, and the whole team reuses it.",
+   "clarity": 8,
+   "accuracy": 7,
+   "craft": 7,
+   "verdict": "Kept as the story spine: pain board, notes swirling into a folder, the match-cut wave, 'Needs you' tiles and teammate beams. Dropped the named character, ticket ID, clock, 40 tiles, diff and dense UI."
+  }
+ ],
+ "style": {
+  "palette": [
+   {
+    "name": "Stage Ink",
+    "hex": "#05070D",
+    "use": "Base background on every frame"
+   },
+   {
+    "name": "Stage Lift",
+    "hex": "#0B1020",
+    "use": "Radial centre lift of the background (behind the light axis)"
+   },
+   {
+    "name": "Grid Dot",
+    "hex": "#1A2233",
+    "use": "48px dot grid at 40% opacity, 0.3x parallax"
+   },
+   {
+    "name": "Glass Fill",
+    "hex": "#FFFFFF0D",
+    "use": "Tile, panel, pill and card fill (5% white). No backdrop-filter."
+   },
+   {
+    "name": "Glass Hairline",
+    "hex": "#FFFFFF24",
+    "use": "1px border on every glass object"
+   },
+   {
+    "name": "Glass Highlight",
+    "hex": "#FFFFFF1A",
+    "use": "Inner top-edge highlight (inset 0 1px) on glass"
+   },
+   {
+    "name": "Frost Text",
+    "hex": "#F2F5FA",
+    "use": "Headlines, primary text, the 'you' cursor"
+   },
+   {
+    "name": "Slate",
+    "hex": "#8B97AD",
+    "use": "Sub-captions, glosses, status line, labels"
+   },
+   {
+    "name": "Dim",
+    "hex": "#5E6A80",
+    "use": "Footnote, DEMO PROJECT chip, dimmed shelf cards, file hints"
+   },
+   {
+    "name": "Ember",
+    "hex": "#FF7A3D",
+    "use": "Spark / not migrated yet: tile front pills, 'Spark SQL' label, ember orb. Deliberately not the Spark brand orange #E25A1C."
+   },
+   {
+    "name": "Ember Glow",
+    "hex": "#FFB26B",
+    "use": "Ember highlights; 2nd stop of the signature gradient"
+   },
+   {
+    "name": "Ember Deep",
+    "hex": "#7A2A0F",
+    "use": "Ember orb core, ember shadows"
+   },
+   {
+    "name": "White-Hot",
+    "hex": "#F5E6D8",
+    "use": "Middle stop of the signature gradient; hinge seams, snap flash, light-wipe core"
+   },
+   {
+    "name": "Ice",
+    "hex": "#38E1FF",
+    "use": "Snowflake / migrated: tile back faces, 'as-is on Snowflake' label, ice orb. Deliberately not the Snowflake brand blue #29B5E8."
+   },
+   {
+    "name": "Ice Glow",
+    "hex": "#B8F3FF",
+    "use": "Ice highlights; 4th stop of the signature gradient"
+   },
+   {
+    "name": "Ice Deep",
+    "hex": "#0B4F74",
+    "use": "Ice orb core, ice shadows"
+   },
+   {
+    "name": "Skill Violet",
+    "hex": "#A98BFF",
+    "use": "Everything that IS the skill: folder core, skill dock icons when lit, match beam, 'matched' tag, 'from Mappings' chip"
+   },
+   {
+    "name": "Violet Glow",
+    "hex": "#6C4DFF",
+    "use": "Bloom around skill objects (screen blend)"
+   },
+   {
+    "name": "Checked Mint",
+    "hex": "#34E0A1",
+    "use": "Check marks, 'match' chip, inserted ' NULLS LAST' text + 14% wash, 'right row'"
+   },
+   {
+    "name": "Needs-You Amber",
+    "hex": "#FFC857",
+    "use": "Flagged tiles' edge, 'Needs you' tag, '2 need you' chip, one tile per teammate board"
+   },
+   {
+    "name": "Coral",
+    "hex": "#FF5C7A",
+    "use": "Only for 'missed one' (S1) and 'wrong row' (S6)"
+   },
+   {
+    "name": "Code BG",
+    "hex": "#0A0E16",
+    "use": "S6 code panel background"
+   },
+   {
+    "name": "SQL Keyword",
+    "hex": "#C9B6FF",
+    "use": "ORDER BY / DESC in S6"
+   },
+   {
+    "name": "Identifier",
+    "hex": "#D6E2F5",
+    "use": "updated_at in S6"
+   },
+   {
+    "name": "Teammate Pink",
+    "hex": "#F472B6",
+    "use": "Cursor tag 'Leo' (S7)"
+   },
+   {
+    "name": "Teammate Lime",
+    "hex": "#A3E635",
+    "use": "Cursor tag 'Priya' (S7)"
+   },
+   {
+    "name": "Teammate Silver",
+    "hex": "#E2E8F0",
+    "use": "Cursor tag 'Sam' (S7)"
+   },
+   {
+    "name": "Signature Gradient",
+    "hex": "#FF7A3D \u2192 #FFB26B \u2192 #F5E6D8 \u2192 #B8F3FF \u2192 #38E1FF",
+    "use": "110deg linear gradient for key words (background-clip:text), the folder rim, shockwave ring, light-wipe and light axis"
+   }
+  ],
+  "typography": "All fonts load offline: npm @fontsource woff2 files are copied into public/ and loaded with @remotion/fonts loadFont({family, url: staticFile(...)}), with rendering held by delayRender until they resolve. Do not use @remotion/google-fonts, which fails in this container.\n- DISPLAY: Inter Tight 800 (@fontsource/inter-tight 5.3.0). Headlines are 120px by default (160px for 'Just ask.', 112px minimum), letter-spacing -0.04em, line-height 0.95, always one line, fitText max width 1500px. The key word in each headline takes the signature gradient plus a 24px glow at 35%.\n- ACCENT: Instrument Serif Italic 400 (@fontsource/instrument-serif 5.3.0) for exactly two words, 'once' (S2) and 'skill' (S3, S8), at 1.08x the headline size so it matches optically, with gradient fill.\n- TEXT: Inter Tight 500 at 44px for sub-captions (Slate); 700 at 48px for triptych titles; 500 at 28px for glosses; 600 at 18-20px UPPERCASE with +0.14em tracking for pills and chips ('SPARK', 'SNOWFLAKE', 'NEEDS YOU', 'DEMO PROJECT'); 500 at 20px for the footnote.\n- MONO: JetBrains Mono 500/700 (@fontsource/jetbrains-mono, render-verified in the probe), ligatures off. Prompt 40px, S6 code 48px, tile filenames 22px, stat chips 30px with tabular-nums, status line 26px, folder tab and end mono line 24-28px.\n- FALLBACK: Inter (@fontsource/inter, render-verified in the probe) if Inter Tight has any issue. Inter Tight and Instrument Serif are confirmed on npm at 5.3.0 but were not render-tested in the probe.",
+  "motionLanguage": "EASING: EXPO_OUT = Easing.bezier(0.16,1,0.3,1) for every reveal and camera move (18-24f). EXIT = Easing.bezier(0.7,0,0.84,0) over 10f. Only typing and the light-axis draw are linear.\nSPRINGS:\n- GLIDE {damping:200}: panels, pills, float-forward. No bounce.\n- SNAP {mass:0.8, damping:14, stiffness:120}: tiles, cards, chips, badges. Small premium overshoot.\n- HINGE {stiffness:260, damping:14}: triptych hinges and folder lid. About 3\u00b0 overshoot.\nTEXT: per-word masked reveal (translateY 40\u21920, blur 16\u21920px, opacity 0\u21921, 4f stagger, 20f EXPO_OUT). Exit: opacity\u21920, y -16px, blur 0\u21928px over 10f. Only one headline on screen at a time, each held at least 1.5s.\nTYPING: 2f per character for the prompt and the inserted ' NULLS LAST'; 1f per character for status lines, the folder tab and the code line. Caret blinks every 15f.\nCAMERA: no one-take camera. Each shot drifts slowly (scale 1.00\u21921.03, \u00b10.3\u00b0 rotation). Push-ins and pull-backs use EXPO_OUT over 18f.\nPAIN VS SKILL: in S1 the ember layer runs on stepped time, pf = Math.floor(frame/3)*3, with seeded \u00b12px jitter, so it feels manual. From S2 on, everything runs at smooth 30fps. The motion quality alone says 'by hand' versus 'with the skill'.\nMOTION BLUR: velocity-driven SVG feGaussianBlur with stdDeviation 'v 0' along the direction of travel, on flying notes, the card flight, push-ins and pull-backs. No CameraMotionBlur.\nDEPTH:\n- Three parallax planes: orbs/grid/grain at 0.3x, hero objects at 1x, ember and ice bokeh specks at 1.3x.\n- Unfocused objects get 6-10px depth-of-field blur, applied to leaf elements only, never to a preserve-3d ancestor.\n- Glow comes from blurred duplicates with mix-blend-mode: screen.\n- 3D tilt only while tiles flip (\u22646\u00b0 at mid-flip) and on hinges. Anything that must be read is flat.\nCOLOUR ARC: two huge blurred orbs, ember at bottom-left and ice at top-right, crossfade with interpolateColors on the global frame, from 70/30 ember at f0 to 20/80 ice at f1110. The whole frame cools as the migration happens.\nGRAIN: 4-6 feTurbulence PNGs pre-rendered with `remotion still`, cycled every 2f at 3.5% overlay (required, because dark gradients band).\nTRANSITIONS:\n- Mostly continuous match cuts: tiles \u2192 notes \u2192 folder \u2192 triptych \u2192 shelf card; the S1 board and the S5 board share identical layout constants; tile \u2192 code panel push-in; board \u2192 mini board pull-back.\n- A custom 12f diagonal light-wipe overlay (a band of ember \u2192 white-hot \u2192 ice with bloom) covers the cuts at S4\u2192S5 and S7\u2192S8. It is drawn as an overlay across the boundary with a hard cut underneath at its midpoint, so there are no TransitionSeries overlap frames.\n- No shader transitions and no stock slide or wipe.\nSFX (optional, local files): stepped paper ticks in S1, a whoosh on each flight, a soft snap on the lid, glassy ticks on the tile flips (quantised to 1 per 3 tiles), a mint chime on the stat chips.",
+  "layout": "Canvas 1920\u00d71080, 30fps, 1110 frames (37.0s), bt709. Title-safe margin 96px on all sides (content box x96-1824, y96-984). 12-column grid: 122px columns, 24px gutters, inside the 96px margins.\nZONES:\n- Headline band: centred at x960, cap-centre y\u2248190 (y110-270).\n- Hero zone: y300-880, centred on a persistent 1px light axis at y=600.\n- Sub/stat band: y890-950, centred.\n- DEMO PROJECT chip: bottom-left at x96, baseline y980 (S1-S7).\n- Footnote (S8 only): centred at baseline y980.\nFIXED OBJECTS (share these constants between scenes so match cuts line up):\n- BOARD: 4\u00d73 tiles, each 300\u00d7170 with radius 18, 28px gaps. Total 1284\u00d7566, centred at (960,600).\n- TRIPTYCH: 3 panels, each 440\u00d7320, 16px gaps (1352\u00d7320), centred at (960,600).\n- PROMPT PILL: x120-900, y552-648, radius 48.\n- SKILL SHELF: 4 cards, each 760\u00d776 with 16px gaps, x1000-1760, y420-772.\n- SKILL DOCK (S5-S6): vertical glass strip, 120\u00d7320, at x96-216, y440-760.\n- CODE PANEL (S6): 1280\u00d7400 centred at (960,600). Code starts at x380; the pill stack sits at x1380-1540.\n- S7 MINI BOARDS: board at 0.34 scale, centred at (500,440) You, (1420,440) Leo, (500,820) Priya, (1420,820) Sam. Folder hub at (960,630).\n- S8 END STACK: folder at (960,340); headline cap-centre y560; sub y660; mono line y730.\nLAYERING: every layer is its own AbsoluteFill (bg orbs/grid \u2192 grain \u2192 light axis \u2192 hero objects \u2192 cursor/chips \u2192 headline \u2192 persistent chips), because the probe showed an absolute background can paint over a static SVG.\nIf a voice-over is added, no burned-in subtitles are needed: each VO line restates the on-screen headline."
+ },
+ "totalSeconds": 37,
+ "scenes": [
+  {
+   "id": "S1",
+   "startSeconds": 0,
+   "seconds": 5,
+   "purpose": "HOOK + PAIN. Within 1s: a batch of Spark jobs. By 3-5s: migrating them by hand means the same fixes again and again, and one gets missed.",
+   "visual": "Dark stage with ember-heavy orbs. A 4\u00d73 wall of 12 glass job tiles, each with an ember 'SPARK' pill, a filename and three faint code-silhouette bars. A white cursor tagged 'you' works through tiles one at a time in stuttery, stepped motion, stamping the same three chips on each. The third tile is left with an empty dashed slot and a coral 'missed one' tag.",
+   "onScreenText": "Headline A (0.3-2.8s): 12 Spark jobs.\nHeadline B (2.8-5.0s): Same fixes. Every job.\nTile chips: Rewrite \u00b7 Fix \u00b7 Test\nStamp: again\nTile tag (tile 2): missed one\nTile filenames (texture, row-major): daily_sales.py \u00b7 orders_clean.py \u00b7 latest_customers.sql \u00b7 events_stream.py \u00b7 fx_rates.py \u00b7 refunds.py \u00b7 inventory.py \u00b7 churn_model.py \u00b7 sessions_daily.py \u00b7 top_products.py \u00b7 returns_weekly.py \u00b7 revenue_by_region.py\nCorner chip: DEMO PROJECT",
+   "vo": "Twelve Spark jobs. By hand, it's the same fixes, job after job.",
+   "animationNotes": "Global f0-150 (local lf = frame within scene).\n- lf0-10: the light axis (1px, signature gradient, 40px bloom) draws left to right via evolvePath with EXPO_OUT.\n- lf4-34: the 12 tiles cascade in with delay (row+col)\u00d72f. SNAP spring from translateZ -200, blur 12px, opacity 0.\n- lf8: word-reveal of '12 Spark jobs.' ('Spark' in the ember gradient). Headlines stay smooth, not stepped.\n- From lf30 the ember layer runs on stepped time pf = Math.floor(f/3)*3 with seeded \u00b12px jitter.\n- lf30: the cursor hops to tile 0. Chips 'Rewrite', 'Fix', 'Test' stamp on at lf36/42/48 (stepped scale 1.3\u21921), and a slow ember progress bar crawls under the tile.\n- lf60: the cursor hops to tile 1. The same three chips stamp again while ghosts of tile 0's chips linger at 30%, and a tilted 'again' stamp lands at lf78.\n- lf84: Headline A exits (10f) and 'Same fixes. Every job.' reveals.\n- lf96: the cursor hops to tile 2 (latest_customers.sql). 'Rewrite' and 'Test' stamp, but the middle slot stays an empty dashed outline.\n- lf120: a coral dot and the 'missed one' tag pop on with a 4f stepped glitch shake.\n- lf120-150: hold. The DEMO PROJECT chip has sat at 60% opacity since lf20."
+  },
+  {
+   "id": "S2",
+   "startSeconds": 5,
+   "seconds": 4,
+   "purpose": "THE IDEA. Those repeated fixes become know-how written once, collected into one folder.",
+   "visual": "The board dims into the background. All the repeated chip notes peel off the tiles and swirl along curved paths into one glass folder rising at centre. The notes turn from ember to violet as they cross its rim. The lid snaps shut with a white-hot flash and a gradient shockwave ring, and the folder tab reads spark-to-snowflake/. Motion is smooth from here on.",
+   "onScreenText": "Headline: Write the know-how once.\nFolder tab: spark-to-snowflake/",
+   "vo": "So write that know-how down, once.",
+   "animationNotes": "Global f150-270.\n- lf0-15: the board dims (opacity 1\u21920.35, scale 1\u21920.96, 8px blur applied to each tile leaf). The cursor fades out.\n- lf6-60: the 8 chip notes (3+3+2) peel off (rotateX -25\u00b0, translateZ +80) and fly along seeded cubic B\u00e9zier paths (getPointAtLength), with velocity-driven directional blur. The destination is a glass folder springing up (GLIDE) to (960,620) from y+220. Each note recolours from ember to violet as it reaches the rim (interpolateColors on distance) and sets off a small violet flash. The dashed empty slot stays behind on tile 2.\n- lf10: word-reveal of 'Write the know-how once.' ('once' in Instrument Serif Italic with the signature gradient).\n- lf72-84: the lid snaps shut (rotateX, HINGE spring, about 3\u00b0 overshoot).\n- lf84: a 2f white-hot flash and a shockwave ring (@remotion/shapes circle, gradient stroke, r 80\u2192560, opacity 1\u21920 over 20f).\n- lf84-114: the tab label 'spark-to-snowflake/' types at 1f/char (JetBrains Mono 28px).\n- lf114-120: the folder breathes (noise2D \u00b14px)."
+  },
+  {
+   "id": "S3",
+   "startSeconds": 9,
+   "seconds": 5,
+   "purpose": "WHAT A SKILL IS, in one frame: a folder with a playbook, mappings and checks that an AI agent can use. This is also the screenshot moment.",
+   "visual": "The folder turns to face the camera and becomes a glass slab. Two white-hot seams split it, and it swings open like a triptych with light pouring through the hinges. It settles as three panels: Playbook, Mappings and Checks, each with a thin-stroke icon, a short gloss and a small file hint. Checks is smoked black glass with a sealed seam (its code is never shown), and a small '\u2713 match' ticket slides out beneath it.",
+   "onScreenText": "Headline: That's an agent skill.\nPanel 1: Playbook \u00b7 Steps to follow \u00b7 SKILL.md\nPanel 2: Mappings \u00b7 Spark \u2192 Snowflake \u00b7 references/\nPanel 3: Checks \u00b7 Old vs new must match \u00b7 scripts/\nTicket under panel 3: \u2713 match",
+   "vo": "That's an agent skill: a playbook, mappings, and checks, in one folder.",
+   "animationNotes": "Global f270-420.\n- lf0-10: the S2 headline exits.\n- lf0-20: the folder turns face-on and scales 1\u21921.35 (GLIDE), becoming a 1352\u00d7320 slab.\n- lf16: two thin white-hot seams appear at 1/3 and 2/3 of the slab.\n- lf24-60: the triptych opens. The left and right panels start folded over the centre panel (rotateY \u00b1180\u00b0, transform-origin on the inner hinge edges, preserve-3d, backface-visibility hidden) and swing to 0\u00b0 with the HINGE spring. Bloom spills through the seams (screen-blend duplicates). The camera pulls back 6%. No filter goes on the preserve-3d parent.\n- lf30: word-reveal of 'That's an agent skill.' ('skill' in Instrument Serif Italic with the gradient).\n- lf48 / lf66 / lf84: panel contents reveal left to right (18f each, EXPO_OUT): icon (list / two-way arrow / check-in-box, drawn on with evolvePath), title, gloss, mono file hint in Dim. The panel being revealed is at full brightness and the others at 70%. From lf102 all are at 100%.\n- lf100-112: the '\u2713 match' ticket slides out of the Checks panel's bottom edge (SNAP), showing that the script runs and only a result comes back.\n- lf112-150: hold with slow drift."
+  },
+  {
+   "id": "S4",
+   "startSeconds": 14,
+   "seconds": 5,
+   "purpose": "HOW YOU USE IT: one plain request. The agent sees every installed skill's one-line summary and opens only the one that matches.",
+   "visual": "The triptych snaps shut, shrinks to a one-line card and flies onto a shelf of four one-line skill cards on the right. On the left, a flat glass prompt pill (no terminal chrome) types the request. On Enter, the words 'Migrate' and 'Snowflake' glow, a violet beam links them to the spark-to-snowflake card, and that card lifts with a 'matched' tag while the others dim. The card grows a row of three micro icons, and only Playbook lights up. A status line types under the pill.",
+   "onScreenText": "Headline: Just ask.\nPrompt pill: \u203a Migrate ./jobs to Snowflake\nShelf cards (name \u00b7 one-line description):\n  pdf-reports \u00b7 Build PDF reports\n  api-tests \u00b7 Write API tests\n  spark-to-snowflake \u00b7 Migrate Spark jobs to Snowflake\n  release-notes \u00b7 Draft release notes\nTag: matched\nCard icons: Playbook \u00b7 Mappings \u00b7 Checks\nStatus line: Loaded skill: spark-to-snowflake\nSub-caption: Only the matching skill opens.",
+   "vo": "Then just ask. Your agent opens the skill that matches.",
+   "animationNotes": "Global f420-570.\n- lf0-12: the panels snap shut (HINGE).\n- lf6-24: the slab shrinks to a 760\u00d776 card and arcs right into shelf slot 3, with directional blur along its path. The other three shelf cards fade in at 55%.\n- lf0-10: the S3 headline exits. lf10: 'Just ask.' at 160px.\n- lf20-74: the prompt pill (flat glass, radius 48, '\u203a' static) types 'Migrate ./jobs to Snowflake' (27 characters) at 2f/char with a blinking caret.\n- lf80: Enter. A light ring pulses out from the pill (20f, opacity 0.6\u21920).\n- lf80-100: 'Migrate' and 'Snowflake' glow Ice. A violet beam (evolvePath, 20f) arcs from the pill to the matching card's description.\n- lf86-100: the card lifts (translateZ 60, scale 1.06, violet rim) and a 'matched' tag pops on (SNAP). The other three dim to 30% with 2px blur.\n- lf100-116: the card grows a second row with three micro icons. Only Playbook lights violet; Mappings and Checks stay Dim.\n- lf100-132: the status line types under the pill at 1f/char (mono 26px, Slate).\n- lf108: sub-caption reveal.\n- lf132-150: hold."
+  },
+  {
+   "id": "S5",
+   "startSeconds": 19,
+   "seconds": 6,
+   "purpose": "THE RESULT (signature shot). The same 12-job board from S1 is converted and checked in one wave. Two hard jobs are handed to the human, who reviews everything.",
+   "visual": "A light-wipe cuts straight back to the exact S1 board, all ember. The matched card collapses into a vertical skill dock on the left. A diagonal violet-white light band sweeps from the dock across the board, and the tiles flip one after another from ember 'SPARK' to ice 'SNOWFLAKE'. Mint checks draw on 10 tiles; 2 land amber with 'Needs you'. The tile missed in S1 lands ice with a small violet sparkle. Stat chips pop in under the board. Then the 'you' cursor comes back, now moving smoothly, skims across every tile and settles on the two amber tiles, which float forward into a soft spotlight.",
+   "onScreenText": "Headline A (19.9-22.2s): Converted. And checked.\nHeadline B (22.2-25.0s): It converts. You review.\nTile pills: SPARK \u2192 SNOWFLAKE\nAmber tags (events_stream.py, churn_model.py): Needs you\nStat chips: 10 converted \u00b7 10/10 match \u00b7 test data \u00b7 2 need you\nCorner chip: DEMO PROJECT",
+   "vo": "Ten jobs converted and checked. The two hard ones come to you.",
+   "animationNotes": "Global f570-750.\n- lf0-12: diagonal light-wipe overlay, with a hard cut at lf6 to the S1 board (identical layout constants, all ember, no chips).\n- lf6-18: the matched shelf card collapses into the skill dock (x96-216), with Playbook lit.\n- lf14: the Mappings icon lights (conversion reads the mappings).\n- lf16-60: a violet-white light band sweeps diagonally from the dock across the board. Tiles flip rotateY 0\u2192180\u00b0 with the SNAP spring, delay (row+col)\u00d75f starting at lf20 (the last tile starts at lf45), about 18f per flip. Tilt is at most 6\u00b0 and only mid-flip. A gradient sheen crosses each tile at its flip midpoint. Back face: ice 'SNOWFLAKE' pill with the same filename.\n- Tile 3 (events_stream.py) and tile 7 (churn_model.py) land with an amber edge, a 'Needs you' tag and a hex '!' badge.\n- Tile 2 (latest_customers.sql) lands ice with a small violet sparkle.\n- lf26: word-reveal of Headline A.\n- lf40: the Checks icon in the dock lights. Mint checks draw on each converted tile (evolvePath, 10f), 6f after it lands.\n- lf64 / 70 / 76: the stat chips pop in (SNAP): '10 converted' (Ice), '10/10 match \u00b7 test data' (Mint), '2 need you' (Amber). Numbers roll up over 12f with tabular-nums.\n- lf96: Headline B replaces A.\n- lf96-140: the 'you' cursor returns, smooth this time, skims across the ice tiles row by row along a B\u00e9zier path, then settles on the amber tiles. Those float forward (translateZ 120, scale 1.12, GLIDE) under a soft radial spotlight while the rest dim to 70%.\n- lf140-180: hold. Orbs are now about 45/55.\n- THUMBNAIL: `remotion still` at global frame 606, mid-wave, with the board half ember and half ice."
+  },
+  {
+   "id": "S6",
+   "startSeconds": 25,
+   "seconds": 4.5,
+   "purpose": "WHY IT'S TRUSTWORTHY. The skill's mappings catch a real trap that is easy to miss by hand, and it pays off S1's 'missed one'. This is the only code moment.",
+   "visual": "The camera pushes into the latest_customers.sql tile, which becomes a flat code panel showing one line of SQL. Next to it, a stack of three pills shows which row wins. Copied as-is to Snowflake, the NULL row jumps to the top ('wrong row'). A violet 'from Mappings' chip arrives, ' NULLS LAST' types in mint, and the NULL row drops back down ('right row').",
+   "onScreenText": "Headline: It knows the traps.\nSub-caption: Spark and Snowflake sort NULLs differently.\nLabel chip: Spark SQL \u2192 as-is on Snowflake\nCode: ORDER BY updated_at DESC \u2192 ORDER BY updated_at DESC NULLS LAST\nPill stack: Sep 01 \u00b7 Aug 15 \u00b7 NULL\nStack label: on Spark \u2192 as-is on Snowflake\nTags: wrong row \u2192 right row\nChip: from Mappings",
+   "vo": "It even knows the traps, like how NULLs sort.",
+   "animationNotes": "Global f750-885.\n- lf0-18: the camera pushes into tile 2 (scale 1\u21923.4, EXPO_OUT, directional blur). The tile face cross-dissolves into a flat 1280\u00d7400 code panel (Code BG) with no tilt.\n- lf0-10: headline exit. lf10: word-reveal of 'It knows the traps.'\n- lf18: the ember label chip 'Spark SQL' appears above the code line.\n- lf18-42: 'ORDER BY updated_at DESC' types at 1f/char (JetBrains Mono 48px; ORDER BY and DESC in #C9B6FF, updated_at in #D6E2F5).\n- lf30: the 3-pill stack springs in on the right (SNAP) in order Sep 01 / Aug 15 / NULL, labelled 'on Spark', with a mint dot on the top pill (newest row wins).\n- lf50: the label chip changes to 'as-is on Snowflake' (Ice). The NULL pill swaps to the top (SNAP translateY) and the top pill gets a coral 'wrong row' tag.\n- lf52: sub-caption reveal.\n- lf72: the violet 'from Mappings' chip slides in from the dock, and the dock's Mappings icon pulses.\n- lf76-98: ' NULLS LAST' types at 2f/char in Mint with a 14% mint wash behind it.\n- lf100: the NULL pill drops back to the bottom (SNAP). 'Sep 01' is on top with a mint 'right row' tag.\n- lf110-135: hold on the fixed state (at least 1s)."
+  },
+  {
+   "id": "S7",
+   "startSeconds": 29.5,
+   "seconds": 3.5,
+   "purpose": "TEAM REUSE. The skill is shared once and every teammate's migration follows the same playbook, with hard cases still flagged.",
+   "visual": "The camera pulls back fast. The full board shrinks into the 'You' mini board, and the skill folder rises at centre as a glowing hub. Gradient beams draw from the folder to three teammate mini boards, each tagged with a coloured cursor. Each mini board runs the same diagonal ember-to-ice wave, and each lands with exactly one amber tile.",
+   "onScreenText": "Headline: Same playbook. Whole team.\nChip under folder: shared in your repo\nCursor tags: You \u00b7 Leo \u00b7 Priya \u00b7 Sam",
+   "vo": "Share it. Your whole team uses it.",
+   "animationNotes": "Global f885-990.\n- lf0-18: the camera pulls back (board scale 3.4\u21920.34, EXPO_OUT, directional blur). The board settles as the 'You' mini board centred at (500,440). The folder rises (GLIDE) to (960,630) with a violet core glow.\n- lf6: headline reveal.\n- lf12: the chip 'shared in your repo' pops in under the folder (SNAP).\n- lf18-48: gradient beams (violet\u2192ice, evolvePath, 16f each, 6f stagger) draw to the teammate boards at (1420,440) Leo #F472B6, (500,820) Priya #A3E635 and (1420,820) Sam #E2E8F0. Cursors glide in with the beams.\n- lf40-80: each teammate board runs the wave. Reuse the same <Board> component at 0.34 scale with delay (row+col)\u00d73f, boards offset 8f. Each board lands exactly one amber tile.\n- lf80-105: hold. Orbs are about 25/75 ice."
+  },
+  {
+   "id": "S8",
+   "startSeconds": 33,
+   "seconds": 4,
+   "purpose": "END CARD. The takeaway in one line, plus an honest footnote.",
+   "visual": "A light-wipe clears to a calm end stage, cool and ice-dominant. The skill folder floats at centre with an edge light orbiting its rim. The title builds word by word and an ember-to-ice gradient sweeps through it, followed by the subline, a small mono line and the footnote.",
+   "onScreenText": "Headline: Migration, as a skill.\nSub: Write once. Reuse on every job.\nMono line: spark-to-snowflake/ \u00b7 playbook \u00b7 mappings \u00b7 checks\nFootnote: Illustrative demo. Some Spark code needs a redesign, not a conversion. Validate on your own workload.",
+   "vo": "Migration, as a skill.",
+   "animationNotes": "Global f990-1110.\n- lf0-12: light-wipe overlay. Behind it, S7 recedes (scale 0.9, 10px blur on leaves), with a hard cut at lf6.\n- lf8: the folder icon (160px) settles at (960,340) on the light axis (GLIDE). A conic-gradient edge light orbits it (1 revolution per 90f).\n- lf16: word-reveal of 'Migration, as a skill.' ('skill' in Instrument Serif Italic). Over lf30-60 the signature gradient sweeps left to right through the whole line.\n- lf40: sub reveal (44px, Frost Text).\n- lf52: mono line (24px, Slate).\n- lf60: footnote fades in (20px, Dim, baseline y980).\n- lf66-120: hold for at least 1.8s. Orbs end at 20/80 ice. No fade to black; the last frame is the hold."
+  }
+ ],
+ "codeSnippets": [
+  {
+   "id": "s6-before",
+   "language": "sql",
+   "code": "ORDER BY updated_at DESC",
+   "usedInScene": "S6. Typed first under the ember label 'Spark SQL'. In Spark, DESC puts NULLs last by default, so the newest dated row wins."
+  },
+  {
+   "id": "s6-after",
+   "language": "sql",
+   "code": "ORDER BY updated_at DESC NULLS LAST",
+   "usedInScene": "S6. ' NULLS LAST' is appended in mint after the label changes to 'as-is on Snowflake'. Snowflake's DESC puts NULLs first by default (DEFAULT_NULL_ORDERING=LAST), so the explicit NULLS LAST restores Spark's behaviour. The clause is valid in both engines."
+  }
+ ],
+ "skillFileMock": "ON-SCREEN FORM 1: one-line shelf card (S4). This is all the agent keeps in view for every installed skill:\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 spark-to-snowflake \u00b7 Migrate Spark jobs to Snowflake      \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nWhen it matches, the card grows a row of micro icons:  [Playbook \u25cf]  [Mappings \u25cb]  [Checks \u25cb]\n(\u25cf lit = read or used so far. Mappings lights in S5, Checks lights in S5.)\n\nON-SCREEN FORM 2: the open folder, as a triptych (S3):\nspark-to-snowflake/\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502  \u2261  PLAYBOOK     \u2502  \u21c4  MAPPINGS     \u2502  \u2611  CHECKS       \u2502\n\u2502  Steps to follow \u2502  Spark \u2192         \u2502  Old vs new      \u2502\n\u2502                  \u2502  Snowflake       \u2502  must match      \u2502\n\u2502  SKILL.md        \u2502  references/     \u2502  scripts/        \u2502\n\u2502                  \u2502                  \u2502  (sealed glass;  \u2502\n\u2502                  \u2502                  \u2502   code never     \u2502\n\u2502                  \u2502                  \u2502   shown)         \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n                                          \u2514\u2500 ticket: \u2713 match\n\nBACKING FILE (never shown as YAML on screen; use it if the companion folder is published in the repo):\n---\nname: spark-to-snowflake\ndescription: Migrate Spark jobs to Snowflake. Use when asked to migrate or convert Spark code.\n---\n1. Scan every job in the given folder.\n2. Convert each job using references/mappings.md (e.g. add NULLS LAST where Spark SQL relied on DESC default ordering).\n3. Flag jobs that need a redesign (e.g. streaming, ML) instead of converting them.\n4. Run scripts/check.py on test data. Old and new outputs must match. Report every diff for human review.\n\nStructure mapping (accurate to the Agent Skills format): Playbook = SKILL.md (name + description frontmatter and instructions), Mappings = a reference file that is read only when needed, Checks = a bundled script the agent runs; only the script's result comes back.",
+ "terminalTranscript": "\u203a Migrate ./jobs to Snowflake\nLoaded skill: spark-to-snowflake\n10 converted\n10/10 match \u00b7 test data\n2 need you\n\n(There is no terminal window. Line 1 is the S4 glass prompt pill. Line 2 is the status line typed under the pill in S4. Lines 3-5 appear in S5 as the three stat chips under the board. Every count comes from one demoData constants file: jobs 12, converted 10, needYou 2 [events_stream.py, churn_model.py], checksPassed 10/10, trapTile latest_customers.sql.)",
+ "accuracyNotes": [
+  "Agent Skill anatomy is shown accurately with no jargon. Playbook = SKILL.md (frontmatter with name and description, plus instructions); Mappings = a reference file under references/; Checks = a bundled script under scripts/. The name 'spark-to-snowflake' is valid (lowercase letters and hyphens, at most 64 characters), and the description says both what the skill does and when to use it.",
+  "Loading on demand: the shelf shows every installed skill's name and one-line description, which the agent always has. On a matching request only that skill opens and only Playbook lights (SKILL.md read). Mappings lights when conversion uses it and Checks lights when the script runs. The Checks panel is sealed and only a result ('\u2713 match') comes out, because script code never enters the agent's context. The S4 caption says 'opens', not 'loads', so it does not imply the other skills are invisible.",
+  "The skill is the user's own hypothetical skill. On screen there are no agent names, no migration-product names (no Snowpark Connect, SMA, SnowConvert, CoCo or Claude Code), no API names and no vendor UI. The prompt is a generic glass pill, and 'Loaded skill:' is a plain status line with no CLI glyphs.",
+  "NULL-ordering trap (S6), verified against the Spark and Snowflake ORDER BY docs: Spark's DESC defaults to NULLS LAST, while Snowflake's DESC defaults to NULLS FIRST under the default DEFAULT_NULL_ORDERING=LAST. `ORDER BY updated_at DESC NULLS LAST` is valid in both and restores Spark's result. The explicit clause stays correct even if an account changes DEFAULT_NULL_ORDERING. The pill stack animates exactly this. The trap is placed in a Spark SQL (.sql) job on purpose: the Snowpark DataFrame API already emits explicit NULL ordering, so never move this beat into DataFrame code. The snippets are clause fragments, checked against the docs but not executed live.",
+  "Every count is internal to the demo and comes from one constants file: 12 jobs, 10 converted, 2 need you, 10/10 match. The 'DEMO PROJECT' chip is on screen whenever a count is visible, the check chip says 'test data', and nothing says 'guaranteed'. There are no speed, time-saved or cost figures, no clock, and no vendor benchmarks (the 5.6x/41% and 5.1x/42% figures are excluded).",
+  "The two flagged jobs (events_stream.py, churn_model.py) reflect a real limit: streaming and ML Spark code has no line-for-line equivalent on Snowflake's Spark-compatible path and needs a redesign. This is conveyed only through the filenames and 'Needs you', with no API names. The end footnote states it plainly.",
+  "'It converts. You review.' is paired with the cursor skimming every converted tile before it settles on the amber ones, so the film does not imply that the 10 converted jobs skip review.",
+  "'Same playbook', never 'same output': agents are non-deterministic, so the skill makes the steps and checks consistent, not byte-identical results.",
+  "Team shot: sharing a repo-scoped skill with teammates is accurate. Each teammate's board also lands one amber tile, so reuse does not read as guaranteed success. The skill is never shown learning or rewriting itself.",
+  "Brand safety: ember #FF7A3D and ice #38E1FF are shifted away from the Spark orange (#E25A1C) and Snowflake blue (#29B5E8). Embers are round dots and ice uses hex facets; there are no flame, star or six-arm snowflake glyphs anywhere, and no issue-tracker or agent-CLI chrome. 'Spark' and 'Snowflake' appear only as plain text.",
+  "Put a date stamp ('Sep 2026') in the video description rather than on screen, because this product area changes quickly."
+ ],
+ "openQuestions": [
+  "Should S6 stay as the one code moment (the NULLS LAST trap, which pays off S1's 'missed one' and gives data engineers one concrete reason to trust the skill), or should it be cut for a code-free 32.5s version? The default is to keep it; the scene is built to be removable without retiming the others.",
+  "Voice-over or silent? The cut works fully silent, and the VO lines are written to fit at about 2 words per second. If silent, should it carry a music bed and SFX? Any audio has to be supplied as local files; no TTS is available in the container.",
+  "Should the video description (not the film) say that Snowflake ships its own built-in Spark migration skill and that the Agent Skills format works across several agents? Recommended, to head off 'is this an official tool?' comments.",
+  "Should the illustrative spark-to-snowflake/ folder (SKILL.md + references/mappings.md + scripts/check.py) be published in the code-examples repo as a companion to the video? It adds credibility, but it means writing and testing a real, working skill."
+ ],
+ "feasibilitySummary": "FEASIBILITY PROBE:\n- Proven stack: Remotion 4.0.529, with every @remotion/* package pinned to the same version, React 19 and TypeScript pinned to 5.9 (npm latest is 7.x). Renders 1920\u00d71080 at 30fps to h264.\n- The probe's 150-frame test rendered in 16.8s wall clock, including about 4.6s of bundling. Simple scenes run at about 12 fps and busy scenes at about 6-7 fps on 4 CPUs.\n- At those rates the 1110-frame film should render in roughly 2-5 minutes (the craft judge estimated 4-10). Run `remotion bundle` once, then render from build/.\n- `remotion still` exports a 1080p PNG in about 5.5s; use it at frame 606 for the thumbnail.\n- Techniques proven in the probe: spring(), evolvePath and getPointAtLength, B\u00e9zier paths with travelling objects, shiki pre-tokenised code with frame-driven typing, TransitionSeries, local audio via <Audio>, and SRT captions.\n- The craft judge's micro-probe added: a 40-tile CSS-3D diagonal flip with backface-visibility renders correctly at about 6.5 fps (this is the S5 wave); a rotating textPath lens ring and interpolateColors recolours are crisp; velocity-driven SVG feGaussianBlur works as cheap motion blur.\n\nKNOWN GOTCHAS:\n1. @remotion/google-fonts FAILS here (headless Chrome rejects the proxy CA). Copy the @fontsource woff2 files into public/ and load them with @remotion/fonts loadFont(staticFile). Inter and JetBrains Mono are render-verified; Inter Tight and Instrument Serif are confirmed on npm at 5.3.0.\n2. Every asset (fonts, grain PNGs, audio) must be local, because Chrome cannot fetch HTTPS at render time. Do not use --ignore-certificate-errors.\n3. Set Config.setColorSpace('bt709') to get yuv420p/bt709 output; the default was yuvj420p full range.\n4. --gl=angle fails. Nothing in this film needs WebGL, so keep the default GL.\n5. Shader transitions cost about 2-4s per frame. None are used; the light-wipe is plain SVG/CSS.\n6. From the craft probe: backdrop-filter added almost nothing visible over smooth orbs, so glass is fill + hairline + inner highlight. Dark gradients band, so the baked grain is mandatory. An absolutely positioned background painted over a static SVG, so every layer needs its own AbsoluteFill. Never put a filter on a preserve-3d ancestor.\n7. There is no system ffmpeg; the compositor's bundled ffprobe works for checks when LD_LIBRARY_PATH is set.\n8. The user cannot see Remotion Studio in the container, so deliver MP4 renders and PNG stills.\n9. Remotion's licence is free for individuals and companies of 3 or fewer people.\n\nBUILD PLAN: prototype the two hardest shots first, the S3 triptych hinge (about 6h) and the S5 wave with its match cut (about 4h), as stills and then as 60-frame clips. The total is roughly 26-32h, per the craft judge's estimate for this scope. The probe project is at /tmp/claude-0/-home-user-code-examples/2057ac15-63ed-5c0a-9a3e-3179de337167/scratchpad/remotion-probe (wave reference: out/CraftWave.mp4, out/wave_45.png)."
+}

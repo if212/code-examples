@@ -10,7 +10,9 @@
     "still": "remotion still src/index.ts Main out/still.png"
   },
   "dependencies": {
+    "@fontsource/instrument-serif": "^5.3.0",
     "@fontsource/inter": "5.3.0",
+    "@fontsource/inter-tight": "^5.3.0",
     "@fontsource/jetbrains-mono": "5.3.0",
     "@remotion/cli": "4.0.529",
     "@remotion/fonts": "4.0.529",
