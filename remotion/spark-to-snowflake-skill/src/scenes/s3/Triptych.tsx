@@ -9,6 +9,8 @@ import {HINGE_L, HINGE_R, PANEL_R, PERSPECTIVE} from './timing';
 
 /**
  * The skill as a triptych: Playbook (left wing) / Mappings (centre) / Checks (right wing, smoked glass).
+ * Each panel shows an icon well, a title and a short gloss (review r1 dropped the mono file hints as
+ * implementation detail, per the 'high level' direction).
  * Wings are true 3D hinges: rotateY about the middle of each 16px gap, preserve-3d, backface-visibility hidden.
  * No CSS filter is ever applied to the preserve-3d group or wings (only to leaf text inside faces).
  * Exported so S4 can close the same object (openL/openR back to 0) for a seamless match cut.
@@ -219,7 +221,6 @@ export const PanelFace: React.FC<PanelFaceProps & {accent?: number}> = ({
   const iconP = at(1, 18);
   const titleP = at(3);
   const glossP = at(6);
-  const hintP = at(9);
   const pulse = smoked ? slot : 0;
   const sx = sheenX === null ? 0 : sheenX - (TRIPTYCH.panelX(k) - TRIPTYCH.left);
   return (
@@ -251,28 +252,6 @@ export const PanelFace: React.FC<PanelFaceProps & {accent?: number}> = ({
           </>
         ) : null}
         <Well k={k} p={wellP} draw={iconP} pulse={pulse} />
-        <Rise
-          p={hintP}
-          dy={10}
-          blur={6}
-          style={{
-            position: 'absolute',
-            right: PAD,
-            top: PAD,
-            height: WELL,
-            display: 'flex',
-            alignItems: 'center',
-            fontFamily: FONT.mono,
-            fontWeight: 500,
-            fontSize: 20,
-            color: C.dim,
-            letterSpacing: 0,
-            fontFeatureSettings: '"liga" 0, "calt" 0',
-            whiteSpace: 'pre',
-          }}
-        >
-          {part.hint}
-        </Rise>
         <Rise
           p={titleP}
           style={{
@@ -353,8 +332,22 @@ export const PanelFace: React.FC<PanelFaceProps & {accent?: number}> = ({
 };
 
 /** Outer cover of the closed slab (back of the Playbook wing): the folder lid, grown up. */
-export const Cover: React.FC<{swing?: number}> = ({swing = 0}) => {
-  const iconSize = 42;
+/**
+ * Where the S2 folder's tab label and lid emblem land in Cover coordinates when the folder (520 wide) and the
+ * slab (440 wide) are drawn at the same width during the S3 turn (ratio 440/520 about both centres). Cover
+ * `morph` = 1 puts its label and icons exactly there, so the cross-dissolve never shows doubled text.
+ */
+const FOLDER_MATCH = {labelX: 20.9, labelCy: 23.8, labelSize: 22, iconCy: 222.1, iconSize: 37.4, iconGap: 22} as const;
+const COVER_REST = {labelX: PAD - 6, labelCy: 37.2, labelSize: 20, iconCy: 0.56 * PH, iconSize: 42, iconGap: 30} as const;
+
+export const Cover: React.FC<{swing?: number; sheen?: {pos: number; strength: number} | null; morph?: number}> = ({
+  swing = 0,
+  sheen = null,
+  morph = 0,
+}) => {
+  const m = clamp01(morph);
+  const mix = (k: keyof typeof COVER_REST) => COVER_REST[k] + (FOLDER_MATCH[k] - COVER_REST[k]) * m;
+  const iconSize = mix('iconSize');
   return (
     <div
       style={{
@@ -399,11 +392,14 @@ export const Cover: React.FC<{swing?: number}> = ({swing = 0}) => {
       <div
         style={{
           position: 'absolute',
-          left: PAD - 6,
-          top: 24,
+          left: mix('labelX'),
+          top: mix('labelCy') - 15,
+          height: 30,
+          display: 'flex',
+          alignItems: 'center',
           fontFamily: FONT.mono,
           fontWeight: 500,
-          fontSize: 20,
+          fontSize: mix('labelSize'),
           color: '#EDE6FF',
           letterSpacing: 0,
           whiteSpace: 'pre',
@@ -417,10 +413,10 @@ export const Cover: React.FC<{swing?: number}> = ({swing = 0}) => {
         style={{
           position: 'absolute',
           left: '50%',
-          top: '56%',
+          top: mix('iconCy'),
           transform: 'translate(-50%, -50%)',
           display: 'flex',
-          gap: 30,
+          gap: mix('iconGap'),
           opacity: 0.9,
         }}
       >
@@ -438,29 +434,102 @@ export const Cover: React.FC<{swing?: number}> = ({swing = 0}) => {
           }}
         />
       ) : null}
+      {sheen && sheen.strength > 0.01 ? <SheenBand pos={sheen.pos} strength={sheen.strength} radius={PANEL_R} /> : null}
     </div>
   );
 };
 
-/** Back of the Checks wing: plain smoked glass (seen for a moment while the Playbook wing lifts). */
-const SmokedBack: React.FC<{light?: number}> = ({light = 0}) => (
+/**
+ * A diagonal specular band crossing a face (used for the S3 folder -> slab turn). pos 0..1 is the band centre
+ * across the face's width (it enters from < 0 and leaves at > 1). Clipped to the face by the radius.
+ */
+export const SheenBand: React.FC<{pos: number; strength: number; radius: number; style?: React.CSSProperties}> = ({pos, strength, radius, style}) => {
+  const c = (pos * 100).toFixed(2);
+  const a = (pos * 100 - 22).toFixed(2);
+  const b = (pos * 100 + 22).toFixed(2);
+  const a2 = (pos * 100 - 7).toFixed(2);
+  const b2 = (pos * 100 + 7).toFixed(2);
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        borderRadius: radius,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        ...style,
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: [
+            `linear-gradient(104deg, rgba(255,255,255,0) ${a2}%, ${alpha('#FFFFFF', 0.2 * strength)} ${c}%, rgba(255,255,255,0) ${b2}%)`,
+            `linear-gradient(104deg, rgba(255,255,255,0) ${a}%, ${alpha(C.whiteHot, 0.14 * strength)} ${c}%, rgba(255,255,255,0) ${b}%)`,
+          ].join(', '),
+        }}
+      />
+    </div>
+  );
+};
+
+/**
+ * Back of the Checks wing: the violet outer skin of the closed slab (same glass as Playbook), seen while the
+ * Playbook wing lifts and until the Checks wing passes 90deg. Review r1: the old smoked back read as a dead
+ * black slab in the centre slot, so the opening now reads as glass opening.
+ */
+const WingBack: React.FC<{light?: number}> = ({light = 0}) => (
   <div
     style={{
       position: 'absolute',
       inset: 0,
       borderRadius: PANEL_R,
-      background: 'linear-gradient(170deg, rgba(24,26,36,0.96) 0%, rgba(6,7,11,0.97) 100%)',
-      boxShadow: SHADOW.glass,
+      background: [
+        'linear-gradient(180deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0) 40%)',
+        softRadial('ellipse 55% 34% at 50% 0%', '#FFFFFF', 0.05, 10, 2.2),
+        softRadial('ellipse 62% 58% at 84% 12%', C.violet, 0.24, 12, 2.3),
+        `linear-gradient(160deg, ${alpha(C.violet, 0.2)} 0%, ${alpha(C.violetGlow, 0.1)} 48%, ${alpha('#1B1450', 0.45)} 100%)`,
+        'rgba(10,9,24,0.96)',
+      ].join(', '),
+      boxShadow: `${SHADOW.lifted}, 0 0 60px ${alpha(C.violetGlow, 0.2)}`,
       overflow: 'hidden',
     }}
   >
-    <Hairline radius={PANEL_R} />
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'linear-gradient(112deg, rgba(255,255,255,0) 20%, rgba(255,255,255,0.06) 34%, rgba(255,255,255,0.012) 46%, rgba(255,255,255,0) 62%)',
+      }}
+    />
+    {/* light escaping along the top edge */}
+    <div
+      style={{
+        position: 'absolute',
+        left: PW * 0.1,
+        right: PW * 0.1,
+        top: 0,
+        height: 1.5,
+        borderRadius: 1,
+        background: `linear-gradient(90deg, ${alpha(C.violet, 0)} 0%, ${alpha('#E9E1FF', 0.85)} 35%, #FFFFFF 50%, ${alpha('#E9E1FF', 0.85)} 65%, ${alpha(C.violet, 0)} 100%)`,
+        boxShadow: `0 0 12px ${alpha(C.violet, 0.8)}, 0 0 30px ${alpha(C.violetGlow, 0.5)}`,
+      }}
+    />
+    <Hairline
+      radius={PANEL_R}
+      width={1.2}
+      color={`linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.06) 45%, rgba(255,255,255,0.12) 100%), ${alpha(C.violet, 0.5)}`}
+    />
     {light > 0.004 ? (
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          background: softRadial('ellipse 45% 85% at 0% 50%', C.whiteHot, 0.32 * light, 12, 2.4),
+          background: [
+            softRadial('ellipse 45% 85% at 0% 50%', C.whiteHot, 0.32 * light, 12, 2.4),
+            softRadial('ellipse 80% 95% at 0% 50%', C.violet, 0.16 * light, 10, 2),
+          ].join(', '),
           mixBlendMode: 'screen',
         }}
       />
@@ -517,8 +586,16 @@ export type TriptychProps = {
   /** wing open progress, 0 = folded over the centre panel, 1 = open (spring overshoot ok) */
   openL: number;
   openR: number;
-  /** rotateY of the whole slab in deg (S3 turn: -90 -> 0) */
+  /** rotateY of the whole slab in deg (S3 turn: a shallow swing that ends at 0) */
   turn?: number;
+  /** rotateX of the whole slab in deg (S3 turn) */
+  tilt?: number;
+  /** extra scale of the whole slab about (960,600) (S3 turn: matches the folder's width) */
+  turnScale?: number;
+  /** specular sweep over the closed slab's cover (S3 turn) */
+  coverSheen?: {pos: number; strength: number} | null;
+  /** 1 = cover label / icons sit where the S2 folder's are (S3 turn), 0 = the cover's own layout */
+  coverMorph?: number;
   /** content reveal start frames per panel (Infinity = empty, -Infinity = fully shown) */
   starts?: readonly [number, number, number];
   bright?: readonly [number, number, number];
@@ -536,6 +613,10 @@ export const Triptych: React.FC<TriptychProps> = ({
   openL,
   openR,
   turn = 0,
+  tilt = 0,
+  turnScale = 1,
+  coverSheen = null,
+  coverMorph = 0,
   starts = [-Infinity, -Infinity, -Infinity],
   bright = [1, 1, 1],
   accent = [0, 0, 0],
@@ -560,7 +641,10 @@ export const Triptych: React.FC<TriptychProps> = ({
           height: 1080,
           transformStyle: 'preserve-3d',
           transformOrigin: '960px 600px',
-          transform: Math.abs(turn) > 0.001 ? `rotateY(${turn.toFixed(3)}deg)` : 'none',
+          transform:
+            Math.abs(turn) > 0.001 || Math.abs(tilt) > 0.001 || Math.abs(turnScale - 1) > 0.0001
+              ? `rotateX(${tilt.toFixed(3)}deg) rotateY(${turn.toFixed(3)}deg) scale(${turnScale.toFixed(5)})`
+              : 'none',
         }}
       >
         <div style={{position: 'absolute', left: TRIPTYCH.panelX(1), top: TRIPTYCH.top, width: PW, height: PH}}>
@@ -573,14 +657,14 @@ export const Triptych: React.FC<TriptychProps> = ({
           front={
             <PanelFace k={2} frame={frame} start={starts[2]} bright={bright[2]} accent={accent[2]} light={light} sheenX={sheenX} swing={swingR} slot={slot} />
           }
-          back={<SmokedBack light={light * (1 - clamp01(openR))} />}
+          back={<WingBack light={light * (1 - clamp01(openR))} />}
         />
         <Wing
           side="L"
           p={openL}
           z={zL}
           front={<PanelFace k={0} frame={frame} start={starts[0]} bright={bright[0]} accent={accent[0]} light={light} sheenX={sheenX} swing={swingL} />}
-          back={<Cover swing={swingL} />}
+          back={<Cover swing={swingL} sheen={coverSheen} morph={coverMorph} />}
         />
       </div>
     </AbsoluteFill>

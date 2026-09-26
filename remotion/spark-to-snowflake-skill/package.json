@@ -7,7 +7,8 @@
     "studio": "remotion studio src/index.ts",
     "typecheck": "tsc -p .",
     "render": "remotion render src/index.ts Main out/spark-to-snowflake-skill.mp4 --codec=h264",
-    "still": "remotion still src/index.ts Main out/still.png"
+    "still": "remotion still src/index.ts Main out/still.png --frame=606",
+    "thumbnail": "remotion still src/index.ts Thumbnail out/thumbnail.png --frame=606"
   },
   "dependencies": {
     "@fontsource/instrument-serif": "^5.3.0",

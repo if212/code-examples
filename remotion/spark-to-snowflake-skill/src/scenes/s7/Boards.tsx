@@ -3,11 +3,12 @@ import {AbsoluteFill, interpolate} from 'remotion';
 import {Board, Camera, DirectionalBlur, Spotlight} from '../../components';
 import type {TileState} from '../../components';
 import {C, EASE, SHADOW, alpha} from '../../theme';
-import {CODE_PANEL, CX, CY, MINI_BOARDS, tileRect, tileRowCol} from '../../layout';
+import {CODE_PANEL, CX, CY, tileRect, tileRowCol} from '../../layout';
 import {JOBS, TRAP_INDEX} from '../../demoData';
 import {bell, clamp01, glide, lerp, ramp, reveal, snap} from '../../motion';
 import {S6EndPanel, S6_DURATION, panelCamAt} from '../s6/PanelShot';
 import {
+  BOARDS,
   MATES,
   MINI,
   Mate,
@@ -127,7 +128,8 @@ const MorphBox: React.FC<{f: number}> = ({f}) => {
         background: [
           'linear-gradient(180deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 22%)',
           `radial-gradient(120% 90% at 0% 0%, ${alpha(C.ice, 0.035 + 0.12 * m)} 0%, ${alpha(C.ice, 0)} 60%)`,
-          `linear-gradient(180deg, ${alpha(C.codeBg, 0.94)} 0%, ${alpha(C.codeBg, 0.97)} 100%)`,
+          // the dark code-panel body turns into translucent tile glass as it lands, so tile 2 never reads as a hole
+          `linear-gradient(180deg, ${alpha(C.codeBg, lerp(0.94, 0.5, m))} 0%, ${alpha(C.codeBg, lerp(0.97, 0.6, m))} 100%)`,
         ].join(', '),
         boxShadow: [SHADOW.lifted, `0 0 90px ${alpha(C.ice, 0.09)}`, `0 0 0 1px ${alpha(C.ice, 0.05 + 0.2 * m)}`].join(', '),
       }}
@@ -162,7 +164,9 @@ const blurFor = (fn: (f: number) => {x: number; y: number; w: number}, f: number
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const speed = Math.hypot(dx, dy) + 0.3 * Math.abs(b.w - a.w);
-  return {amount: Math.min(cap, speed * gain), angle: (Math.atan2(dy, dx) * 180) / Math.PI};
+  // velocity already starts small (eased head); the ramp keeps the first frames after the cut crisp
+  const rampIn = ramp(f, T7.pull, T7.pull + T7.blurRamp);
+  return {amount: Math.min(cap, speed * gain) * rampIn, angle: (Math.atan2(dy, dx) * 180) / Math.PI};
 };
 
 /** tile 2 on screen: the You layer's motion */
@@ -175,7 +179,7 @@ const youMotion = (f: number) => {
 /** the teammate boards all converge toward the anchor; the diagonal (Sam) board carries the largest move */
 const mateMotion = (f: number) => {
   const c = worldCamAt(f);
-  const b = MINI_BOARDS.sam;
+  const b = BOARDS.sam;
   const p = toScreen(c, b.cx, b.cy);
   return {x: p.x, y: p.y, w: 0};
 };
@@ -190,7 +194,7 @@ export const YouLayer: React.FC<{f: number; recede: number}> = ({f, recede}) => 
   const miniO = ramp(f, T7.miniSwap[0], T7.miniSwap[1]);
   const plateO = ramp(f, T7.youPlate[0], T7.youPlate[1]);
   const rb = 8 * recede;
-  const b = MINI_BOARDS.you;
+  const b = BOARDS.you;
   const pr = plateRect('you');
   const linkLit = reveal(f, T7.youLink + T7.youLinkDur - 4, 18);
   return (
@@ -225,6 +229,14 @@ export const YouLayer: React.FC<{f: number; recede: number}> = ({f, recede}) => 
 };
 
 export const MatesLayer: React.FC<{f: number; recede: number}> = ({f, recede}) => {
+  // hidden while the stage is still huge and streaking (only the You board and the folder read during the
+  // fast part of the pull-back), then fading in as the camera settles
+  const matesIn = interpolate(f, [T7.matesIn[0], T7.matesIn[1]], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+    easing: EASE.IN_OUT,
+  });
+  if (matesIn <= 0.001) return null;
   const cam = worldCamAt(f);
   const visible = MATES.filter((m) => onScreen(cam, plateRect(m.key)));
   if (visible.length === 0) return null;
@@ -232,14 +244,14 @@ export const MatesLayer: React.FC<{f: number; recede: number}> = ({f, recede}) =
   const rb = 8 * recede;
   const settled = pullP(f) > 0.999;
   return (
-    <AbsoluteFill style={{pointerEvents: 'none'}}>
+    <AbsoluteFill style={{pointerEvents: 'none', opacity: matesIn}}>
       <DirectionalBlur id="s7-mates" amount={settled ? 0 : v.amount} angle={v.angle} style={FULL}>
         <div style={{position: 'relative', width: 1920, height: 1080}}>
           <Camera origin={cam.origin} scale={cam.scale} x={cam.x} y={cam.y}>
             {visible.map((m) => {
               const land = mateLandAt(m.k);
               const wake = glide(f, land - 2);
-              const b = MINI_BOARDS[m.key];
+              const b = BOARDS[m.key];
               return (
                 <React.Fragment key={m.key}>
                   <Plate

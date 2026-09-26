@@ -1,6 +1,6 @@
 import React from 'react';
 import {AbsoluteFill, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {Board, Camera, Cursor, DirectionalBlur, Headline, Spotlight, StatChip, drift} from '../components';
+import {Board, Camera, Headline, Spotlight, StatChip, drift} from '../components';
 import type {TileState} from '../components';
 import {C, SPRING, alpha} from '../theme';
 import {BOARD, SKILL_DOCK, tileRect, tileRowCol} from '../layout';
@@ -8,6 +8,7 @@ import {COPY, JOBS, NEED_YOU_INDICES, STATS, TRAP_INDEX} from '../demoData';
 import {bell, clamp01, glide, ramp, reveal, snap, velocity2D, wobble} from '../motion';
 import {DockMorph} from './s5/DockMorph';
 import {WaveBand} from './s5/WaveBand';
+import {ReviewCursor} from './s5/ReviewCursor';
 import {REVIEW_TICKS, SKIM, cursorAt} from './s5/cursorPath';
 
 /**
@@ -20,8 +21,9 @@ import {REVIEW_TICKS, SKIM, cursorAt} from './s5/cursorPath';
  */
 
 const T = {
-  morphFrom: 6,
-  morphTo: 18,
+  /** the card collapses from lf0, under the wipe (the storyboard's cut at its lf6 is our lf0; see DockMorph) */
+  morphFrom: 0,
+  morphTo: 12,
   mappingsOn: 14,
   bandFrom: 16,
   bandOut: 52,
@@ -44,6 +46,8 @@ const T = {
   statRoll: 12,
   liftAt: 128,
   press: 144,
+  /** the returning cursor fades and scales in over this many frames from SKIM.from */
+  cursorIn: 6,
 } as const;
 
 const CAM_ORIGIN: [number, number] = [BOARD.cx, BOARD.top + BOARD.height]; // grow upward, keep the stat band clear
@@ -116,7 +120,7 @@ export const S5: React.FC = () => {
 
   // ---- cursor -----------------------------------------------------------------------------------------
   const cursorVisible = f >= SKIM.from;
-  const cIn = reveal(f, SKIM.from, 10);
+  const cIn = reveal(f, SKIM.from, T.cursorIn);
   const settle = ramp(f, SKIM.to, SKIM.to + 10);
   const pos = cursorAt(f);
   const idle = {x: 3 * settle * wobble('s5-cx', f, 0.03), y: 2 * settle * wobble('s5-cy', f, 0.03, 1)};
@@ -162,13 +166,18 @@ export const S5: React.FC = () => {
       {/* the 'you' cursor (same camera as the board so it stays on its tiles) */}
       {cursorVisible ? (
         <Camera {...cam}>
-          <div style={{position: 'absolute', left: pos.x + idle.x - 60, top: pos.y + idle.y - 60}}>
-            <DirectionalBlur id="s5-cursor" amount={Math.min(7, v.speed * 0.08)} angle={v.angle}>
-              <div style={{position: 'relative', width: 220, height: 150}}>
-                <Cursor x={60} y={60} label="you" opacity={cIn} scale={0.92 + 0.08 * cIn} press={press} tilt={-2} />
-              </div>
-            </DirectionalBlur>
-          </div>
+          <ReviewCursor
+            id="s5-cursor"
+            x={pos.x + idle.x}
+            y={pos.y + idle.y}
+            label="you"
+            opacity={cIn}
+            scale={0.85 + 0.15 * cIn}
+            press={press}
+            tilt={-2}
+            speed={v.speed}
+            angle={v.angle}
+          />
         </Camera>
       ) : null}
 

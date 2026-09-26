@@ -116,7 +116,7 @@ export const TYPE = {
   headline: 120,
   headlineJustAsk: 160,
   headlineMin: 112,
-  headlineTracking: '-0.04em',
+  headlineTracking: '-0.03em',
   headlineLineHeight: 0.95,
   accentScale: 1.08,
   sub: 44, // Inter Tight 500, Slate

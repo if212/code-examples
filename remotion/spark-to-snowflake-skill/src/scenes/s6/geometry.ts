@@ -1,8 +1,8 @@
+import {Easing, interpolate} from 'remotion';
 import {BOARD, CODE_PANEL, CX, CY, SKILL_DOCK, tileRect} from '../../layout';
 import {TRAP_INDEX} from '../../demoData';
 import {TYPE} from '../../theme';
 import {drift} from '../../components';
-import {reveal} from '../../motion';
 import {sceneById} from '../../timeline';
 import {T6} from './timing';
 
@@ -25,7 +25,16 @@ const S5_END = (() => {
 
 export type Cam = {origin: [number, number]; scale: number; rotate: number; x: number; y: number};
 
-export const pushP = (f: number): number => reveal(f, 0, T6.pushTo);
+/**
+ * Push progress with an acceleration head: frame 1 moves < 1% of the push, the peak is mid-move and it
+ * settles softly (a camera move toward a visible target, not a jump cut).
+ */
+const PUSH_EASE = Easing.bezier(0.5, 0, 0.12, 1);
+export const pushP = (f: number): number =>
+  interpolate(f, [0, T6.pushTo], [0, 1], {easing: PUSH_EASE, extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+
+/** Zoom interpolated in log space, so equal steps of p read as equal perceived speed. */
+export const pushScale = (p: number): number => Math.pow(PUSH_SCALE, p);
 
 /** Outer camera: S5's final drift, released to identity as the push runs. */
 export const outerCam = (f: number): Cam => {
@@ -36,7 +45,7 @@ export const outerCam = (f: number): Cam => {
 /** Inner camera: the push into tile 2 (its centre travels to the hero centre). */
 export const innerCam = (f: number): Cam => {
   const p = pushP(f);
-  return {origin: [TRAP.cx, TRAP.cy], scale: 1 + (PUSH_SCALE - 1) * p, rotate: 0, x: (CX - TRAP.cx) * p, y: (CY - TRAP.cy) * p};
+  return {origin: [TRAP.cx, TRAP.cy], scale: pushScale(p), rotate: 0, x: (CX - TRAP.cx) * p, y: (CY - TRAP.cy) * p};
 };
 
 const apply = (c: Cam, x: number, y: number) => ({
@@ -57,11 +66,13 @@ export const trapScreen = (f: number) => {
 /** The flat code panel. */
 export const PANEL = {x: CODE_PANEL.left, y: CODE_PANEL.top, w: CODE_PANEL.w, h: CODE_PANEL.h, r: 26} as const;
 
-/** Left column: filename header, label chip, code line, 'from Mappings' chip (vertical centres). */
+/** Left column: filename header, state chip, code line, 'from Mappings' chip (vertical centres). */
 export const CODE = {
   x: CODE_PANEL.codeX,
-  fileY: 458,
-  chipY: 532,
+  fileY: 454,
+  chipY: 522,
+  /** the single state chip is set at the gloss size so it reads at a glance */
+  chipSize: TYPE.gloss,
   lineY: 606,
   mapY: 694,
   size: TYPE.code,
@@ -72,14 +83,21 @@ export const CODE = {
 /** Right column: the 3-pill result stack at x1380-1540. */
 /** nudged 16px right of the storyboard's x1380 so the fixed 35-char line (48px mono) keeps clear air */
 const STACK_SHIFT = 16;
+const PILL_H = 54;
+const RING_PAD = 6;
+const SLOT0 = 562;
+/** tag pill height (Tag = 15px Pill -> round(15 * 1.85)) */
+const TAG_H = 28;
 export const STACK = {
   x0: CODE_PANEL.stackX0 + STACK_SHIFT,
   x1: CODE_PANEL.stackX1 + STACK_SHIFT,
   w: CODE_PANEL.stackX1 - CODE_PANEL.stackX0,
   cx: (CODE_PANEL.stackX0 + CODE_PANEL.stackX1) / 2 + STACK_SHIFT,
-  pillH: 54,
-  labelY: 472,
-  slotY: (k: number): number => 562 + k * 68,
+  pillH: PILL_H,
+  ringPad: RING_PAD,
+  slotY: (k: number): number => SLOT0 + k * 68,
+  /** row tags sit 18px clear above the winner ring (never on its stroke) */
+  tagY: SLOT0 - PILL_H / 2 - RING_PAD - 18 - TAG_H / 2,
   dividerX: CODE_PANEL.stackX0 + STACK_SHIFT - 26,
 } as const;
 

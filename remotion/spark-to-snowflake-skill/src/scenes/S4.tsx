@@ -6,15 +6,19 @@ import {COPY} from '../demoData';
 import {T4} from './s4/timing';
 import {ClosingTriptych, SlabMorph, SnapFlash} from './s4/SlabToCard';
 import {PromptPill} from './s4/PromptPill';
-import {MatchBeams, Shelf, StatusLine} from './s4/Shelf';
+import {MatchBeams, Shelf} from './s4/Shelf';
+import {StatusLine} from './s4/StatusLine';
+import {S4_SUB, S4_SUB_KEY} from './s4/copy';
 
 /**
  * S4 — HOW YOU USE IT: "Just ask." Global f420-570 (150f).
- * The S3 triptych snaps shut and flies onto a shelf of one-line skills as the spark-to-snowflake card. On the
- * left a flat glass prompt pill types a plain request. On Enter the words 'Migrate' and 'Snowflake' light up,
- * violet beams carry them to the one card whose description matches, that card lifts with a 'matched' tag
- * while the others dim, grows its Playbook / Mappings / Checks row with only Playbook lit, and a status line
- * confirms the skill was loaded. The last frames hold the matched card exactly where S5 collapses it.
+ * The S3 triptych snaps shut and flies onto a labelled shelf of one-line skills ('Your skills') as the
+ * spark-to-snowflake card. On the left a flat glass prompt pill types a plain request. On Enter the words
+ * 'Migrate' and 'Snowflake' light up; a violet trace rises from each, the two join above the pill and continue
+ * as one beam into the one card whose description matches. That card lifts (clear of the light axis) with a
+ * 'matched' tag while the others dim, a light pulse runs along it lighting the same two words in its
+ * description, and it grows its Playbook / Mappings / Checks row with only Playbook lit. The status line types
+ * under the pill; the sub-caption (from Enter) names who does the matching. The last frames hold for S5.
  */
 
 const SHOT = 150;
@@ -46,7 +50,7 @@ export const S4: React.FC = () => {
       {/* headlines + sub-caption (outside the camera) */}
       {f < T4.headlineOut + 12 ? <Headline text={COPY.s3} accentWord="skill" enterAt={-100} exitAt={T4.headlineOut} /> : null}
       <Headline text={COPY.s4} keyWord="ask" fontSize={TYPE.headlineJustAsk} enterAt={T4.headline} />
-      <Caption text={COPY.s4Sub} enterAt={T4.sub} keyWord="matching" keyGradient="violet" />
+      <Caption text={S4_SUB} enterAt={T4.sub} keyWord={S4_SUB_KEY} keyGradient="violet" />
     </AbsoluteFill>
   );
 };

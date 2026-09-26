@@ -2,11 +2,10 @@ import React from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 import {Board, Camera, Cursor, Headline, Shockwave, SkillFolder, Spotlight, caretOn, typedCount, useFontsLoaded} from '../components';
 import {C} from '../theme';
-import {tileRect} from '../layout';
+import {BOARD, tileRect} from '../layout';
 import {COPY, MISSED_CHIP_SLOT, MISSED_INDEX, SKILL_FOLDER_LABEL} from '../demoData';
 import {ramp, reveal} from '../motion';
 import {S1_HEADLINE_B, s1ActiveTile, s1Cursor, s1MissP, s1TileState} from './s1/state';
-import {MissedSlotOnBoard} from './s1/MissedSlotMark';
 import {
   FOLDER,
   LABEL_LEN,
@@ -23,11 +22,15 @@ import {
   impact,
   labelDoneAt,
   lidOpen,
+  missMarkBlur,
+  missMarkOpacity,
   outP,
   shock,
+  tagOpacity,
   tileBlur,
   tileJitter,
 } from './s2/timing';
+import {MissedSlotDof, TileProgressDof, TileTagDof} from './s2/BoardDof';
 import {NotesLayer, RimFlashes, landedFraction, landingGlow, notePaths} from './s2/Notes';
 import {SnapStreak} from './s2/SnapStreak';
 
@@ -57,6 +60,10 @@ export const S2: React.FC = () => {
   const missRect = tileRect(MISSED_INDEX);
   const miss = s1MissP(end);
   const mj = tileJitter(MISSED_INDEX, f);
+  const blur = tileBlur(f);
+  // S1's end state per tile (fixed), and its coral 'missed one' tag
+  const bases = Array.from({length: BOARD.count}, (_, i) => s1TileState(i, end, fps));
+  const missTag = bases[MISSED_INDEX].tag;
 
   // note flight paths (fixed per note; measured from the loaded font)
   const paths = notePaths();
@@ -85,22 +92,28 @@ export const S2: React.FC = () => {
             scale={boardScale(f)}
             opacity={bOpacity}
             tile={(i) => {
-              const base = s1TileState(i, end, fps);
+              const base = bases[i];
               const chips = base.chips;
               return {
                 ...base,
-                blur: tileBlur(f),
+                blur: blur,
                 highlight: (base.highlight ?? 0) * (1 - r),
                 dx: tileJitter(i, f).x,
                 dy: tileJitter(i, f).y,
                 // the chips now fly as notes; only the missed tile keeps its empty dashed slot
                 hideChips: i !== MISSED_INDEX && !!chips,
                 chips: i === MISSED_INDEX && chips ? chips.map((c, k) => (k === MISSED_CHIP_SLOT ? c : {...c, p: 0})) : chips,
-                tag: base.tag ? {...base.tag, shake: 0} : undefined,
+                // the bar and tag live on the Tile's unfiltered frame: drawn below with a leaf blur instead
+                progress: 0,
+                tag: undefined,
               };
             }}
           >
-            <MissedSlotOnBoard p={miss} dx={mj.x} dy={mj.y} />
+            {bases.map((base, i) => (
+              <TileProgressDof key={`bar-${i}`} i={i} dx={tileJitter(i, f).x} dy={tileJitter(i, f).y} progress={base.progress ?? 0} blur={blur} opacity={1} />
+            ))}
+            {missTag ? <TileTagDof i={MISSED_INDEX} dx={mj.x} dy={mj.y} tag={{...missTag, shake: 0}} blur={blur} opacity={tagOpacity(f)} /> : null}
+            <MissedSlotDof p={miss} dx={mj.x} dy={mj.y} blur={missMarkBlur(f)} opacity={missMarkOpacity(f)} />
           </Board>
           {curO > 0.002 ? (
             <AbsoluteFill>

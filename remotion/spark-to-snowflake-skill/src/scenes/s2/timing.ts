@@ -30,6 +30,8 @@ import {S1_END_FRAME, S1_PASSES, chipSlots, s1Camera, s1pf} from '../s1/state';
 
 export const T = {
   dimDur: 15,
+  markRecede: 30, // the coral missed-slot mark racks into the background after tile 2's chips have gone
+  markRecedeDur: 30,
   cursorOutDur: 12,
   headline: 10,
   folderRise: 4,
@@ -70,6 +72,21 @@ export const outP = (f: number): number =>
 export const boardScale = (f: number): number => 1 - 0.04 * dimP(f) - 0.04 * outP(f);
 export const boardOpacity = (f: number): number => (1 - 0.65 * dimP(f)) * (1 - outP(f));
 export const tileBlur = (f: number): number => 8 * dimP(f);
+/**
+ * Depth of field for the pieces the Tile draws outside its faces (see ./BoardDof.tsx):
+ *  - the ember progress bars take the tiles' own 8px leaf blur (the board opacity dims them to 0.35 with it);
+ *  - the coral 'missed one' tag blurs with the tiles and fades out over the dim (lf0-15): the storyboard keeps
+ *    only the dashed empty slot behind on tile 2;
+ *  - the coral missed-slot mark (the dashed slot's callback, 'stays behind on tile 2') keeps the board's 0.35 and
+ *    only softens slightly (1.2px) while tile 2's chips peel off around it (lf15, lf27), so the empty slot
+ *    between them still reads; then it racks back into the background plane (lf30-60): blur -> 3px and
+ *    opacity x1 -> x0.55, so it never floats sharp over the folder.
+ */
+const markRecede = (f: number): number => reveal(f, T.markRecede, T.markRecedeDur, EASE.IN_OUT);
+/** the tag blurs with the tiles (EXPO_OUT) but dissolves on a gentler IN_OUT curve, so it recedes rather than blinks */
+export const tagOpacity = (f: number): number => 1 - reveal(f, 0, T.dimDur, EASE.IN_OUT);
+export const missMarkBlur = (f: number): number => 1.2 * dimP(f) + 1.8 * markRecede(f);
+export const missMarkOpacity = (f: number): number => 1 - 0.45 * markRecede(f);
 /** The S1 stepped jitter, frozen on the S1 end step and relaxing to zero (smooth time). */
 export const jitterAmp = (f: number): number => 2 * (1 - dimP(f));
 /** S1's last frame: the board, cursor and chips start from exactly what S1 showed on it. */
@@ -198,9 +215,14 @@ export const NOTES: NoteDef[] = ORDER.map(([tile, slot], k) => {
 /** Chip centre (canvas px) while it still sits on its tile. */
 export const chipOnBoard = (n: NoteDef, f: number): {x: number; y: number} => {
   const {row, col} = tileRowCol(n.tile);
-  const slot = chipSlots(n.tile)[n.slot];
+  const slots = chipSlots(n.tile);
+  const slot = slots[n.slot];
+  // the Tile's chip row is bottom-aligned: on the missed tile the dashed slot makes the row 3px taller and the
+  // solid chips sit at its bottom (measured against S1's last frame), so centre the note on the chip, not the row top
+  const rowH = Math.max(...slots.map((s) => s.h));
+  const cy = slot.y + rowH - slot.h / 2;
   const j = tileJitter(n.tile, f);
-  return boardToCanvas(col * (BOARD.tileW + BOARD.gap) + j.x + slot.cx, row * (BOARD.tileH + BOARD.gap) + j.y + slot.cy, f);
+  return boardToCanvas(col * (BOARD.tileW + BOARD.gap) + j.x + slot.cx, row * (BOARD.tileH + BOARD.gap) + j.y + cy, f);
 };
 
 /** Chip scale on the tile (relative to a NOTE_SIZE note). */

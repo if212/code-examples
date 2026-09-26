@@ -33,8 +33,9 @@ export const sceneAt = (globalFrame: number): SceneId => {
 };
 
 /**
- * Light-wipe overlays (drawn by Main). Each is 12 frames CENTRED on a scene boundary; the frame is fully
- * covered at `cut` where the hard cut happens underneath.
+ * Light-wipes (drawn by Main). Each is 12 frames CENTRED on a scene boundary. They are reveals: the band's
+ * core crosses the frame centre at `cut`; the outgoing scene stays ahead of the band (frozen at its last frame
+ * after `cut`) and the incoming scene appears behind it (frozen at its lf0 before `cut`).
  *  - S4->S5: global 564-576, cut 570 (= S4 lf144, S5 lf0). S4 lf144-149 and S5 lf0-5 are (partly) covered.
  *  - S7->S8: global 984-996, cut 990 (= S7 lf99, S8 lf0).  S7 lf99-104 and S8 lf0-5 are (partly) covered.
  */
@@ -44,8 +45,11 @@ export const WIPES = [
   {from: 984, cut: 990, duration: WIPE_DURATION},
 ] as const;
 
-/** DEMO PROJECT chip: fades in at global 20 (S1 lf20) at 60% and stays until the S7->S8 cut. */
-export const DEMO_CHIP = {from: 20, until: 990, opacity: 0.6} as const;
+/**
+ * DEMO PROJECT chip: fades in at global 8 (with '12 Spark jobs.', the first count on screen) at 85% so the
+ * disclaimer is legible, and stays until the S7->S8 wipe carries it away.
+ */
+export const DEMO_CHIP = {from: 8, until: 990, opacity: 0.85} as const;
 
 /**
  * Colour arc: ember share of the orbs (ice = 1 - ember). Storyboard anchors: 70/30 at f0, ~45/55 by the end

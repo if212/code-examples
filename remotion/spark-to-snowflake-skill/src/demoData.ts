@@ -117,7 +117,7 @@ export const COPY = {
   s1Stamp: 'again',
   s1Missed: 'missed one',
   s2: 'Write the know-how once.',
-  s3: "That's an agent skill.",
+  s3: 'That’s an agent skill.',
   s3Ticket: '✓ match',
   s4: 'Just ask.',
   s4Sub: 'Only the matching skill opens.',

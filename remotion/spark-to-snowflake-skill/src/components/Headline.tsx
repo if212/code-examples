@@ -65,6 +65,45 @@ const wordState = (frame: number, i: number, p: RevealParams) => {
   return {opacity, y, blur, visible: opacity > 0.001};
 };
 
+/**
+ * Headline tracking (em). -0.04em on Inter Tight 800 made 'It', 'rt' and 'kn' collide at 120px, so the
+ * display line runs at -0.03em with normal kerning, plus optical pair fixes (display headlines only).
+ */
+export const HEADLINE_TRACKING = -0.03;
+/** Extra space (em) inserted between these letter pairs in display headlines ('It' read as 'lt'). */
+export const PAIR_FIX: Readonly<Record<string, number>> = {It: 0.035, rt: 0.042, kn: 0.012};
+/** Backwards-compatible alias: the 'It' pair extra. */
+export const I_PAIR_EM = PAIR_FIX.It;
+/** Per-character extra (em) to add AFTER character i of `core` (0 where no pair fix applies). */
+const pairExtras = (core: string): number[] => {
+  const out: number[] = [];
+  for (let i = 0; i < core.length; i++) out.push(i < core.length - 1 ? PAIR_FIX[core[i] + core[i + 1]] ?? 0 : 0);
+  return out;
+};
+const pairExtraTotal = (core: string): number => pairExtras(core).reduce((a, b) => a + b, 0);
+/** Core text with pair-fix spans (a plain string when no pair applies). */
+const withPairFix = (core: string): React.ReactNode => {
+  const ex = pairExtras(core);
+  if (!ex.some((v) => v > 0)) return core;
+  const parts: React.ReactNode[] = [];
+  let buf = '';
+  ex.forEach((v, i) => {
+    if (v > 0) {
+      if (buf) parts.push(buf);
+      buf = '';
+      parts.push(
+        <span key={i} style={{marginRight: `${v}em`}}>
+          {core[i]}
+        </span>,
+      );
+    } else {
+      buf += core[i];
+    }
+  });
+  if (buf) parts.push(buf);
+  return <>{parts}</>;
+};
+
 const PAD = {t: 0.3, x: 0.42, b: 0.46}; // mask box padding (em) so blur halos and descenders never clip
 const FILL_PAD = {y: 0.22, x: 0.14}; // gradient-fill padding (em) so italic overhangs + descenders are filled
 const GAP = 0.24; // word gap (em of base size)
@@ -83,6 +122,8 @@ type Styling = {
   italicAccent: boolean;
   uppercase?: boolean;
   fontVariantNumeric?: string;
+  /** apply the PAIR_FIX optical pair fixes (display headlines) */
+  iPair?: boolean;
 };
 
 const fontFor = (kind: WordKind, s: Styling) =>
@@ -95,7 +136,9 @@ const measureWords = (words: Word[], s: Styling): number[] =>
   words.map((w) => {
     const f = fontFor(w.kind, s);
     const core = s.uppercase ? w.core.toUpperCase() : w.core;
-    const coreW = measureWidth(core, `${f.style === 'italic' ? 'italic ' : ''}${f.weight} ${f.size}px ${f.family}`, f.tracking * f.size);
+    const coreW =
+      measureWidth(core, `${f.style === 'italic' ? 'italic ' : ''}${f.weight} ${f.size}px ${f.family}`, f.tracking * f.size) +
+      (s.iPair && w.kind !== 'accent' ? pairExtraTotal(core) * f.size : 0);
     const pw = w.punct
       ? measureWidth(w.punct, `${s.weight} ${s.size}px ${s.family}`, s.tracking * s.size)
       : 0;
@@ -145,6 +188,7 @@ const RevealLine: React.FC<LineProps> = ({words, frame, params, styling: s, swee
         textTransform: s.uppercase ? 'uppercase' : undefined,
         fontVariantNumeric: s.fontVariantNumeric,
         fontFeatureSettings: '"liga" 0, "calt" 0',
+        fontKerning: 'normal',
         display: 'inline-block',
       }}
     >
@@ -154,6 +198,7 @@ const RevealLine: React.FC<LineProps> = ({words, frame, params, styling: s, swee
         cursor += widths[i] + GAP * s.size;
         const f = fontFor(w.kind, s);
         const last = i === words.length - 1;
+        const coreText = s.iPair && w.kind !== 'accent' ? withPairFix(w.core) : w.core;
         const fillBox: React.CSSProperties = {
           display: 'inline-block',
           padding: `${FILL_PAD.y}em ${FILL_PAD.x}em`,
@@ -233,10 +278,10 @@ const RevealLine: React.FC<LineProps> = ({words, frame, params, styling: s, swee
                       opacity: 0.35,
                     }}
                   >
-                    {w.core}
+                    {coreText}
                   </span>
                 ) : null}
-                <span style={coreStyle}>{w.core}</span>
+                <span style={coreStyle}>{coreText}</span>
               </span>
               {w.punct ? <span style={punctStyle}>{w.punct}</span> : null}
             </span>
@@ -315,12 +360,13 @@ export const Headline: React.FC<HeadlineProps> = ({
     size: fontSize,
     family: FONT.display,
     weight: 800,
-    tracking: -0.04,
+    tracking: HEADLINE_TRACKING,
     color,
     keyGradient,
     accentGradient,
     glow: true,
     italicAccent: true,
+    iPair: true,
   };
   const w0 = measureWords(words, base);
   const lineW0 = w0.reduce((a, b) => a + b, 0) + GAP * fontSize * Math.max(0, words.length - 1);
@@ -461,20 +507,40 @@ export const Caption: React.FC<CaptionProps> = ({
   );
 };
 
+const headlineStyling = (size: number): Styling => ({
+  size,
+  family: FONT.display,
+  weight: 800,
+  tracking: HEADLINE_TRACKING,
+  color: C.frost,
+  keyGradient: 'signature',
+  accentGradient: 'signature',
+  glow: false,
+  italicAccent: false,
+  iPair: true,
+});
+
 /** Exported for components that need the same fit logic (e.g. a headline inside a panel). */
 export const headlineFontSize = (text: string, fontSize = 120, maxWidth = 1500, minFontSize = 112): number => {
   const words = parseWords(text);
-  const base: Styling = {
-    size: fontSize,
-    family: FONT.display,
-    weight: 800,
-    tracking: -0.04,
-    color: C.frost,
-    keyGradient: 'signature',
-    accentGradient: 'signature',
-    glow: false,
-    italicAccent: false,
-  };
-  const w = measureWords(words, base).reduce((a, b) => a + b, 0) + GAP * fontSize * Math.max(0, words.length - 1);
+  const w = measureWords(words, headlineStyling(fontSize)).reduce((a, b) => a + b, 0) + GAP * fontSize * Math.max(0, words.length - 1);
   return w > maxWidth ? Math.max(minFontSize, (fontSize * maxWidth) / w) : fontSize;
+};
+
+/**
+ * Laid-out width (px) of a Headline line exactly as <Headline> sets it (after auto-fit), e.g. to put something
+ * under its sweep band. Pass the same text/accentWord/fontSize/maxWidth/minFontSize as the Headline.
+ * Exact once fonts are loaded (a Headline on the same frame holds rendering until they are).
+ */
+export const headlineWidth = (
+  text: string,
+  opts: {accentWord?: string | string[]; fontSize?: number; maxWidth?: number; minFontSize?: number} = {},
+): number => {
+  const {accentWord, fontSize = TYPE.headline, maxWidth = ZONES.headline.maxWidth, minFontSize = TYPE.headlineMin} = opts;
+  const words = parseWords(text, undefined, accentWord);
+  const size = (() => {
+    const w0 = measureWords(words, headlineStyling(fontSize)).reduce((a, b) => a + b, 0) + GAP * fontSize * Math.max(0, words.length - 1);
+    return w0 > maxWidth ? Math.max(minFontSize, (fontSize * maxWidth) / w0) : fontSize;
+  })();
+  return measureWords(words, headlineStyling(size)).reduce((a, b) => a + b, 0) + GAP * size * Math.max(0, words.length - 1);
 };

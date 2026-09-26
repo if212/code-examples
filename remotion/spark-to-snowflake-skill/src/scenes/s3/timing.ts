@@ -8,13 +8,17 @@ import {clamp01} from '../../motion';
  * S3 timing + geometry (local frames, 0..149). Everything is a pure function of the frame.
  *
  * Choreography:
- *  lf0-16   the S2 folder turns (rotateY 0->90) and hands over, edge-on, to the closed triptych slab
- *           (-90->0); it scales 1 -> 1.35 on a 20f GLIDE and rises from y620 to the axis at y600.
- *  lf16     two white-hot seams light up on the slab's hinge lines.
- *  lf24/30  the left (Playbook) and right (Checks) wings swing open from +-180deg; light pours out of the
+ *  lf0-16   the S2 folder turns toward the camera: a shallow yaw swing (0 -> 22deg -> 0, never edge-on) while
+ *           it scales 1 -> 1.35 on a 20f GLIDE and rises from y620 to the axis at y600. At the widest point of
+ *           the swing it cross-dissolves into the closed triptych slab (sizes matched every frame) under one
+ *           specular sweep and a soft bloom.
+ *  lf16     two white-hot seams light up on the slab's hinge lines; the headline starts (review r1: no empty
+ *           headline band after the S2 exit at lf10).
+ *  lf24/27  the left (Playbook) and right (Checks) wings swing open from +-180deg; light pours out of the
  *           hinges; the camera pulls back so the open triptych lands exactly on the TRIPTYCH constants.
- *  lf30     headline.
+ *           3f is the smallest stagger at which the two wings never intersect in 3D.
  *  lf48/66/84 panel contents reveal left to right; the panel being revealed is at 100%, the others 70%.
+ *  lf80     sub-caption (who uses the folder); it exits lf136-146, clear of the S4 cut.
  *  lf100    the 'match' ticket slides out of the Checks panel's bottom slot (SNAP).
  *  lf112-149 hold: slow camera settle (ends at identity), one specular sheen across the glass.
  */
@@ -23,8 +27,10 @@ export const T = {
   scaleDur: 20,
   seams: 16,
   openL: 24,
-  openR: 29,
-  headline: 30,
+  openR: 27,
+  headline: 16,
+  sub: 80,
+  subOut: 136,
   content: [48, 66, 84] as const,
   contentDur: 18,
   allBright: 102,
@@ -68,13 +74,46 @@ const G20_END = spring({frame: T.scaleDur, fps: 30, config: SPRING.GLIDE, durati
 export const grow = (f: number, fps = 30): number =>
   f >= T.scaleDur ? 1 : clamp01(spring({frame: f, fps, config: SPRING.GLIDE, durationInFrames: T.scaleDur}) / G20_END);
 
-/** Turn progress 0..1 (0 = folder face-on, 0.5 = edge-on, 1 = slab face-on). */
+/** Turn progress 0..1 (0 = folder face-on, 1 = slab face-on; the yaw peaks at 0.5). */
 export const turnP = (f: number): number =>
   interpolate(f, [0, T.turnEnd], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
     easing: Easing.bezier(0.45, 0.05, 0.22, 1),
   });
+
+/** Peak yaw of the turn (deg). Shallow on purpose: the object never goes edge-on (review r1). */
+export const TURN_YAW = 22;
+/** Small counter-tilt (deg) that gives the turn some depth. */
+export const TURN_TILT = 3;
+
+/** Yaw of the folder / slab during the turn: 0 -> TURN_YAW -> 0. */
+export const turnYaw = (f: number): number => TURN_YAW * Math.sin(Math.PI * turnP(f));
+export const turnTilt = (f: number): number => TURN_TILT * Math.sin(Math.PI * turnP(f));
+
+/** Folder -> slab cross-dissolve 0..1 around the widest point of the swing. */
+export const dissolve = (f: number): number => {
+  const x = clamp01((turnP(f) - 0.3) / 0.4);
+  return x * x * (3 - 2 * x);
+};
+
+/** Cover layout morph (1 = matches the folder's label / emblem, 0 = the cover's own layout), after the dissolve. */
+export const coverMorph = (f: number): number => {
+  const x = clamp01((turnP(f) - 0.55) / 0.45);
+  return 1 - x * x * (3 - 2 * x);
+};
+
+/** Width the folder and slab share during the turn (before the camera scale): 520 -> 440. */
+export const SLAB_W = TRIPTYCH.panelW;
+export const matchWidth = (f: number): number => FOLDER.width + (SLAB_W - FOLDER.width) * turnP(f);
+
+/** Specular sweep across the face during the turn: band centre 0..1 across the object, and its strength. */
+export const turnSheen = (f: number): {pos: number; strength: number} => {
+  const u = turnP(f);
+  const pos = interpolate(u, [0.12, 0.88], [-0.3, 1.3], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const strength = Math.sin(Math.PI * clamp01((u - 0.08) / 0.84));
+  return {pos, strength: Math.max(0, strength)};
+};
 
 /**
  * Camera pull-back 0..1 from lf22 to the end of the scene: most of it (83%) while the wings open, then a slow
@@ -92,6 +131,9 @@ export const cameraScale = (f: number, fps = 30): number => {
   return up * (1 - (1 - 1 / SLAB_SCALE) * pullBack(f));
 };
 
+/** Share of the lopsided Playbook-open moment the camera re-centres (review r1: the group sat off-centre). */
+export const CAMERA_LEAN = 0.62;
+
 /**
  * Camera x offset: while only the Playbook wing is open the object's weight sits left of centre, so the camera
  * leans a little toward it, then settles back as the Checks wing opens (0 once both are open).
@@ -99,7 +141,7 @@ export const cameraScale = (f: number, fps = 30): number => {
 export const cameraX = (f: number, fps = 30): number => {
   const cL = clamp01(openL(f, fps));
   const cR = clamp01(openR(f, fps));
-  return (960 - (TRIPTYCH.left + TRIPTYCH.panelX(2) - TRIPTYCH.gap) / 2) * 0.42 * (cL - cR) * cameraScale(f, fps);
+  return (960 - (TRIPTYCH.left + TRIPTYCH.panelX(2) - TRIPTYCH.gap) / 2) * CAMERA_LEAN * (cL - cR) * cameraScale(f, fps);
 };
 
 /** Camera y offset: the object rises from the folder's y620 to the axis at y600. */

@@ -64,15 +64,26 @@ export type S1Pass = {
 
 export const S1_PASSES: S1Pass[] = [
   {tile: 0, hop: 30, chipAt: [36, 42, 48], progress: [36, 60], leave: 60, ghostAt: 63},
-  {tile: 1, hop: 60, chipAt: [66, 69, 72], progress: [66, 90], leave: 96, stampAt: 78},
-  {tile: MISSED_INDEX, hop: 96, chipAt: [102, 105, 108], progress: [102, 117], leave: 114, missed: true},
+  {tile: 1, hop: 60, chipAt: [66, 69, 72], progress: [66, 90], leave: 93, stampAt: 78},
+  // tile 2 is rushed: the cursor leaves right after the last stamp (lf108), so the miss can flag earlier and
+  // hold longer (review r1: the tag read for only ~1s before S2 dims the board)
+  {tile: MISSED_INDEX, hop: 93, chipAt: [99, 102, 105], progress: [99, 108], leave: 108, missed: true},
 ];
 
-/** 'missed one' tag + coral glitch. */
-export const S1_MISSED_AT = 120;
+/**
+ * 'missed one' tag + coral glitch: one step after the cursor has moved on to the next job, so it holds
+ * lf111-149 (1.3s) in S1 and then dissolves over S2's dim (~1.6s readable in total).
+ */
+export const S1_MISSED_AT = 111;
+/**
+ * The 'missed one' tag settles at 1.2x (15px Tag -> 18px) for legibility. It is carried by the tag's p (the
+ * Tile, and S2's TileTagDof, both render scale(p) about 80% 50%), so S2 inherits the size from s1TileState at
+ * the cut with no change on its side.
+ */
+export const S1_TAG_SCALE = 1.2;
 /** The cursor moves on to the next job (unaware of the miss). */
 export const S1_NEXT_TILE = MISSED_INDEX + 1;
-export const S1_NEXT_HOP = S1_PASSES[S1_PASSES.length - 1].leave; // 114
+export const S1_NEXT_HOP = S1_PASSES[S1_PASSES.length - 1].leave; // 108
 /** Cursor fade-in (before the first hop) */
 export const S1_CURSOR_IN = 20;
 
@@ -156,7 +167,7 @@ export const s1TileState = (i: number, f: number, fps = 30): Partial<TileState> 
       st.stamp = {label: COPY.s1Stamp, p: stepSnap(pf, pass.stampAt), tone: 'ember'};
     }
     if (pass.missed) {
-      st.tag = {label: COPY.s1Missed, p: stepSnap(pf, S1_MISSED_AT, MISS_LEAD), tone: 'coral', shake: s1MissShake(f)};
+      st.tag = {label: COPY.s1Missed, p: S1_TAG_SCALE * stepSnap(pf, S1_MISSED_AT, MISS_LEAD), tone: 'coral', shake: s1MissShake(f)};
     }
   }
   return st;
@@ -167,6 +178,17 @@ export const s1JitterFrame = (f: number): number | undefined => (f >= STEP_FROM 
 
 /** Coral 'miss' glow progress (0..1, stepped) for the missed slot overlay. */
 export const s1MissP = (f: number): number => stepSnap(s1pf(f), S1_MISSED_AT, MISS_LEAD);
+
+/**
+ * Coral bloom that flares on the tag's pop and decays (stepped) to nothing well before the cut (< 0.02 by
+ * ~lf140), so S2's first frame, which has no flare, still matches S1's last one.
+ */
+export const s1MissFlare = (f: number): number => {
+  const pf = s1pf(f);
+  if (pf < S1_MISSED_AT) return 0;
+  const v = Math.exp(-(pf - S1_MISSED_AT) / 7);
+  return v < 0.02 ? 0 : v;
+};
 
 /* ------------------------------------------------------------------------------------------------
  * Cursor (tip in canvas px, board centred at BOARD.cx/cy; place it inside the same Camera as the board)

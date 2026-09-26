@@ -1,18 +1,20 @@
 import React from 'react';
 import {AbsoluteFill, interpolate} from 'remotion';
-import {Caret, caretOn, measureWidth, sliceTokens, typedCount, useFontsLoaded} from '../../components';
-import {C, EASE, FONT, SHADOW, TONES, alpha} from '../../theme';
-import {CODE_BEFORE, CODE_INSERT, CODE_TOKENS, COPY, JOB_FILES, TRAP_INDEX} from '../../demoData';
+import {Caret, Tag, caretOn, measureWidth, sliceTokens, typedCount, useFontsLoaded} from '../../components';
+import {C, EASE, FONT, SHADOW, alpha} from '../../theme';
+import {CODE_BEFORE, CODE_INSERT, CODE_TOKENS, JOB_FILES, TRAP_INDEX} from '../../demoData';
 import {bell, clamp01, lerp, ramp, reveal, snap} from '../../motion';
 import {CODE, PANEL, STACK, trapScreen} from './geometry';
-import {AsIsLabel, ChipShell, ToneIcon} from './Labels';
+import {StateChip} from './Labels';
+import type {ChipStage} from './Labels';
+import {S6_COPY} from './copy';
 import {T6} from './timing';
 
 /**
  * The flat code panel (1280x400 at 320,400, Code BG). Its box is born from the trap tile's screen rect and
- * morphs to the panel rect while the tile dissolves under it (lf1-14). Inside: a dim filename header, the
- * label chip ('Spark SQL' -> 'as-is on Snowflake'), the one code line typed at 1f/char, and later
- * ' NULLS LAST' typed at 2f/char in mint over a 14% mint wash.
+ * morphs to the panel rect while the tile dissolves under it (lf6-19). Inside: the filename header with the
+ * by-hand callback tag ('missed by hand' -> 'caught'), ONE label chip ('Spark SQL' -> 'as-is on Snowflake' ->
+ * check 'on Snowflake'), the one code line filled in fast, and later ' NULLS LAST' typed in mint over a mint wash.
  */
 
 const MONO_FONT = `500 ${CODE.size}px "JetBrains Mono"`;
@@ -29,7 +31,7 @@ export const insertX = (): number => CODE.x + codeWidth(CODE_BEFORE + CODE_INSER
 export const PanelBox: React.FC<{f: number}> = ({f}) => {
   if (f < T6.morphFrom) return null;
   // the box rides the tile's rect first, then flattens into the panel (ease in-out, no pop)
-  const m = interpolate(f, [T6.morphFrom + 1, T6.morphFrom + 1 + T6.morphDur], [0, 1], {
+  const m = interpolate(f, [T6.morphStart, T6.morphStart + T6.morphDur], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
     easing: EASE.IN_OUT,
@@ -40,7 +42,7 @@ export const PanelBox: React.FC<{f: number}> = ({f}) => {
   const w = lerp(t.w, PANEL.w, m);
   const h = lerp(t.h, PANEL.h, m);
   const r = lerp(18 * t.s, PANEL.r, m);
-  const o = ramp(f, T6.morphFrom, T6.morphFrom + 6);
+  const o = ramp(f, T6.morphFrom, T6.morphFrom + 5);
   const iceT = 1 - m; // the ice tile tint fades out as it flattens into code
   return (
     <AbsoluteFill style={{pointerEvents: 'none'}}>
@@ -81,9 +83,18 @@ export const PanelBox: React.FC<{f: number}> = ({f}) => {
 
 /* -------------------------------------------------------------------------------------------------------- */
 
+/**
+ * Filename header + the by-hand callback to S1. A quiet coral 'missed by hand' tag fades in only after the panel
+ * has landed (never on the push-in, where the tile already shows a mint check). When the fix lands it hands over
+ * to a mint 'caught' tag, so the payoff reads: you missed it by hand, the skill catches it.
+ */
 const Header: React.FC<{f: number}> = ({f}) => {
   const p = reveal(f, T6.header, 14);
   if (p <= 0.001) return null;
+  const hand = reveal(f, T6.handTag, T6.handTagDur);
+  const handOut = reveal(f, T6.caught, 6, EASE.IN_OUT);
+  const caught = snap(f, T6.caught + 6);
+  const handO = 0.8 * hand * (1 - handOut);
   return (
     <div
       style={{
@@ -94,74 +105,100 @@ const Header: React.FC<{f: number}> = ({f}) => {
         opacity: p,
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
-        fontFamily: FONT.mono,
-        fontWeight: 500,
-        fontSize: 22,
-        color: alpha(C.slate, 0.9),
-        letterSpacing: '-0.01em',
-        fontFeatureSettings: '"liga" 0, "calt" 0',
+        gap: 16,
         whiteSpace: 'nowrap',
       }}
     >
-      {JOB_FILES[TRAP_INDEX]}
+      <span
+        style={{
+          fontFamily: FONT.mono,
+          fontWeight: 500,
+          fontSize: 22,
+          color: alpha(C.slate, 0.95),
+          letterSpacing: '-0.01em',
+          fontFeatureSettings: '"liga" 0, "calt" 0',
+          lineHeight: 1,
+        }}
+      >
+        {JOB_FILES[TRAP_INDEX]}
+      </span>
+      <span style={{position: 'relative', display: 'inline-block', height: 28}}>
+        {handO > 0.001 ? (
+          <span
+            style={{
+              display: 'inline-block',
+              transform: `translateX(${(-8 * (1 - hand)).toFixed(2)}px) scale(${(1 - 0.12 * handOut).toFixed(4)})`,
+              transformOrigin: '0% 50%',
+              opacity: handO,
+            }}
+          >
+            <Tag label={S6_COPY.missedByHand} tone="coral" glow={0.3} />
+          </span>
+        ) : null}
+        {caught > 0.001 ? (
+          <span
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              display: 'inline-block',
+              transform: `scale(${Math.max(0, caught).toFixed(4)})`,
+              transformOrigin: '0% 50%',
+              opacity: clamp01(caught * 1.6),
+            }}
+          >
+            <Tag label={S6_COPY.caught} tone="mint" icon="check" glow={0.7} />
+          </span>
+        ) : null}
+      </span>
     </div>
   );
 };
 
-/** 'Spark SQL' (ember) -> 'as-is on Snowflake' (ice) above the code line. */
+/**
+ * The one label chip above the code (storyboard 'Label chip: Spark SQL -> as-is on Snowflake'); it labels the
+ * whole panel, code and stack, so the stack carries no second label. Once the line is fixed it settles on a mint
+ * check + 'on Snowflake'. See Labels.tsx for the in-place roll.
+ */
+const CHIP_STAGES: readonly [ChipStage, ChipStage, ChipStage] = [
+  {label: S6_COPY.spark, tone: 'ember', icon: 'dot'},
+  {label: S6_COPY.asIs, tone: 'ice', icon: 'hex'},
+  {label: S6_COPY.fixed, tone: 'mint', icon: 'check'},
+];
+
 const LabelChip: React.FC<{f: number}> = ({f}) => {
+  const size = CODE.chipSize;
   const pIn = snap(f, T6.chip);
-  const out = ramp(f, T6.swap, T6.swap + 5);
-  const pNew = snap(f, T6.swap + 3);
-  const strike = reveal(f, T6.strike, 10);
+  if (pIn <= 0.001) return null;
+  // linear progress: Labels.tsx shapes each half of the roll itself
+  const t01 = ramp(f, T6.swap, T6.swap + 10);
+  const t12 = ramp(f, T6.asIsOut, T6.asIsOut + 10);
+  const flash = bell(ramp(f, T6.swap, T6.swap + 16)) + bell(ramp(f, T6.asIsOut, T6.asIsOut + 18));
   return (
-    <>
-      {pIn > 0.001 && out < 1 ? (
-        <div
-          style={{
-            position: 'absolute',
-            left: CODE.x,
-            top: CODE.chipY,
-            transform: `translateY(-50%) translateY(${(-10 * out).toFixed(2)}px) scale(${(0.86 + 0.14 * pIn).toFixed(4)})`,
-            transformOrigin: '0% 50%',
-            opacity: clamp01(pIn * 1.6) * (1 - out),
-          }}
-        >
-          <ChipShell tone="ember" size={22} icon={<ToneIcon tone="ember" size={22} />} glow={0.35}>
-            {COPY.s6LabelBefore}
-          </ChipShell>
-        </div>
-      ) : null}
-      {pNew > 0.001 ? (
-        <div
-          style={{
-            position: 'absolute',
-            left: CODE.x,
-            top: CODE.chipY,
-            transform: `translateY(-50%) translateY(${(10 * (1 - Math.min(1, pNew))).toFixed(2)}px) scale(${(0.86 + 0.14 * pNew).toFixed(4)})`,
-            transformOrigin: '0% 50%',
-            opacity: clamp01(pNew * 1.6),
-          }}
-        >
-          <ChipShell tone="ice" size={22} icon={<ToneIcon tone="ice" size={22} />} glow={0.35 + 0.4 * bell(ramp(f, T6.swap, T6.swap + 16))}>
-            <AsIsLabel strike={strike} color={TONES.ice.text} />
-          </ChipShell>
-        </div>
-      ) : null}
-    </>
+    <div
+      style={{
+        position: 'absolute',
+        left: CODE.x,
+        top: CODE.chipY,
+        transform: `translateY(-50%) scale(${(0.86 + 0.14 * pIn).toFixed(4)})`,
+        transformOrigin: '0% 50%',
+        opacity: clamp01(pIn * 1.6),
+      }}
+    >
+      <StateChip stages={CHIP_STAGES} t={[t01, t12]} size={size} glow={0.35 + 0.5 * clamp01(flash)} />
+    </div>
   );
 };
 
-/** The one code line, syntax coloured, typed at 1f/char, then ' NULLS LAST' at 2f/char in mint. */
+/** The one code line, syntax coloured, filled in fast (T6.codeFpc), then ' NULLS LAST' at T6.insertFpc in mint. */
 const CodeLine: React.FC<{f: number}> = ({f}) => {
   useFontsLoaded();
   if (f < T6.caretIn) return null;
-  const n = f >= T6.codeType ? typedCount(f, T6.codeType, CODE_BEFORE.length, 1) : 0;
-  const baseDoneAt = T6.codeType + CODE_BEFORE.length - 1;
+  const n = f >= T6.codeType ? typedCount(f, T6.codeType, CODE_BEFORE.length, T6.codeFpc) : 0;
+  const baseDoneAt = T6.codeType + (CODE_BEFORE.length - 1) * T6.codeFpc;
   const toks = sliceTokens(CODE_TOKENS, n);
-  const k = f >= T6.insert ? typedCount(f, T6.insert, CODE_INSERT.length, 2) : 0;
-  const insDoneAt = T6.insert + (CODE_INSERT.length - 1) * 2;
+  const k = f >= T6.insert ? typedCount(f, T6.insert, CODE_INSERT.length, T6.insertFpc) : 0;
+  const insDoneAt = T6.insert + (CODE_INSERT.length - 1) * T6.insertFpc;
   const ins = CODE_INSERT.slice(0, k);
   const lead = CODE_INSERT.length - CODE_INSERT.trimStart().length;
   const word = ins.slice(lead);

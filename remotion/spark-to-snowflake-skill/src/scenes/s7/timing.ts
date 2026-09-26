@@ -3,27 +3,37 @@
  * The S7->S8 light-wipe (Main) starts covering at lf99 and is fully white-hot at the cut (lf105 = S8 lf0).
  */
 export const T7 = {
-  /** camera pull-back: board scale 3.4 -> 0.34 (EXPO_OUT), tile 2 is the anchor */
+  /**
+   * camera pull-back: board scale 3.4 -> 0.34 in log space, eased-in head (lf1 moves ~1%, lf2 ~4%), fastest
+   * around lf6-8, settled by lf20. Tile 2 is the anchor.
+   */
   pull: 0,
-  pullDur: 18,
+  pullDur: 20,
   /** S6's code panel content fades out as it rides the pull-back */
-  panelFade: [0, 5] as const,
+  panelFade: [2, 6] as const,
   /** the code panel's box morphs back into tile 2's rect, then dissolves onto the real tile */
-  morph: [1, 7] as const,
-  boxFade: [4, 9] as const,
-  trapIn: [2, 6] as const,
+  morph: [3, 8] as const,
+  boxFade: [5, 9] as const,
+  trapIn: [4, 8] as const,
   /** the rest of the You board fades back in */
-  othersIn: [1, 5] as const,
+  othersIn: [4, 8] as const,
   /** full tile faces -> simplified mini faces (crossfade while the board is small and moving) */
-  miniSwap: [5, 9] as const,
+  miniSwap: [8, 12] as const,
   /** glass plate behind the You board */
-  youPlate: [6, 15] as const,
-  /** S6's skill dock, headline and sub-caption exit over lf0-10 */
+  youPlate: [9, 17] as const,
+  /** S6's headline, sub-caption and skill dock leave together over lf0-5 (gone before the fast part) */
   prevExit: 0,
-  /** R8: one headline at a time -> the new one enters once S6's has finished its 10f exit */
-  headline: 10,
-  /** the folder rises to the hub (GLIDE) */
-  folder: 4,
+  prevExitDur: 5,
+  /** the dock also slides 40px left */
+  dockExitDur: 6,
+  /** motion blur ramps in over the first frames of the pull */
+  blurRamp: 3,
+  /** teammate boards stay hidden while the stage is still huge, then fade in as the camera settles */
+  matesIn: [12, 20] as const,
+  /** storyboard lf6: S6's line is fully gone at lf5, so only one headline is ever on screen */
+  headline: 6,
+  /** the folder rises to the hub (GLIDE) as the You board clears the centre */
+  folder: 8,
   /** 'shared in your repo' chip pops under the folder (SNAP) */
   chip: 12,
   /** the You board links into the hub (it is where the skill came from) */
@@ -42,6 +52,9 @@ export const T7 = {
   tileDelay: 3,
   /** SNAP reaches 1 about 9f after a tile starts */
   flipLand: 9,
+  /** a teammate's cursor starts its hop onto the amber tile this many frames before the tile lands */
+  reviewLead: 3,
+  reviewDur: 12,
   /** hold */
   hold: 80,
   /** the stage recedes behind the S7->S8 light-wipe (storyboard S8 lf0-12) */
